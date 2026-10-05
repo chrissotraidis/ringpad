@@ -1,0 +1,43 @@
+# SonicPad private integration workspace.
+# Never commit original game data, private development material or evidence.
+
+# Original game data and odd disc containers are never part of this project.
+*.gdi
+*.cdi
+*.chd
+*.iso
+*.cue
+track*.bin
+track*.raw
+*.7z
+
+# Pinned read-only reference checkouts (SARecomp / SunPad / PaperPad).
+ref/
+
+# Authentication material, private development package, extracted content.
+private-inputs/
+.local/
+work/
+generated/
+out/
+build/
+build-*/
+runs/
+
+# Local evidence, captures, logs and hashes.
+docs/artifacts/
+
+# Local saves, fixtures and crash data.
+*.ksave
+*.ksave.bak
+*.vmu
+*.sav
+*.dmp
+*.ips
+
+# Machine-local settings.
+sonicpad-display.ini
+
+__pycache__/
+*.pyc
+.DS_Store

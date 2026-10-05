@@ -113,8 +113,8 @@ For physical-device work, an unavailable Bluetooth device, audio route or gestur
 ### First session
 
 1. Read both files. Inspect the working machine and existing project directories without moving or deleting user work.
-2. Create/update `STATUS.md`, `JOURNAL.md`, the safety ignores and dependency lock. Record private-only state; do not create a public remote.
-3. Pin SARecomp to `d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2`, SunPad to `c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b`, and PaperPad to `a6f6999a570156f6794ff3fa79f810cfad71c4fc`. Preserve different preexisting clones; use separate references rather than resetting them.
+2. Create/update `STATUS.md`, `JOURNAL.md`, the safety ignores and dependency lock. Record private-only state. Keep game data, private development material and evidence out of any public history; do not publish.
+3. Pin SARecomp to `d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2`, SunPad to `c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b`, and PaperPad to `a6f6999a570156f6794ff3fa79f810cfad71c4fc`. Preserve different preexisting clones; use separate references rather than resetting them. The SARecomp upstream is public, so its reference may be cloned read-only into `ref/sarecomp` with the push URL disabled; donor and private material follow the checks in `scripts/check-repo-safety.sh`.
 4. Inventory the exact disc and the required Katana/generated-title/media source material. Inspect declared local backups only as inputs; do not reconstruct a source package from unrelated binaries or fetch game files.
 5. Record each G1 input as present-verified, present-unverified, missing or incompatible. Decide retained-source Route A or reproducible-generation Route B from evidence, not preference.
 6. If complete, make the smallest ARM64 compile/ABI test. If incomplete, write `BOOTSTRAP-BLOCKERS.md` and one bounded independent shell/input/renderer result, then hand off the missing-source requirement.

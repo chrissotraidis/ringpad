@@ -92,6 +92,32 @@ insufficient by itself.
   and for `.local/baseline/r354`, `.local/linux-sdk`, `.local/working-product`
   and any `title-source/` directory, all mounted volumes (`/Volumes`), and the
   public GitHub namespace (see Blocker C).
+- **Exact acquisition route (verified this session).** The bundle is a single
+  local archive, not a repository: `tools/restore-baseline.py` reads
+  `baseline/development-bundle.json` and expects **12 local parts** in
+  `ref/sarecomp/.local/archives/`, concatenated into `r354-development.zip`:
+  - `r354-development.zip.part001` … `.part011` — 268,435,456 bytes each
+  - `r354-development.zip.part012` — 162,700,604 bytes
+  - concatenated archive — **3,115,490,620 bytes**, SHA-256
+    `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`, tag
+    `r354-baseline`, schema `sarecomp-private-release-bundle-v1`
+  The script verifies every part and the concatenation, then extracts exactly
+  `.local/baseline/r354/` (3,951 files) and `.local/toolchain/`, and **does not
+  download anything**. Its failure text is literally `Local development backup
+  part required: <name>. This archive is not distributed through GitHub.`
+  `baseline/dev-tools.json` pins the four `.local/toolchain/` entries the build
+  links: `katana_core.lib` (197,431,946 B), `katana_runtime_core.lib`
+  (63,507,406 B), `r354.katana-native-port` (37,660 B) and
+  `sonic-native-provider-refresh.exe` (329,216 B).
+- **Upstream statement (quoted).** `docs/DEVELOPMENT.md`: "The old development
+  recovery archive contained installed original game data and has been removed
+  from GitHub, together with its release tag. It must not be uploaded again.
+  … Maintainers with an existing local backup can use `tools/restore-baseline.py`;
+  it requires local archive parts and does not download them. A complete
+  clean-machine source bootstrap is not yet provided or claimed to be tested."
+  The bundle schema name (`sarecomp-private-release-bundle-v1`) and tag
+  (`r354-baseline`) match that retired release, so the only sanctioned source is
+  a maintainer-held local backup or authenticated generator access.
 - **Acceptable replacement:** the owner's authenticated r354 development bundle
   or a complete source-only development package covering: the Katana AOT and
   native-port runtime **source and headers**; the retained/generated title
@@ -110,6 +136,29 @@ repository matching the pinned SDK (`sonicfreak1337/KatanaRecomp`, `.../Katana`,
 absent/private). This is a bounded result, not proof that no private or later
 release exists. If Chris has authenticated access to such a repository, that
 alone may close Blocker B.
+
+Re-run this session with an authenticated `gh` (account `chrissotraidis`,
+scopes `gist, read:org, repo, workflow`) and a fresh code search:
+
+- `sonicfreak1337` exposes **only** the public `SARecomp` repo — one branch
+  (`main` = the pinned `d5288fe`), one tag (`v0.50.0-beta.1`) and one release
+  whose six assets are Windows/Linux/Steam Deck **player installers only**, no
+  source or Apple inputs. The public clone carries no `.gitmodules`, no
+  bootstrap script and no Katana source tree; `third_party/` is only
+  `sdl3`/x64 `SDL3.dll`, `volk` and `vulkan-headers`.
+- `gh search repos` for `katana-recomp`, `KatanaRecomp` and
+  `sonic recompiled dreamcast` returns only `sonicfreak1337/SARecomp`.
+- `gh search code 'katana/runtime/native_port.hpp'` matches **only inside
+  `sonicfreak1337/SARecomp` itself** (consumers). No repository anywhere in the
+  searchable index ships the header closure.
+- The pinned clone has **no Apple/macOS/iOS build files** at all; `cmake/` is
+  Windows + Linux only (`PinnedSdk.cmake` imports Windows `.lib`/`.dll`;
+  `SonicLinux.cmake` + `Linux*.cmake` are x86-64 Linux). There is no upstream
+  Apple target to start from.
+
+Conclusion unchanged: the route is a **maintainer-held local backup of the
+retired `r354-baseline` archive** (Blocker B), or authenticated generator
+access. It is not reachable from public GitHub.
 
 ## Environment blocker — Apple toolchain license
 
@@ -139,6 +188,12 @@ Apple target build can proceed until the license is accepted.
    build source (`sdk/ffmpeg`, 154 files); and the 6 title files that differ
    from the public clone. Prebuilt Windows `.lib` archives alone are **not**
    acceptable Apple inputs.
+   - **Preferred form:** the 12-part `r354-development.zip.part001…012` archive
+     (`r354-baseline` tag; concatenated size 3,115,490,620 bytes; archive
+     SHA-256 `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`),
+     dropped into `ref/sarecomp/.local/archives/`; `tools/restore-baseline.py`
+     will then verify and lay down the closure without any download. Do **not**
+     upload it to GitHub — `docs/DEVELOPMENT.md` explicitly forbids that.
 3. Accept the Xcode license once: `sudo xcodebuild -license accept`.
 
 ## Draft request (send manually; SonicPad does not message anyone)
@@ -154,6 +209,13 @@ is blocked on two source inputs and I'd like to request them, source-only:
 >    documented reproducible generation route with the matching generator
 >    sources. I do not need prebuilt Windows binaries; I need the sources and
 >    generated headers to build Apple targets.
+>
+>    If the easiest path is the retired `r354-baseline` development archive,
+>    the 12-part `r354-development.zip.part001…012` set is what I need locally
+>    (concatenated SHA-256
+>    `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`);
+>    `tools/restore-baseline.py` verifies and restores it without downloading.
+>    No public upload is needed or wanted.
 >
 > No game data, saves or prebuilt binaries need to be sent — only the source
 > package and a pointer to where I can place the PAL GDI I own.

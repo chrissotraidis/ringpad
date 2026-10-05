@@ -2,13 +2,21 @@
 
 Updated: **5 October 2026**. Private integration workspace; publication not approved.
 
-Revalidated 2026-10-05 (third consecutive goal turn on the same condition): the two
-G1 prerequisites and the Apple-toolchain license are unchanged. A fresh filesystem
-sweep found no GDI/CHD/CUE/ISO Dreamcast image and no `.local` source closure; the
-home `.local` is the XDG tool directory, not a SARecomp baseline. `supported_disc.hpp`
-still accepts exactly one release (PAL v1.003). `/usr/bin/clang++` now also fails
-with the license message, so the gate blocks every Apple compile, not only
-`xcodebuild`/`simctl`. Host suites stay 46/46 + 50/50 + 46/46 PASS.
+Revalidated 2026-10-05 ("figure it out" turn): the two G1 prerequisites and the
+Apple-toolchain license are unchanged, but the acquisition route is now **exact**
+instead of vague. G1's missing source is one retired local archive, not a
+repository: the 12-part `r354-development.zip.part001…012` set (tag
+`r354-baseline`, concatenated 3,115,490,620 bytes, archive SHA-256
+`07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`) restorable by
+`tools/restore-baseline.py` with **no download**; upstream `DEVELOPMENT.md`
+states it "has been removed from GitHub… must not be uploaded again" and that a
+clean-machine source bootstrap "is not yet provided." A full-filesystem sweep and
+an authenticated `gh` code search found no other route: `sonicfreak1337` exposes
+only the public SARecomp (one branch, one tag, player-installer release assets,
+no Apple build files, no Katana source). `supported_disc.hpp` still accepts
+exactly one release (PAL v1.003). `/usr/bin/clang++` fails with the license
+message, so the gate blocks every Apple compile, not only `xcodebuild`/`simctl`.
+Host suites stay 46/46 + 50/50 + 46/46 PASS.
 
 Snapshot: this session's work is committed locally on `main` (never pushed).
 
@@ -63,6 +71,9 @@ source.
 
 Next step: Chris supplies the two missing private prerequisites described in
 docs/BOOTSTRAP-BLOCKERS.md — (a) the supported PAL v1.003 GDI with all three
-tracks, and (b) the source-only Katana/runtime/title closure or a reproducible
-generation route. G0 also needs one-time acceptance of the Xcode license by
-Chris before any Apple compile or link is possible.
+tracks, and (b) the 12-part `r354-baseline` development archive (or the
+equivalent source-only Katana/runtime/title closure, or authenticated generator
+access). Placing the archive in `ref/sarecomp/.local/archives/` lets
+`python3 ref/sarecomp/tools/restore-baseline.py` restore it with no download.
+G0 also needs one-time acceptance of the Xcode license by Chris
+(`sudo xcodebuild -license accept`) before any Apple compile or link is possible.

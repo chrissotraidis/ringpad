@@ -155,3 +155,19 @@ Hygiene: no Simulator or game launched; no saves/profile used. Stored device pli
 Interpretation: the absence boundary is executable and false-readiness cases are tested. This does not close G1 or justify a G2 build. Asked for the accessible authenticated Katana package/repository path while completing independent work; no answer/source-state change yet.
 Next exact input: matching Katana/runtime/generated guest/SDK/provider/media/auxiliary source or declared reproducible generator route, and owner's PAL v1.003 GDI/three tracks. Full Xcode license acceptance remains a separate mobile prerequisite. This is the second resumed goal turn with the same source/disc boundary; meaningful bounded work completed before handoff.
 ```
+
+---
+
+## 2026-10-05 02:36 CDT — Third resumed turn: verified external boundary, goal parked
+
+```text
+Previous goal-turn classification: progress (18794e9 added executable input audits, dependency lock and provenance records). Current turn revalidates unchanged blockers; status restatement is not implementation progress.
+Root/state: 18794e9, clean at start; docs-only close. Known implementation file hashes still match bootstrap-verifier-implementation.json. Source/reference pins and private-only authority unchanged.
+G0: macOS CLT lane remains verified; full Xcode requires EA2002 while accepted license remains EA1990. No attempt to accept a license or change developer selection.
+G1: private-inputs/, .local/linux-sdk/, .local/baseline/r354/, .local/working-product/ absent. No supported GDI in declared private-inputs/pal-v1003/. No reply identifying an accessible source package/repository.
+Audit command: scripts/check-source-closure.sh --report docs/artifacts/2026-10-05-astra/blocked-audit.json. Explicitly waited to terminal, exit 2. Same result: guest 0/1474, headers 0/177, contracts 0/4, title/provider 38/39, runtime archive 0/1; FFmpeg 10139/10139 verified. Report SHA-256 7a8c96b08a9d31213a1e1ea59bbc3e6c0a96952e092504bde1d9a45c98e1bcd3.
+Regression: verified hashes of known Apple test binaries before executing them; 46/46 + 50/50 + 46/46 PASS. python3 tests/host/test_bootstrap_verifiers.py: 16/16 PASS. No unnecessary recompilation or core-build attempt.
+Hygiene: no Simulator/game launched, no save/profile used. Repository-safety check PASS and private evidence/source still ignored. No publication/message/request sent.
+Blocked audit decision: this is the third consecutive resumed goal turn on the same genuine source/disc access boundary. Available bounded source-recovery/host-input/bootstrap work is complete. The loop explicitly requires a source-acquisition handoff here instead of inventing a replacement runtime or retrying an impossible build. Mark goal blocked, not complete.
+Reopening input: accessible matching Katana/runtime/generated guest/header/provider/media/auxiliary source or a declared reproducible generator route, plus owner's PAL v1.003 GDI/three tracks. Source-only request and exact identities remain in BOOTSTRAP-BLOCKERS.md. Full Xcode license acceptance separately reopens mobile tooling; it cannot supply missing source.
+```

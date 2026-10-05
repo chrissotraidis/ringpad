@@ -3,6 +3,16 @@
 Updated: **5 October 2026, Astra audit**. Private-only; publication not approved.
 Root at audit start: `65fefee`. Unknown work preserved; no push or release.
 
+**Blocked audit, 02:36 CDT:** at `18794e9`, the third resumed goal turn confirms
+the same external prerequisites. `private-inputs/`, `.local/linux-sdk/`,
+`.local/baseline/r354/` and `.local/working-product/` remain absent; the source
+audit returns 2 with unchanged missing-file counts. Xcode still requires EA2002
+while EA1990 is accepted. The requested source path/repository has not been
+provided. Bounded independent work is finished; park the goal as **blocked**
+until matching source/dump access or an external prerequisite changes.
+Revalidated existing binary/source identities and ran 142 input checks plus
+16 verifier tests: all pass. No game build or Simulator launch was attempted.
+
 Continuation at `864ae6e`: added the read-only source/disc verifiers, an explicitly
 incomplete dependency lock and the required private provenance document.
 16 synthetic verifier regressions pass. The source audit verifies the complete

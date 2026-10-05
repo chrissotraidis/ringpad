@@ -98,7 +98,7 @@ Start is separate from the three-dot menu; the three-dot action is never Start.
 
 1. **State/adapter unit tests** — `tests/host/test_dreamcast_input.cpp`, run by
    `scripts/run-host-tests.sh`. Source-derived; currently 46/46 pass. The shell
-   mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (34/34 pass,
+   mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (50/50 pass,
    same runner).
 2. **Simulator view-event routing** — not run. `xcrun simctl io ... screenshot`
    captures an image and does not test touch.

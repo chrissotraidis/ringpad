@@ -41,10 +41,11 @@ log="$out/host-tests.log"
 run_suite() {
     name="$1"; shift
     bin="$out/$name"
+    rm -f "$bin"
     "$CXX" -std=c++20 -Wall -Wextra -Werror -O2 -I port/input "$@" \
         -o "$bin" --ld-path="$LLD" -isysroot "$SDK" \
         -L "$CXXLIB" -Wl,-rpath,"$CXXLIB" > "$out/$name.build.out" 2>&1
-    if [ ! -x "$bin" ]; then
+    if [ $? -ne 0 ] || [ ! -x "$bin" ]; then
         cat "$out/$name.build.out" | tee -a "$log"
         echo "BUILD FAILED: $name" | tee -a "$log"
         return 4

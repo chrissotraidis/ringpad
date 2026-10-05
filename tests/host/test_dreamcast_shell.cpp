@@ -11,6 +11,7 @@
 #include "DreamcastInputMixer.h"
 #include "DreamcastInputState.h"
 
+#include <cmath>
 #include <cstdio>
 
 using namespace sonicpad;
@@ -26,6 +27,8 @@ static int g_checks = 0;
             std::printf("FAIL: %s (%s:%d)\n", (msg), __FILE__, __LINE__);      \
         }                                                                      \
     } while (0)
+
+static bool near(float a, float b, float eps = 0.002f) { return std::fabs(a - b) <= eps; }
 
 static SonicPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
                                    uint8_t l = 0, uint8_t r = 0, int connected = 1) {
@@ -136,6 +139,69 @@ static void test_controller_slots() {
     CHECK(r.assigned.size() == 1 && r.assigned[0].slot == 0, "freed slot 0 is reused");
 }
 
+/* 9. Chords: movement + action + trigger, and two independent triggers. */
+static void test_chords() {
+    /* Movement + jump/action + one trigger, all in one canonical state. */
+    const auto chord = adapt(make(100, 40, SonicPadDC_A, 180, 0));
+    CHECK(held(chord, DreamcastAction::A), "chord keeps A");
+    CHECK(chord.move_x > 0.0f && chord.move_y > 0.0f, "chord keeps movement");
+    CHECK(held(chord, DreamcastAction::LeftTrigger), "chord keeps L trigger");
+
+    /* Two-trigger interaction: L and R stay independent and both cross. */
+    const auto two = adapt(make(0, 0, 0, 200, 200));
+    CHECK(held(two, DreamcastAction::LeftTrigger) && held(two, DreamcastAction::RightTrigger),
+          "both triggers held together");
+    CHECK(near(two.left_trigger, 200.0f / 255.0f) && near(two.right_trigger, 200.0f / 255.0f),
+          "both trigger values preserved");
+
+    /* Simultaneous face buttons are all delivered. */
+    const auto faces = adapt(make(0, 0, SonicPadDC_A | SonicPadDC_B | SonicPadDC_X | SonicPadDC_Y));
+    CHECK(held(faces, DreamcastAction::A) && held(faces, DreamcastAction::B) &&
+              held(faces, DreamcastAction::X) && held(faces, DreamcastAction::Y),
+          "all four faces held at once");
+}
+
+/* 10. Rapid distinct taps each land exactly once and are not merged. */
+static void test_rapid_taps() {
+    EdgeLatch latch;
+    latch.press(SonicPadDC_A);
+    CHECK((latch.consume(0) & SonicPadDC_A) != 0u, "tap 1 A delivered");
+    latch.press(SonicPadDC_B);
+    CHECK((latch.consume(0) & SonicPadDC_B) != 0u, "tap 2 B delivered");
+    latch.press(SonicPadDC_X);
+    latch.press(SonicPadDC_Y);
+    const unsigned both = latch.consume(0);
+    CHECK((both & SonicPadDC_X) != 0u && (both & SonicPadDC_Y) != 0u, "coalesced taps both delivered");
+    CHECK((latch.consume(0)) == 0u, "no taps replayed");
+}
+
+/* 11. Slide-out/cancel: releasing a control clears its held value and, with a
+ * modal clear, leaves no stuck axis; returning to play needs a fresh press. */
+static void test_slide_out_and_modal_clear() {
+    DreamcastInputMixer mixer;
+    /* Finger slid off the stick while A is held. */
+    mixer.setState(make(127, 0, SonicPadDC_A), true);
+    CHECK(mixer.consumeMerged().moveX == 127, "stick deflected before slide-out");
+
+    /* Control release drops the stick back to center (no stuck axis). */
+    mixer.setState(make(0, 0, SonicPadDC_A), true);
+    const auto recentered = mixer.consumeMerged();
+    CHECK(recentered.moveX == 0 && recentered.moveY == 0, "slide-out recenters the stick");
+    CHECK((recentered.buttons & SonicPadDC_A) != 0u, "A still held while pressed");
+
+    /* Opening a shell sheet clears everything and queues nothing to replay. */
+    mixer.clearAll();
+    const auto after_modal = mixer.consumeMerged();
+    CHECK(after_modal.buttons == 0u && after_modal.moveX == 0 && after_modal.connected == 0,
+          "modal open clears held state");
+    const auto still_clear = mixer.consumeMerged();
+    CHECK(still_clear.buttons == 0u, "no queued input replays after the modal");
+
+    /* Returning to play requires a fresh press. */
+    mixer.setState(make(0, 0, SonicPadDC_Start), false);
+    CHECK((mixer.consumeMerged().buttons & SonicPadDC_Start) != 0u, "fresh press after modal works");
+}
+
 int main() {
     test_single_source();
     test_merge_two_sources();
@@ -145,6 +211,9 @@ int main() {
     test_mapping_invalid_fallback();
     test_mapping_assign();
     test_controller_slots();
+    test_chords();
+    test_rapid_taps();
+    test_slide_out_and_modal_clear();
 
     std::printf("\n%d/%d checks passed\n", g_checks - g_failures, g_checks);
     if (g_failures) {

@@ -30,7 +30,7 @@ Source closure: **blocked**. Two independent, exact prerequisites are missing
 Highest observed target and behavior: **host source-derived logic tests only.**
 The game-independent Dreamcast input adapter and edge latch pass 46/46 host
 checks, and the single-stick shell layer reused from pinned SunPad (mixer,
-narrow face mapping, player slots) passes 34/34. No Apple target has been
+narrow face mapping, player slots) passes 50/50. No Apple target has been
 configured, compiled, linked or run.
 
 Known-good build/run/test command: scripts/run-host-tests.sh (host logic; two

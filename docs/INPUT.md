@@ -29,6 +29,7 @@ arbitration:
 | Touch/controller merge | `port/input/DreamcastInputMixer.{h,cpp}` | `ref/sunpad/apple/shared/SunPadInputMixer.mm` | Removed the GameCube C-stick axis; one movement stick only |
 | Narrow face remap | `port/input/DreamcastControllerMapping.{h,cpp}` | `ref/sunpad/apple/shared/SunPadControllerMapping.mm` | Four face buttons only; dropped Z and the FLUDD shoulder-pressure helper |
 | Player-slot bookkeeping | `port/input/DreamcastControllerSlots.h` | `ref/sunpad/apple/ios/SunPadControllerSlots.h` | Intent unchanged: GameController stays the connection authority |
+| Touch layout + per-touch arbitration | `port/input/DreamcastTouchLayout.{h,cpp}` | `ref/sunpad/apple/ios/SunPadGameOverlay.mm` | One stick, no C-stick/Z; shoulder slide without the FLUDD detent |
 
 The mixer OR's buttons with rising-edge latching (so a sub-sample tap survives
 exactly once), takes the strongest movement axis (no stuck axis), keeps L/R
@@ -81,11 +82,18 @@ Per-touch identity and ownership arbitration belong to the shell overlay
 release another finger's button; a second controller must not steal P1; SDL and
 GameController must not each feed the same physical event.
 
-## Default touch layout (intent; not yet wired)
+## Default touch layout
+
+`port/input/DreamcastTouchLayout.h` holds the game-independent geometry and
+ownership rules; the Apple view applies safe-area insets and pixel scaling. A
+placement is a circle whose center is normalized to the view width/height and
+whose radius is a fraction of the smaller view dimension, so the arrangement
+stays usable on any aspect ratio. The list is ordered highest hit priority
+first, and the movement stick is last because its region is the largest.
 
 | Control | Touch default | Physical default |
 |---|---|---|
-| Movement stick | Large left-side stick, safe-area aware | Left thumbstick |
+| Movement stick | Large left-side stick, radial, safe-area aware | Left thumbstick |
 | D-pad | Compact cluster near the left thumb | D-pad |
 | A / B / X / Y | Dreamcast diamond: A bottom, B right, X left, Y top | Positional face buttons |
 | L / R | Left/right shoulder regions; slide supplies the analog value | Analog triggers |
@@ -93,13 +101,24 @@ GameController must not each feed the same physical event.
 | Three-dot menu | Persistent native button, never hidden | Optional host binding |
 
 Start is separate from the three-dot menu; the three-dot action is never Start.
+There is exactly one movement stick and no C-stick, Z or FLUDD detent: the
+shoulder value rises linearly across its region, with the right edge a full
+press and no digital-click jump.
+
+`DreamcastTouchArbiter` owns per-touch identity. Each active touch latches one
+control at `begin()`; only its continuous value follows the finger, so sliding
+off the stick cannot fire a button underneath. Lifting or cancelling one finger
+releases only that finger's contribution, and `clear()` (on modal, layout edit,
+owner change, focus loss or lifecycle transition) drops every held value and
+stick deflection.
 
 ## Acceptance levels
 
 1. **State/adapter unit tests** — `tests/host/test_dreamcast_input.cpp`, run by
    `scripts/run-host-tests.sh`. Source-derived; currently 46/46 pass. The shell
-   mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (50/50 pass,
-   same runner).
+   mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (50/50 pass)
+   and the touch layout/arbiter by `tests/host/test_dreamcast_touch.cpp`
+   (46/46 pass), both via the same runner.
 2. **Simulator view-event routing** — not run. `xcrun simctl io ... screenshot`
    captures an image and does not test touch.
 3. **Physical multitouch/controller** — not run; reserved for the owner on the

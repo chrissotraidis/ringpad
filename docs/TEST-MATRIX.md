@@ -44,7 +44,7 @@ failed. Nothing here is a green technical matrix; the private technical bar
 | 17 | Final Super Sonic story | M; mobile late fixture | **not-run** | — | Requires rows 2–4 and a normal unlock path. |
 | 18 | Fields and auxiliary paths | M; affected mobile routes | **not-run** | — | Includes the Mini Cart auxiliary AOT path; part of the missing closure. |
 | 19 | Chao operations | M, IS, PS | **not-run** | — | Requires rows 2–4. |
-| 20 | Complete input-state contract | Host tests | **partial** | host unit test | `./scripts/run-host-tests.sh` → 46/46 (adapter) + 50/50 (shell) pass. State level covers the canonical one-stick profile, radial deadzone, analog L/R thresholds, edge latch, the touch/controller mixer, the narrow face mapping, player-slot ownership, chords, rapid distinct taps, slide-out recentering and modal clear. Still open: real view-event routing, owner transitions through the Apple overlay and live shell clearing. See [`INPUT.md`](INPUT.md). |
+| 20 | Complete input-state contract | Host tests | **partial** | host unit test | `./scripts/run-host-tests.sh` → 46/46 (adapter) + 50/50 (shell) + 46/46 (touch) pass. State level covers the canonical one-stick profile, radial deadzone, analog L/R thresholds, edge latch, the touch/controller mixer, the narrow face mapping, player-slot ownership, chords, rapid distinct taps, slide-out recentering, modal clear, the touch layout (one stick, no C-stick/Z), hit priority, stick normalization and shoulder slide without a detent. Still open: real view-event routing, owner transitions through the Apple overlay and live shell clearing. See [`INPUT.md`](INPUT.md). |
 | 21 | Actual touch/UI path | IS, PS | **not-run** | — | Needs a built Apple target and view-event routing; `xcrun simctl io screenshot` does not test touch. |
 | 22 | Three-dot/settings parity | IS, PS | **not-run** | — | Needs the built shell. |
 | 23 | Import/reimport failure safety | IS, PS | **not-run** | — | Needs the built shell; the setup engine's failure paths are source-visible only. |
@@ -53,7 +53,7 @@ failed. Nothing here is a green technical matrix; the private technical bar
 | 26 | Timing/performance | M + diagnostic mobile runs | **not-run** | — | Needs a playable core. |
 | 27 | Diagnostics/privacy | M, IS, PS | **not-run** | — | Needs the built shell. |
 | 28 | Soak/repeated transitions | M + IS | **not-run** | — | Needs a playable core. |
-| 29 | Regression suite | Host + highest-good targets | **partial** | host unit test | Two input host suites exist and pass (`test_dreamcast_input` 46/46, `test_dreamcast_shell` 50/50); no end-to-end smoke is possible without a built target. |
+| 29 | Regression suite | Host + highest-good targets | **partial** | host unit test | Three input host suites exist and pass (`test_dreamcast_input` 46/46, `test_dreamcast_shell` 50/50, `test_dreamcast_touch` 46/46); no end-to-end smoke is possible without a built target. |
 | 30 | Clean-machine reproduction | New directory | **blocked** | source inspection | Cannot reproduce from pins plus declared private inputs while the private inputs are absent (rows 2/3). |
 | 31 | Physical exact candidate | Physical iPad + iPhone | **not-run** | — | No candidate build exists. |
 | 32 | Publication authorization | Source + package | **not-run** | — | Not requested; private-only. |
@@ -71,6 +71,7 @@ rows 1, 20 and 29 and to no other row, and it does not advance G1.
 | Edge latch (sub-sample tap delivered exactly once) | **partial pass** | host unit test | `port/input/DreamcastInputState.h` `EdgeLatch`; adapter suite |
 | Touch/controller mixer (single stick, rising-edge latch, clearAll) | **partial pass** | host unit test | `port/input/DreamcastInputMixer.{h,cpp}`, from SunPad mixer; 50/50 shell suite |
 | Narrow face-button mapping + player slots | **partial pass** | host unit test | `port/input/DreamcastControllerMapping.{h,cpp}`, `DreamcastControllerSlots.h`; shell suite |
+| Touch layout (one stick) + per-touch arbitration | **partial pass** | host unit test | `port/input/DreamcastTouchLayout.{h,cpp}`, from SunPad overlay; 46/46 touch suite |
 | Reference pins frozen read-only (SARecomp/SunPad/PaperPad) | **passed** | source inspection | `ref/sarecomp` `d5288fe`, `ref/sunpad` `c77dd61`, `ref/paperpad` `a6f6999`, all push DISABLED |
 | Simulator view-event routing | **not-run** | — | needs a built Apple target + accepted license |
 | Physical multitouch/controller | **not-run** | — | reserved for row 31 |

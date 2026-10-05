@@ -66,4 +66,9 @@ run_suite test_dreamcast_shell \
     port/input/DreamcastInputAdapter.cpp port/input/DreamcastInputMixer.cpp \
     port/input/DreamcastControllerMapping.cpp tests/host/test_dreamcast_shell.cpp
 rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
+run_suite test_dreamcast_touch \
+    port/input/DreamcastTouchLayout.cpp tests/host/test_dreamcast_touch.cpp
+rc=$?
 exit "$rc"

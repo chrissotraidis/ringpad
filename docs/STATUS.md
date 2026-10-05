@@ -28,12 +28,13 @@ Source closure: **blocked**. Two independent, exact prerequisites are missing
    (Katana source/runtime, generated AOT, title source) is not present locally.
 
 Highest observed target and behavior: **host source-derived logic tests only.**
-The game-independent Dreamcast input adapter and edge latch pass 46/46 host
-checks, and the single-stick shell layer reused from pinned SunPad (mixer,
-narrow face mapping, player slots) passes 50/50. No Apple target has been
+Three suites pass: the game-independent Dreamcast input adapter and edge latch
+(46/46), the single-stick shell layer reused from pinned SunPad (mixer, narrow
+face mapping, player slots; 50/50), and the touch layout + per-touch arbiter
+reused from the pinned SunPad overlay (46/46). No Apple target has been
 configured, compiled, linked or run.
 
-Known-good build/run/test command: scripts/run-host-tests.sh (host logic; two
+Known-good build/run/test command: scripts/run-host-tests.sh (host logic; three
 suites, uses the self-contained Homebrew LLVM chain, not the Apple toolchain).
 
 Exact artifact/source identity: SARecomp pin

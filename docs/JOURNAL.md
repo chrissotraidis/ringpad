@@ -58,3 +58,21 @@ Evidence path and artifact SHA-256: docs/artifacts/host-tests/{host-tests.log,te
 Interpretation and affected regressions: The single-stick Dreamcast profile now covers the mixer, narrow face mapping and slot bookkeeping at the state level, reusing the pinned donor mechanisms rather than inventing new arbitration. This is host-logic evidence only: no Apple target is compiled, no Simulator view-event routing is exercised, and no physical controller is involved. Row 20 advances within its state subset but stays partial; rows 21/25/31 stay open; the regression suite (row 29) now has two passing host suites. G1 stays blocked and unchanged.
 Next smallest step / external prerequisite: Chris (a) accepts the Xcode license, (b) supplies the PAL v1.003 GDI with all three tracks, and (c) supplies the source-only Katana/runtime/title closure or authenticated generator access. Until then the only further bounded work is more donor-shell extraction (Apple overlay/lifecycle/settings), kept labeled independent of G1.
 ```
+
+---
+
+## 2026-10-05 04:06 CDT — G1-independent bounded step: touch layout + per-touch arbitration
+
+```text
+Date/time and timezone:  2026-10-05 04:06 CDT
+Goal / current matrix row: Lowest unmet goal stays G1 (blocked); bounded G1-independent workstream; matrix rows 20 and 29
+Root revision + dirty patch identity: 96cea04 (local commit, never pushed); this step adds new port/input/DreamcastTouchLayout.{h,cpp}, tests/host/test_dreamcast_touch.cpp, and edits scripts/run-host-tests.sh plus docs
+Source pack / dependency lock / SDK / target: SARecomp d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2 in ref/sarecomp; SunPad c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b in ref/sunpad; PaperPad a6f6999a570156f6794ff3fa79f810cfad71c4fc in ref/paperpad; all push DISABLED. No r354 closure present. Host target = arm64 macOS logic only (Homebrew LLVM).
+Input and isolated profile identity: ref/Sonic Adventure.cdi SHA-256 105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533 (present, incompatible; not used by this step)
+Hypothesis / expected observation: The game-neutral touch mechanics of the pinned SunPad overlay (ref/sunpad/apple/ios/SunPadGameOverlay.mm: normalized centers, +Y-up stick normalization, slide-valued shoulders, per-control tracking) can be ported to a pure model for the single-stick Dreamcast profile, so the default layout has one stick and no C-stick/Z, a face button inside the larger movement region still wins, lifting one finger does not release another's button, and a modal clear leaves no stuck axis.
+Change and exact command: Added DreamcastTouchLayout.{h,cpp}: 12-placement default layout (phone + tablet), priority-ordered circular hit test, stick normalization clamped to the unit circle with +Y up, linear shoulder slide (no FLUDD detent/hysteresis), and DreamcastTouchArbiter with per-touch latched control plus begin/move/end/cancel/clear. Added tests/host/test_dreamcast_touch.cpp (7 groups) and taught scripts/run-host-tests.sh a third suite; ran ./scripts/run-host-tests.sh and ./scripts/check-repo-safety.sh.
+Actual result / first causal error: test_dreamcast_input 46/46 PASS; test_dreamcast_shell 50/50 PASS; test_dreamcast_touch 46/46 PASS; combined exit 0. Safety check VERDICT safe, HEAD 96cea04. No error.
+Evidence path and artifact SHA-256: docs/artifacts/host-tests/{host-tests.log,test_dreamcast_touch.build.out,test_dreamcast_touch.run.out,test_dreamcast_touch} (ignored). test_dreamcast_touch SHA-256 dcc836e9a9362fa6e551f3229fb1db94c02114b05e519819ef6f971750ef6064
+Interpretation and affected regressions: The single-stick profile now also covers the touch layout and per-touch ownership at the state level, reusing the pinned donor overlay rather than inventing new geometry or arbitration. This is host-logic evidence only: UIKit view-event delivery and physical multitouch are unexercised, so rows 21/25/31 stay open and row 20 stays partial. G1 remains blocked and unchanged.
+Next smallest step / external prerequisite: Chris (a) accepts the Xcode license, (b) supplies the PAL v1.003 GDI with all three tracks, and (c) supplies the source-only Katana/runtime/title closure or authenticated generator access. Further bounded work can continue on donor-shell extraction (settings/diagnostics/lifecycle model), kept labeled independent of G1.
+```

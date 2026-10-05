@@ -2,6 +2,14 @@
 
 Updated: **5 October 2026**. Private integration workspace; publication not approved.
 
+Revalidated 2026-10-05 (third consecutive goal turn on the same condition): the two
+G1 prerequisites and the Apple-toolchain license are unchanged. A fresh filesystem
+sweep found no GDI/CHD/CUE/ISO Dreamcast image and no `.local` source closure; the
+home `.local` is the XDG tool directory, not a SARecomp baseline. `supported_disc.hpp`
+still accepts exactly one release (PAL v1.003). `/usr/bin/clang++` now also fails
+with the license message, so the gate blocks every Apple compile, not only
+`xcodebuild`/`simctl`. Host suites stay 46/46 + 50/50 + 46/46 PASS.
+
 Snapshot: this session's work is committed locally on `main` (never pushed).
 
 Lowest unmet goal: **G1 — complete source and game inputs.** G0 is met except

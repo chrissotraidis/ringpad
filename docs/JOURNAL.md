@@ -76,3 +76,21 @@ Evidence path and artifact SHA-256: docs/artifacts/host-tests/{host-tests.log,te
 Interpretation and affected regressions: The single-stick profile now also covers the touch layout and per-touch ownership at the state level, reusing the pinned donor overlay rather than inventing new geometry or arbitration. This is host-logic evidence only: UIKit view-event delivery and physical multitouch are unexercised, so rows 21/25/31 stay open and row 20 stays partial. G1 remains blocked and unchanged.
 Next smallest step / external prerequisite: Chris (a) accepts the Xcode license, (b) supplies the PAL v1.003 GDI with all three tracks, and (c) supplies the source-only Katana/runtime/title closure or authenticated generator access. Further bounded work can continue on donor-shell extraction (settings/diagnostics/lifecycle model), kept labeled independent of G1.
 ```
+
+---
+
+## 2026-10-05 04:35 CDT — G1 revalidation (no change) and hard Apple-toolchain confirmation
+
+```text
+Date/time and timezone:  2026-10-05 04:35 CDT
+Goal / current matrix row: Lowest unmet goal G1 (blocked, re-verified); G0 toolchain step; matrix rows 1, 2, 3, 20, 29
+Root revision + dirty patch identity: d537e3a (local commit, never pushed); tree clean; this step edits docs only
+Source pack / dependency lock / SDK / target: SARecomp d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2, SunPad c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b, PaperPad a6f6999a570156f6794ff3fa79f810cfad71c4fc — all three rev-parse-confirmed and push DISABLED. No .local/ closure. Host target = arm64 macOS logic only (Homebrew LLVM).
+Input and isolated profile identity: ref/Sonic Adventure.cdi re-hashed this session — 105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533, 757,339,066 bytes (unchanged, incompatible). No .gdi/.chd/.cue/.iso Dreamcast image anywhere; the whole Dreamcast library is .cdi.
+Hypothesis / expected observation: (a) The two G1 prerequisites remain unmet with no new local material. (b) The Apple toolchain cannot compile any target until the license is accepted, even via /usr/bin/clang++.
+Change and exact command: Re-ran a filesystem sweep for *.gdi/*.chd/*.cue/*.iso/*.mds/*.nrg/*.cdi and for katana_generated.lib/unit-*.cpp/katana-source-*.zip/native-content/.local; re-read src/setup/supported_disc.hpp; inspected ref/sarecomp third_party (only sdl3/volk/vulkan-headers, no .gitmodules/bootstrap); attempted an Apple compile probe: /usr/bin/clang++ -std=c++20 -target arm64-apple-macos12.1 probe.cpp. Also verified the ported guest mask against src/sonic_input.cpp sample() (result.pad = p.buttons, plus bits 14/15 when left/right_trigger_raw > 64) and re-ran ./scripts/run-host-tests.sh and ./scripts/check-repo-safety.sh.
+Actual result / first causal error: The home `.local` found by the sweep is the XDG tool dir (bin/share/state: claude, grok, opencode), not the SARecomp baseline; ref/sarecomp/.local does not exist. supported_disc.hpp accepts exactly one release (PAL v1.003, three tracks, required_gdi_sha256 d6e47505…); no GDI exists. Apple probe: /usr/bin/clang++ prints "You have not agreed to the Xcode license agreements" and produces no binary — the license gate blocks even Apple clang, not only xcodebuild/simctl. Host tests still 46/46 + 50/50 + 46/46 PASS (exit 0); safety VERDICT safe, HEAD d537e3a.
+Evidence path and artifact SHA-256: docs/artifacts/host-tests/* (unchanged: test_dreamcast_input 1d3019f6…, test_dreamcast_shell 07d41255…, test_dreamcast_touch dcc836e9…). Raw outputs kept in this entry.
+Interpretation and affected regressions: G0 reference pinning and safety are met; the G0 toolchain-use step is hard-blocked by the license (no Apple compile of any kind). G1 stays blocked by the same two irreducible prerequisites, re-verified independently this turn. The single-stick profile's mask is confirmed faithful to the retained sample() boundary. No new defect. Rows 1/29 stay green within host scope; rows 2/3 stay blocked; row 20 stays partial.
+Next smallest step / external prerequisite: Chris (a) runs `sudo xcodebuild -license accept`, (b) supplies the PAL v1.003 GDI + three tracks under private-inputs/pal-v1003/, (c) supplies the source-only Katana/runtime/title closure or authenticated generator access. This is the third consecutive goal turn on the same condition.
+```

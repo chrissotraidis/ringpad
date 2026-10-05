@@ -3,6 +3,11 @@
 Updated: **5 October 2026, Astra audit**. Private-only; publication not approved.
 Root at audit start: `65fefee`. Unknown work preserved; no push or release.
 
+Continuation at `864ae6e`: added the read-only source/disc verifiers, an explicitly
+incomplete dependency lock and the required private provenance document.
+16 synthetic verifier regressions pass. The source audit verifies the complete
+materialized FFmpeg tree but remains blocked by the missing private inputs.
+
 Lowest unmet goal: **G0, partially reopened** — native macOS CLT builds now work;
 full Xcode/mobile tooling still requires the newer license. G1 remains unresolved.
 
@@ -57,6 +62,8 @@ Diagnostic commands intentionally exit 2 for open prerequisites:
 ```sh
 scripts/check-prerequisites.sh       # macOS probe passes; full Xcode unavailable
 python3 scripts/recover-title-source.py  # 38/39 verified; r354 CMake missing
+scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit.json
+python3 scripts/verify-game.py private-inputs/pal-v1003/sonic-adventure.gdi
 ```
 
 Evidence: `docs/artifacts/2026-10-05-astra/`,
@@ -65,6 +72,11 @@ Evidence: `docs/artifacts/2026-10-05-astra/`,
 See [JOURNAL.md](JOURNAL.md) for hashes and [TEST-MATRIX.md](TEST-MATRIX.md)
 for acceptance scope. Rows 1, 20 and 29 remain partial; gameplay/ABI rows
 cannot advance on shell-only evidence.
+
+`dependencies.lock.json` records verified pins/toolchain and unresolved graph
+entries, not a complete build closure. [RIGHTS-STATUS.md](RIGHTS-STATUS.md)
+records private-only authorization and inspected notices. Actual current commands
+and verifier scope are in [BUILDING.md](BUILDING.md).
 
 Next external input: an accessible authenticated Katana/runtime/generated-source
 package or generator repository/path, plus the owner's supported PAL dump.

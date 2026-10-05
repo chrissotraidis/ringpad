@@ -143,3 +143,23 @@ No request has been sent.
 G0: macOS CLT lane verified; full Xcode/mobile tools still blocked.
 G1: **unresolved** pending actual runtime, guest source, matching headers/providers,
 media integration, auxiliary code and exact disc. G2/gameplay remain not-run.
+
+## Executable recheck (retained-source input scope)
+
+```sh
+scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit.json
+python3 scripts/verify-game.py private-inputs/pal-v1003/sonic-adventure.gdi
+```
+
+The current audit verifies 38/39 title/provider files, 0/1,474 portable
+guest-source/metadata entries, 0/177 SDK headers, 0/4 SDK contract entries and
+0/1 Katana source archive. The two excluded Windows build metadata files are
+`build.ninja` and `compile_commands.json`; source/build configuration and
+generation metadata remain required. All 10,139 FFmpeg archive/materialized-file
+entries pass, including actual implementation bodies rather than cache stamps.
+Current source audit exit: 2. The provided CDI and absent GDI also return 2.
+
+The source audit checks the dependency lock and actual reference revisions.
+Even complete input hashes would not alone establish G1: the JSON deliberately
+records `g1_complete: false` and lists the remaining build/ABI, auxiliary,
+provenance and disc/extraction reviews. See [BUILDING.md](BUILDING.md).

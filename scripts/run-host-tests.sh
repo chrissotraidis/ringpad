@@ -27,7 +27,6 @@ fi
 
 out="docs/artifacts/host-tests"
 mkdir -p "$out"
-bin="$out/test_dreamcast_input"
 log="$out/host-tests.log"
 
 {
@@ -38,16 +37,32 @@ log="$out/host-tests.log"
     echo
 } | tee "$log"
 
-"$CXX" -std=c++20 -Wall -Wextra -Werror -O2 -I port/input \
-    port/input/DreamcastInputAdapter.cpp tests/host/test_dreamcast_input.cpp \
-    -o "$bin" --ld-path="$LLD" -isysroot "$SDK" \
-    -L "$CXXLIB" -Wl,-rpath,"$CXXLIB" > "$out/build.out" 2>&1
-rc=$?
-cat "$out/build.out" | tee -a "$log"
-if [ ! -x "$bin" ]; then echo "BUILD FAILED" | tee -a "$log"; exit 4; fi
+# Each suite is a self-contained binary. Fail fast on the first failure.
+run_suite() {
+    name="$1"; shift
+    bin="$out/$name"
+    "$CXX" -std=c++20 -Wall -Wextra -Werror -O2 -I port/input "$@" \
+        -o "$bin" --ld-path="$LLD" -isysroot "$SDK" \
+        -L "$CXXLIB" -Wl,-rpath,"$CXXLIB" > "$out/$name.build.out" 2>&1
+    if [ ! -x "$bin" ]; then
+        cat "$out/$name.build.out" | tee -a "$log"
+        echo "BUILD FAILED: $name" | tee -a "$log"
+        return 4
+    fi
+    "$bin" > "$out/$name.run.out" 2>&1
+    rc=$?
+    cat "$out/$name.run.out" | tee -a "$log"
+    echo "$name exit status: $rc" | tee -a "$log"
+    return "$rc"
+}
 
-"$bin" > "$out/run.out" 2>&1
+run_suite test_dreamcast_input \
+    port/input/DreamcastInputAdapter.cpp tests/host/test_dreamcast_input.cpp
 rc=$?
-cat "$out/run.out" | tee -a "$log"
-echo "exit status: $rc" | tee -a "$log"
+[ "$rc" -eq 0 ] || exit "$rc"
+
+run_suite test_dreamcast_shell \
+    port/input/DreamcastInputAdapter.cpp port/input/DreamcastInputMixer.cpp \
+    port/input/DreamcastControllerMapping.cpp tests/host/test_dreamcast_shell.cpp
+rc=$?
 exit "$rc"

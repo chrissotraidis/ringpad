@@ -21,6 +21,25 @@ SARecomp's guest snapshot at the verified boundary
 the analog triggers). The adapter is a pure function with no host I/O, so it is
 testable without a device and without the guest runtime.
 
+The shell side reuses the pinned SunPad mechanisms rather than re-inventing
+arbitration:
+
+| Shell mechanism | SonicPad file | Donor | Change from donor |
+|---|---|---|---|
+| Touch/controller merge | `port/input/DreamcastInputMixer.{h,cpp}` | `ref/sunpad/apple/shared/SunPadInputMixer.mm` | Removed the GameCube C-stick axis; one movement stick only |
+| Narrow face remap | `port/input/DreamcastControllerMapping.{h,cpp}` | `ref/sunpad/apple/shared/SunPadControllerMapping.mm` | Four face buttons only; dropped Z and the FLUDD shoulder-pressure helper |
+| Player-slot bookkeeping | `port/input/DreamcastControllerSlots.h` | `ref/sunpad/apple/ios/SunPadControllerSlots.h` | Intent unchanged: GameController stays the connection authority |
+
+The mixer OR's buttons with rising-edge latching (so a sub-sample tap survives
+exactly once), takes the strongest movement axis (no stuck axis), keeps L/R
+independent and continuous as the max of the two sources, and clears every held
+value and queued edge via `clearAll()` on modal, layout-edit, owner, focus and
+lifecycle transitions. The mapping validates that each face action holds a
+distinct allowed physical button and falls back to the default rather than
+dropping input; assigning swaps with the previous owner. The slot reconciler
+keeps P1 stable so a second controller cannot steal it and a disconnect frees
+exactly one slot.
+
 ## Guest mask (verified against the retained boundary)
 
 Copied from `ref/sarecomp/src/sonic_input_bindings.hpp`, not guessed:
@@ -78,11 +97,12 @@ Start is separate from the three-dot menu; the three-dot action is never Start.
 ## Acceptance levels
 
 1. **State/adapter unit tests** — `tests/host/test_dreamcast_input.cpp`, run by
-   `scripts/run-host-tests.sh`. Source-derived; currently 46/46 pass.
+   `scripts/run-host-tests.sh`. Source-derived; currently 46/46 pass. The shell
+   mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (34/34 pass,
+   same runner).
 2. **Simulator view-event routing** — not run. `xcrun simctl io ... screenshot`
    captures an image and does not test touch.
 3. **Physical multitouch/controller** — not run; reserved for the owner on the
    exact candidate.
 
 Levels 2 and 3 are open; passing level 1 is not evidence of either.
-

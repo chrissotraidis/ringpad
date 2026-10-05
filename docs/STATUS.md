@@ -27,20 +27,22 @@ Source closure: **blocked**. Two independent, exact prerequisites are missing
    is insufficient by its own docs/DEVELOPMENT.md; the pinned r354 bundle
    (Katana source/runtime, generated AOT, title source) is not present locally.
 
-Highest observed target and behavior: **host source-derived logic test only.**
+Highest observed target and behavior: **host source-derived logic tests only.**
 The game-independent Dreamcast input adapter and edge latch pass 46/46 host
-checks. No Apple target has been configured, compiled, linked or run.
+checks, and the single-stick shell layer reused from pinned SunPad (mixer,
+narrow face mapping, player slots) passes 34/34. No Apple target has been
+configured, compiled, linked or run.
 
-Known-good build/run/test command: scripts/run-host-tests.sh (host logic; uses
-the self-contained Homebrew LLVM chain, not the Apple toolchain).
+Known-good build/run/test command: scripts/run-host-tests.sh (host logic; two
+suites, uses the self-contained Homebrew LLVM chain, not the Apple toolchain).
 
 Exact artifact/source identity: SARecomp pin
 d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2 in ref/sarecomp (push disabled);
 provided dump ref/Sonic Adventure.cdi SHA-256
 105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533.
 
-Matrix: rows 1, 20 and 29 **partial pass** (workspace safety + input host
-suite); rows 2, 3 and 30 **blocked**; all other rows **not-run**. See
+Matrix: rows 1, 20 and 29 **partial pass** (workspace safety + two input host
+suites); rows 2, 3 and 30 **blocked**; all other rows **not-run**. See
 docs/TEST-MATRIX.md. Journal: docs/JOURNAL.md.
 
 Physical-device acceptance: not performed.

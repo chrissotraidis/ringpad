@@ -1,79 +1,73 @@
 # SonicPad status
 
-Updated: **5 October 2026**. Private integration workspace; publication not approved.
+Updated: **5 October 2026, Astra audit**. Private-only; publication not approved.
+Root at audit start: `65fefee`. Unknown work preserved; no push or release.
 
-Revalidated 2026-10-05 ("figure it out" turn): the two G1 prerequisites and the
-Apple-toolchain license are unchanged, but the acquisition route is now **exact**
-instead of vague. G1's missing source is one retired local archive, not a
-repository: the 12-part `r354-development.zip.part001…012` set (tag
-`r354-baseline`, concatenated 3,115,490,620 bytes, archive SHA-256
-`07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`) restorable by
-`tools/restore-baseline.py` with **no download**; upstream `DEVELOPMENT.md`
-states it "has been removed from GitHub… must not be uploaded again" and that a
-clean-machine source bootstrap "is not yet provided." A full-filesystem sweep and
-an authenticated `gh` code search found no other route: `sonicfreak1337` exposes
-only the public SARecomp (one branch, one tag, player-installer release assets,
-no Apple build files, no Katana source). `supported_disc.hpp` still accepts
-exactly one release (PAL v1.003). `/usr/bin/clang++` fails with the license
-message, so the gate blocks every Apple compile, not only `xcodebuild`/`simctl`.
-Host suites stay 46/46 + 50/50 + 46/46 PASS.
+Lowest unmet goal: **G0, partially reopened** — native macOS CLT builds now work;
+full Xcode/mobile tooling still requires the newer license. G1 remains unresolved.
 
-Snapshot: this session's work is committed locally on `main` (never pushed).
+**Progress this turn:**
 
-Lowest unmet goal: **G1 — complete source and game inputs.** G0 is met except
-for its toolchain-use step: the Apple SDKs are present but the license is not
-accepted, so no Apple compile or link is possible yet.
+- Found and verified the independently installed Apple Command Line Tools lane.
+  A native ARM64 Objective-C++ Foundation probe compiles, links and runs.
+  Mach-O target: MACOS, minimum 13.0, SDK 27.0. The earlier claim that all
+  Apple compiles are blocked is superseded.
+- All 142 single-stick Dreamcast checks pass with Apple clang 21.0.0
+  (46 adapter, 50 shell, 46 touch). The preserved Homebrew LLVM lane also passes.
+  The runner defaults to Apple CLT, honors compiler overrides and fails on a
+  compiler error before any stale binary can run.
+- Recovered **38/39 exact r354 title/provider source files** privately from
+  pinned/public Git history. Every staged size/hash matches the manifest;
+  the exact r354 CMake file remains missing.
+- Acquired and SHA-256 verified the pinned **FFmpeg implementation source**.
+  The retired SDK's headers/Windows binaries were incorrectly described as
+  codec source in the earlier inventory.
+- Completed a scoped local-source scan to exit 0: 1,235,012 filenames across
+  project, document, download, desktop, local-tool and mounted-volume roots;
+  zero traversal errors and zero relevant candidates. Earlier unfinished
+  root-wide searches did not establish an exhaustive machine-wide result.
+- Corrected the acquisition request to **source/metadata only**. The removed
+  12-part recovery archive contains game assets and is not the requested input.
 
-Authorization: private-only; publication not approved. No push, release or
-share is authorized.
+Source closure: **blocked**. Still missing the actual Katana runtime/compiler,
+generated guest code and SDK contracts, compatible providers/build configuration,
+audio/movie interfaces, auxiliary Mini Cart source/generator closure, and the
+exact owner's PAL v1.003 GDI/three tracks. The present V1.004 CDI is incompatible.
+The recovered title snapshot and FFmpeg source do not close these gaps.
 
-G0: references pinned and frozen read-only (SARecomp `d5288fe`, SunPad
-`c77dd61`, PaperPad `a6f6999`, all push-disabled); safety ignores and
-`scripts/check-repo-safety.sh` established. Xcode 27.0 and the macOS/iOS/iOS
-Simulator 27.0 SDKs are present, but the Apple toolchain is **license-blocked**,
-so G0 is not fully met and no Apple target can build yet.
+References verified: SARecomp `d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2`,
+SunPad `c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b`,
+PaperPad `a6f6999a570156f6794ff3fa79f810cfad71c4fc`; all push-disabled.
 
-Source closure: **blocked**. Two independent, exact prerequisites are missing
-(details in docs/BOOTSTRAP-BLOCKERS.md):
+Highest observed behavior: native macOS Foundation probe and input logic tests.
+No Katana core, SonicPad game app, graphics/media playback or gameplay build exists.
+No Simulator/game instance was launched. Stored device plists all say shutdown;
+live simctl inspection remains license-blocked. Physical acceptance not performed.
 
-1. **Game input incompatible** — only a multi-region MK-51000 V1.004 CDI
-   container is present. The supported target is PAL v1.003 MK-5100050 as a
-   three-track GDI, and no PAL GDI/track file exists on the machine.
-2. **Private Katana/title source closure missing** — the public SARecomp clone
-   is insufficient by its own docs/DEVELOPMENT.md; the pinned r354 bundle
-   (Katana source/runtime, generated AOT, title source) is not present locally.
+Known-good commands:
 
-Highest observed target and behavior: **host source-derived logic tests only.**
-Three suites pass: the game-independent Dreamcast input adapter and edge latch
-(46/46), the single-stick shell layer reused from pinned SunPad (mixer, narrow
-face mapping, player slots; 50/50), and the touch layout + per-touch arbiter
-reused from the pinned SunPad overlay (46/46). No Apple target has been
-configured, compiled, linked or run.
+```sh
+scripts/run-host-tests.sh
+SONICPAD_HOST_TOOLCHAIN=llvm scripts/run-host-tests.sh
+python3 scripts/fetch-media-source.py
+```
 
-Known-good build/run/test command: scripts/run-host-tests.sh (host logic; three
-suites, uses the self-contained Homebrew LLVM chain, not the Apple toolchain).
+Diagnostic commands intentionally exit 2 for open prerequisites:
 
-Exact artifact/source identity: SARecomp pin
-d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2 in ref/sarecomp (push disabled);
-provided dump ref/Sonic Adventure.cdi SHA-256
-105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533.
+```sh
+scripts/check-prerequisites.sh       # macOS probe passes; full Xcode unavailable
+python3 scripts/recover-title-source.py  # 38/39 verified; r354 CMake missing
+```
 
-Matrix: rows 1, 20 and 29 **partial pass** (workspace safety + two input host
-suites); rows 2, 3 and 30 **blocked**; all other rows **not-run**. See
-docs/TEST-MATRIX.md. Journal: docs/JOURNAL.md.
+Evidence: `docs/artifacts/2026-10-05-astra/`,
+`docs/artifacts/prerequisites.9Hgol1/`,
+`docs/artifacts/host-tests/{apple,llvm}/` and private source-provenance JSON.
+See [JOURNAL.md](JOURNAL.md) for hashes and [TEST-MATRIX.md](TEST-MATRIX.md)
+for acceptance scope. Rows 1, 20 and 29 remain partial; gameplay/ABI rows
+cannot advance on shell-only evidence.
 
-Physical-device acceptance: not performed.
-
-Open defect and unblocking rung reached: source-access boundary. Unblocking
-ladder rung 5 (resolve dependencies / research the exact contract) and rung 8
-(park the blocked work honestly). No further local retry can create absent
-source.
-
-Next step: Chris supplies the two missing private prerequisites described in
-docs/BOOTSTRAP-BLOCKERS.md — (a) the supported PAL v1.003 GDI with all three
-tracks, and (b) the 12-part `r354-baseline` development archive (or the
-equivalent source-only Katana/runtime/title closure, or authenticated generator
-access). Placing the archive in `ref/sarecomp/.local/archives/` lets
-`python3 ref/sarecomp/tools/restore-baseline.py` restore it with no download.
-G0 also needs one-time acceptance of the Xcode license by Chris
-(`sudo xcodebuild -license accept`) before any Apple compile or link is possible.
+Next external input: an accessible authenticated Katana/runtime/generated-source
+package or generator repository/path, plus the owner's supported PAL dump.
+The exact source-only request is in [BOOTSTRAP-BLOCKERS.md](BOOTSTRAP-BLOCKERS.md).
+For full Xcode/iOS tools Chris must accept its newer license once:
+`sudo xcodebuild -license accept`. macOS work does not require that step.

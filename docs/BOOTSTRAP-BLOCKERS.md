@@ -1,229 +1,145 @@
-# SonicPad bootstrap blockers (G1)
+# SonicPad bootstrap blockers
 
-Updated: **5 October 2026**. This is a **source-only acquisition request**. It
-records exactly what G1 needs, what was checked, and the smallest request that
-would reopen the gate. Nothing here authorizes publication or fetching game
-content.
+Updated: **5 October 2026, Astra audit**. Private-only. This replaces the earlier
+recommendation to acquire the complete retired recovery archive.
 
-## Verdict
+## G0: macOS toolchain reopened
 
-G1 (complete source and game inputs) is **blocked** by two independent
-prerequisites. Neither can be produced by retrying a build. The public
-SARecomp clone with the pinned commit is present and correct, and it is
-insufficient by itself.
-
-## Blocker A — supported game input is absent / incompatible
-
-- **Interface:** the setup engine reads a GDI descriptor plus three referenced
-  tracks and validates them in ref/sarecomp/src/setup/install_engine.cpp against
-  the identities in ref/sarecomp/src/setup/supported_disc.hpp.
-- **Expected identity:** Sonic Adventure **PAL v1.003 (1999), MK-5100050**, one
-  `.gdi` with three tracks:
-  - track 1 — 26,721,072 bytes — `cb45a8de12af5b13abb559fc8acc714744a4e22965fe67158cdbd0037cace093`
-  - track 2 — 13,994,400 bytes — `57eff24181c0581e969a40ec4972336da0891dcd093f814d7dd577c64e0142a6`
-  - track 3 — 1,185,760,800 bytes — `189f89cb695ff81b40878463f326ead759437794d733329ebf3943196ad59b45`
-  The header also declares a descriptor hash,
-  `required_gdi_sha256=d6e475056e725ae2887f613d4788c2376f86630227c19404d1436ac0672a2d1e`.
-  This is the hash of the `.gdi` descriptor for the canonical PAL v1.003 image,
-  so a matching disc should reproduce it; the exact track bytes are the primary
-  contract the installer enforces.
-- **What is present instead:** `ref/Sonic Adventure.cdi` (722.3 MiB, SHA-256
-  `105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533`), a
-  DiscJuggler CDI container. It is **byte-identical** to
-  `~/Documents/Systems/Sega Dreamcast/Sonic Adventure.cdi`, so the library copy
-  is not a second candidate. Its embedded IP.BIN reports product **MK-51000**,
-  version **V1.004**, region **JUE**, date **19990812**: a later, multi-region
-  master, not PAL v1.003.
-- **Why the present input cannot work:** setup requires an exact GDI layout and
-  the three track hashes, and the only accepted data track is the PAL
-  1.185 GB track. The CDI is 722 MiB total, so the PAL data track cannot even be
-  contained. Extracting the CDI would also yield V1.004 content, not v1.003.
-  Do not patch validation or substitute a US/DX/other disc.
-- **Locations checked:** `ref/`, `~/Documents/Systems/Sega Dreamcast/`, the
-  `Dreamcast 7z Dump/` folder, `~/Downloads`, `~/Documents/Codex/`, and a
-  filesystem scan for `*.gdi` (none found anywhere).
-- **Acceptable replacement:** the owner's own PAL v1.003 (1999) GDI with all
-  three track files named exactly as the descriptor references, supplied by
-  Chris as a private input (for example under `private-inputs/`). Any region or
-  revision other than PAL v1.003 remains incompatible.
-
-## Blocker B — private Katana/title source closure is absent
-
-- **Interface:** the build consumes source and libraries that are not in the
-  public repository. Concretely, 103 files under `ref/sarecomp/src/` include
-  `katana/runtime/*` headers (`native_port.hpp`, `memory.hpp`, `fpu.hpp`,
-  `gdi.hpp`, and so on) that exist nowhere on this machine:
-  - Windows root CMake requires `.local/baseline/r354/aot/katana_generated.lib`
-    and `.local/toolchain/katana_core.lib` / `katana_runtime_core.lib`
-    (`CMakeLists.txt`, `cmake/PinnedSdk.cmake`).
-  - Linux `cmake/SonicLinux.cmake` requires `.local/linux-sdk/src/runtime/*.cpp`
-    (runtime, fpu, fpu_simd, memory, dispatch, invalidation, ...) and the
-    retained guest source `.local/working-product/generated/code/unit-*.cpp` and
-    `native-port-*-shard-*.cpp`.
-  - Shared headers live under `.local/baseline/r354/sdk/include` and
-    `sdk/generated/include`.
-- **Expected identity:** the retained-source bundle recorded by
-  `ref/sarecomp/baseline/r354.json` — schema `sonic-accepted-baseline-v1`,
-  build **r354**, product version 0.49.9, upstream commit
-  `178448bee4239048661c5e2362850b1c135b6ba1`, 3,951 files / ~10.85 GB, pack
-  SHA-256 `3c831c4588e31ef428e785352c0660ac4d766e0dec485406029903a0a00c9fd2`,
-  including a `katana-source-178448be.zip` (SHA-256 to be verified after
-  acquisition) and `title-source/src/*.cpp/.hpp`. The r354 manifest enumerates
-  the exact per-file hashes needed to prove closure.
-- **What is present instead:** the public clone plus only the JSON identity
-  manifests under `ref/sarecomp/baseline/`. Those contain paths, sizes and
-  hashes but **not the files**. No `.local/` tree, no `katana_generated.lib`, no
-  Katana source zip, no generated `unit-v*.cpp` guest source and no
-  `katana/runtime/*` headers exist on the machine; a filesystem scan for those
-  names returned nothing. The clone is not empty, though: `src/` holds the
-  Sonic-specific adapter/provider code, including `native_title_adapter.cpp`
-  (43,841 lines), and 33 of the 39 manifest `title-source` files are present and
-  byte-identical to r354. That code is unusable and unlinked because its
-  `katana/runtime/*` dependency closure is gone, and 6 of the 39 title files
-  (`native_title_adapter.cpp`, `native_port_manifest.cpp`,
-  `sonic_private_scenario_launcher.cpp/.hpp`, `tools/refresh_native_provider.cpp`,
-  `CMakeLists.txt`) differ from the accepted r354 revision.
-- **Why the manifest is insufficient:** a hash manifest is not source closure,
-  and a Windows static library (`.lib`) cannot be re-labeled as an Apple ARM64
-  input. Upstream documents that a clean-machine source bootstrap is not
-  provided.
-- **Locations checked:** `ref/sarecomp/baseline/`, the whole home directory for
-  `katana_generated.lib` / `native_port.cpp` / `unit-*.cpp` / `katana-source-*.zip`
-  and for `.local/baseline/r354`, `.local/linux-sdk`, `.local/working-product`
-  and any `title-source/` directory, all mounted volumes (`/Volumes`), and the
-  public GitHub namespace (see Blocker C).
-- **Exact acquisition route (verified this session).** The bundle is a single
-  local archive, not a repository: `tools/restore-baseline.py` reads
-  `baseline/development-bundle.json` and expects **12 local parts** in
-  `ref/sarecomp/.local/archives/`, concatenated into `r354-development.zip`:
-  - `r354-development.zip.part001` … `.part011` — 268,435,456 bytes each
-  - `r354-development.zip.part012` — 162,700,604 bytes
-  - concatenated archive — **3,115,490,620 bytes**, SHA-256
-    `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`, tag
-    `r354-baseline`, schema `sarecomp-private-release-bundle-v1`
-  The script verifies every part and the concatenation, then extracts exactly
-  `.local/baseline/r354/` (3,951 files) and `.local/toolchain/`, and **does not
-  download anything**. Its failure text is literally `Local development backup
-  part required: <name>. This archive is not distributed through GitHub.`
-  `baseline/dev-tools.json` pins the four `.local/toolchain/` entries the build
-  links: `katana_core.lib` (197,431,946 B), `katana_runtime_core.lib`
-  (63,507,406 B), `r354.katana-native-port` (37,660 B) and
-  `sonic-native-provider-refresh.exe` (329,216 B).
-- **Upstream statement (quoted).** `docs/DEVELOPMENT.md`: "The old development
-  recovery archive contained installed original game data and has been removed
-  from GitHub, together with its release tag. It must not be uploaded again.
-  … Maintainers with an existing local backup can use `tools/restore-baseline.py`;
-  it requires local archive parts and does not download them. A complete
-  clean-machine source bootstrap is not yet provided or claimed to be tested."
-  The bundle schema name (`sarecomp-private-release-bundle-v1`) and tag
-  (`r354-baseline`) match that retired release, so the only sanctioned source is
-  a maintainer-held local backup or authenticated generator access.
-- **Acceptable replacement:** the owner's authenticated r354 development bundle
-  or a complete source-only development package covering: the Katana AOT and
-  native-port runtime **source and headers**; the retained/generated title
-  source (dispatch/registration/binding tables, generated includes, manifest);
-  the generated SDK headers and build configuration; the title providers and
-  the Mini Cart auxiliary AOT path; and the audio/movie/codec source. Route B
-  (reproducible generation) is acceptable only with the matching
-  Katana generator/analyzer sources or Mac host tooling plus configuration and
-  patches, validated against the expected interfaces.
-
-## Blocker C — no public Katana source route
-
-A bounded retrieval check found no public `KatanaRecomp`/Katana source
-repository matching the pinned SDK (`sonicfreak1337/KatanaRecomp`, `.../Katana`,
-`.../katana-recomp`, `SoNiCFReaK/KatanaRecomp`, `.../KatanaSDK` all resolve as
-absent/private). This is a bounded result, not proof that no private or later
-release exists. If Chris has authenticated access to such a repository, that
-alone may close Blocker B.
-
-Re-run this session with an authenticated `gh` (account `chrissotraidis`,
-scopes `gist, read:org, repo, workflow`) and a fresh code search:
-
-- `sonicfreak1337` exposes **only** the public `SARecomp` repo — one branch
-  (`main` = the pinned `d5288fe`), one tag (`v0.50.0-beta.1`) and one release
-  whose six assets are Windows/Linux/Steam Deck **player installers only**, no
-  source or Apple inputs. The public clone carries no `.gitmodules`, no
-  bootstrap script and no Katana source tree; `third_party/` is only
-  `sdl3`/x64 `SDL3.dll`, `volk` and `vulkan-headers`.
-- `gh search repos` for `katana-recomp`, `KatanaRecomp` and
-  `sonic recompiled dreamcast` returns only `sonicfreak1337/SARecomp`.
-- `gh search code 'katana/runtime/native_port.hpp'` matches **only inside
-  `sonicfreak1337/SARecomp` itself** (consumers). No repository anywhere in the
-  searchable index ships the header closure.
-- The pinned clone has **no Apple/macOS/iOS build files** at all; `cmake/` is
-  Windows + Linux only (`PinnedSdk.cmake` imports Windows `.lib`/`.dll`;
-  `SonicLinux.cmake` + `Linux*.cmake` are x86-64 Linux). There is no upstream
-  Apple target to start from.
-
-Conclusion unchanged: the route is a **maintainer-held local backup of the
-retired `r354-baseline` archive** (Blocker B), or authenticated generator
-access. It is not reachable from public GitHub.
-
-## Environment blocker — Apple toolchain license
-
-The Xcode/Command Line Tools license is not accepted on this Mac. Every Apple
-compile or link fails with `You have not agreed to the Xcode license
-agreements.` This blocks any ARM64/ABI claim (G0 toolchain verification and G2)
-and can only be cleared by Chris:
+The independently installed Apple Command Line Tools work when selected for
+the command:
 
 ```sh
-sudo xcodebuild -license accept   # interactive; requires the admin account
+DEVELOPER_DIR=/Library/Developer/CommandLineTools /usr/bin/clang++ --version
+scripts/check-prerequisites.sh
+scripts/run-host-tests.sh
 ```
 
-Host logic tests do not need this and already run (see docs/JOURNAL.md), but no
-Apple target build can proceed until the license is accepted.
+Apple clang 21.0.0 compiled, linked and ran an ARM64 Objective-C++ Foundation
+probe. Mach-O metadata: **MACOS**, minimum 13.0, SDK 27.0, Apple linker 27037.1.
+All 142 Dreamcast checks also pass with this Apple toolchain. Global developer
+selection and license settings were not changed.
 
-## Smallest request to Chris
+Full Xcode 27.0 remains license-blocked: it requires EA2002; the machine records
+EA1990 accepted for Xcode 26.6. Simulator/iOS tooling remains unverified.
+Chris can clear this with `sudo xcodebuild -license accept`. This blocks the
+full Xcode/mobile lane, **not all macOS compilation**. The prerequisite script
+exits 2 while full Xcode is unavailable, even when its macOS probe passes.
 
-1. Supply the supported **PAL v1.003 (1999) GDI** plus its three track files,
-   privately (target path `private-inputs/pal-v1003/`).
-2. Supply the **source-only r354 bundle** (or another complete, compatible
-   Katana/runtime/title source package, or authenticated generator access),
-   privately. At minimum the closure must include: the `katana/runtime/*`
-   headers (r354 `sdk/include`, 177 files, plus `sdk/generated/include`); the
-   generated guest units (`product/generated/code`, 1,459 files) or the
-   generator/analyzer source to regenerate them; the native-content set
-   (`native-content`, 2,072 files); the retained product source; the FFmpeg
-   build source (`sdk/ffmpeg`, 154 files); and the 6 title files that differ
-   from the public clone. Prebuilt Windows `.lib` archives alone are **not**
-   acceptable Apple inputs.
-   - **Preferred form:** the 12-part `r354-development.zip.part001…012` archive
-     (`r354-baseline` tag; concatenated size 3,115,490,620 bytes; archive
-     SHA-256 `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`),
-     dropped into `ref/sarecomp/.local/archives/`; `tools/restore-baseline.py`
-     will then verify and lay down the closure without any download. Do **not**
-     upload it to GitHub — `docs/DEVELOPMENT.md` explicitly forbids that.
-3. Accept the Xcode license once: `sudo xcodebuild -license accept`.
+## G1: exact source inventory
 
-## Draft request (send manually; SonicPad does not message anyone)
+Public pin: `d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2`.
+Retained-source identities below come from its public baseline manifests.
+Their hashes establish source identity; Apple ABI compatibility is unverified.
 
-> Hi — SonicPad (private Apple port of Sonic Adventure, using SARecomp/Katana)
-is blocked on two source inputs and I'd like to request them, source-only:
+| Required material | Actual state | Exact identity or missing interface |
+|---|---|---|
+| Katana runtime/compiler source | **missing** | `katana-source-178448be.zip`, 6,185,732 bytes, SHA-256 `85e5bd27952552f0957559cca82bde5b4024cd71e50e94650cd922f42430cd66`, or a compatible complete source checkout with declared provenance. |
+| Runtime translation units | **missing** | Linux build reads `src/runtime/{block_abi,block_table,block_dispatch,block_guards,cache_control,code_invalidation,crash_report,exception,fpu,fpu_simd,guest_program_range,memory,native_bringup_dispatch,native_port,runtime}.cpp` plus all transitive sources/includes. |
+| Runtime/SDK headers | **missing** | r354 `sdk/include/`: 177 files (175 .hpp + 2 .in), 1,516,512 bytes. Verify actual files against the public per-file hashes. |
+| Generated SDK contracts | **missing** | `sdk/generated/include/`: 3 .hpp + identity materials JSON, 65,232 bytes; `katana/{abi_contract,build_contract,component_identity}.hpp` and matching build/ABI provenance. |
+| Generated guest source/metadata | **missing** | r354 `product/generated/`: 1,476 files, 4,356,016,177 bytes; 1,460 .cpp, 2 .hpp, 10 .json plus manifest/build metadata. Includes `generated/code/unit-*.cpp`, `native-port-*-shard-*.cpp`, dispatch, `generated/include/`, and `.katana-generated-artifacts`. Obtain source/metadata or reproduce it with the matching generator. |
+| Title/provider snapshot | **present-verified, partial** | 38/39 r354 files privately staged under `.local/source-only/r354/title-source/`, each size/hash verified. Exact r354 `CMakeLists.txt` (15,384 bytes) remains missing. Current public CMake exists at a different identity. |
+| Mini Cart auxiliary source/generator | **missing dependency closure** | Public `generate_minicart_aot.cpp` requires `katana/io/{raw_binary_loader,input_provenance}.hpp`, `analysis/control_flow_analysis.hpp`, `ir/{lower,optimize}.hpp`, `codegen/{cpp_emitter,native_aot_profile}.hpp`, texture interfaces and their implementations. Supply complete generator/build configuration or compatible retained auxiliary source. |
+| Katana audio/movie/codec integration | **missing** | `src/runtime/native_port_{audio,audio_execution_domain,audio_command_queue,telemetry,movie,ffmpeg_codec,codec,sound_bank}.cpp` and transitive source/headers. See LinuxAudio/LinuxMovie and audio preparation helpers. |
+| FFmpeg implementation source | **present-verified archive, extracted source** | Public revision `5a03dfa0f607ee6156a59bdad3987cd3b858ee5d`, archive SHA-256 `5de5245447bafc6734be2e6151becfc389550863d6bcef31b1146a21a69ac49a`, privately acquired under `.local/media-source/` via `scripts/fetch-media-source.py`. Apple libraries and decoder tests remain not-run. |
+| Exact supported disc | **missing** | Owner-supplied PAL v1.003 GDI and three tracks below. |
+| Native-content assets | **absent; derive from owner's disc** | The 2,072-file `native-content/` set contains game assets. It is not source material to request from upstream. Extraction/install identity remains unverified. |
+
+Five of the six title files that differed from r354 were recovered from public
+Git history at `40cb8ca05dd849390cbcde31f4b00da0a4137511`:
+`native_port_manifest.cpp`, `native_title_adapter.cpp`,
+`sonic_private_scenario_launcher.cpp/.hpp`, and `refresh_native_provider.cpp`.
+Together with 33 matching current files, this yields 38/39.
+`scripts/recover-title-source.py` reproduces the snapshot, records provenance,
+refuses to overwrite unknown work, and exits 2 for the CMake gap.
+It does not prove compatibility with the missing guest/runtime source.
+
+**Media correction:** r354 `sdk/ffmpeg/` has 144 headers, five Windows .lib
+files and five DLLs. These 154 files are not FFmpeg implementation source.
+The actual public source pin above comes from `tools/build-lean-ffmpeg.py`.
+The Katana codec interfaces still need source.
+
+## Supported game input
+
+Target: Sonic Adventure **PAL v1.003 (1999), MK-5100050**. Keep the GDI and all
+track filenames exactly as referenced by its descriptor; preserve the original.
+
+| Track | LBA | Type / sector bytes | Bytes | SHA-256 |
+|---|---:|---|---:|---|
+| 1 | 0 | 4 / 2352 | 26,721,072 | `cb45a8de12af5b13abb559fc8acc714744a4e22965fe67158cdbd0037cace093` |
+| 2 | 11511 | 0 / 2352 | 13,994,400 | `57eff24181c0581e969a40ec4972336da0891dcd093f814d7dd577c64e0142a6` |
+| 3 | 45000 | 4 / 2352 | 1,185,760,800 | `189f89cb695ff81b40878463f326ead759437794d733329ebf3943196ad59b45` |
+
+Canonical descriptor SHA-256:
+`d6e475056e725ae2887f613d4788c2376f86630227c19404d1436ac0672a2d1e`.
+Installer acceptance depends on its parsed layout and track checks.
+
+Present input: `ref/Sonic Adventure.cdi`, 757,339,066 bytes, SHA-256
+`105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533`.
+Earlier IP.BIN inspection identified MK-51000 V1.004/JUE. Converting its
+container cannot reproduce the supported PAL track bytes. Do not bypass validation.
+
+## Retired archive: historical identity, not the requested input
+
+The manifest records `r354-development.zip.part001…012`, tag
+`r354-baseline`, total 3,115,490,620 bytes, archive SHA-256
+`07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`.
+Parts 001–011 are 268,435,456 bytes each; part012 is 162,700,604 bytes.
+The baseline pack hash `3c831c4588e31ef428e785352c0660ac4d766e0dec485406029903a0a00c9fd2`
+is a separate identity; neither identifies a newly assembled source-only package.
+
+The recovery archive mixes source, Windows binaries and installed game assets.
+Upstream DEVELOPMENT.md explains its removal and prohibits re-upload.
+`restore-baseline.py` restores an existing owner-held backup; it does not
+provide a source download or establish an Apple bootstrap.
+Do not request or hunt the complete removed archive. A maintainer can instead
+identify the source/metadata subset above from their local material.
+
+## Completed checks and scope
+
+Astra's scan completed to exit 0 across `~/GitHub`, `~/Documents`,
+`~/Downloads`, `~/Desktop`, `~/.local`, and `/Volumes`:
+**1,235,012 filenames**, no traversal errors. It excluded `.git`,
+`node_modules` and `__pycache__`. No matching GDI, runtime header, Katana
+source archive, archive part or named Katana library was found.
+Evidence: `docs/artifacts/2026-10-05-astra/local-source-scan.json`.
+
+Earlier root-wide searches returned unfinished sessions and suppressed errors;
+their claim of an exhaustive machine-wide search is withdrawn. This completed
+scan is bounded to the listed roots and filename criteria.
+
+Available public Git history supplies the title files above but no runtime/SDK
+archive. Earlier authenticated GitHub checks found header consumers without the
+supplying repository. Those searches do not rule out private access. The player
+installer is not a source closure.
+
+## Source-only acquisition request (Chris sends manually)
+
+> I'm building SonicPad privately against SARecomp
+> d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2. Could you provide authenticated
+> access to matching Katana runtime/compiler source, generated SDK contracts,
+> retained guest C++/metadata and auxiliary Mini Cart source or a reproducible
+> generator route?
 >
-> 1. Sonic Adventure **PAL v1.003 (1999)** as a GDI with all three tracks. I
->    only have a multi-region V1.004 CDI, which the setup expects to reject.
-> 2. A **source-only development package** for the Katana runtime/generator and
->    the retained title source at the accepted r354 identity (pack SHA-256
->    `3c831c4588e31ef428e785352c0660ac4d766e0dec485406029903a0a00c9fd2`), or a
->    documented reproducible generation route with the matching generator
->    sources. I do not need prebuilt Windows binaries; I need the sources and
->    generated headers to build Apple targets.
+> The known runtime archive is katana-source-178448be.zip, 6,185,732 bytes,
+> SHA-256 85e5bd27952552f0957559cca82bde5b4024cd71e50e94650cd922f42430cd66.
+> I recovered 38/39 r354 title-source files by hash from public Git history;
+> the exact r354 CMakeLists.txt remains missing. Please include compatible
+> build configuration, provider identities, audio/movie/codec integration
+> and the generator configuration/patches. A complete package matching the
+> current public revision is also acceptable with provenance and compatibility
+> information.
 >
->    If the easiest path is the retired `r354-baseline` development archive,
->    the 12-part `r354-development.zip.part001…012` set is what I need locally
->    (concatenated SHA-256
->    `07f28aa2052827c34f94fe20ad1c53b129405ec019f85486675186d9e7508ee9`);
->    `tools/restore-baseline.py` verifies and restores it without downloading.
->    No public upload is needed or wanted.
->
-> No game data, saves or prebuilt binaries need to be sent — only the source
-> package and a pointer to where I can place the PAL GDI I own.
+> I acquired the pinned public FFmpeg source. I will supply my own verified
+> PAL v1.003 disc and derive game assets locally. Please exclude installed
+> assets, discs, saves, Windows binaries and the complete removed recovery
+> archive. This is a request for private source access; no publication is planned.
 
-## What is NOT blocked
+Owner action: place the supported GDI and tracks in
+`private-inputs/pal-v1003/`, and authenticated source material in
+`private-inputs/` or provide its accessible repository/path.
+No request has been sent.
 
-Game-independent shell and input work may continue (goal-loop Section 1
-permits bounded source-free work). The Dreamcast input contract, adapter and
-edge latch are implemented and tested at the state level. Renderer-contract
-and Synthetic probes remain possible once the toolchain license is accepted.
-G1 stays blocked regardless.
+G0: macOS CLT lane verified; full Xcode/mobile tools still blocked.
+G1: **unresolved** pending actual runtime, guest source, matching headers/providers,
+media integration, auxiliary code and exact disc. G2/gameplay remain not-run.

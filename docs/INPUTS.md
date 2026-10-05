@@ -36,15 +36,18 @@ descriptor; a matching PAL v1.003 `.gdi` should reproduce it.
 | SARecomp game-specific source | commit d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2 | **present-verified** (ref/sarecomp, push disabled); 33/39 title-source files match r354, 6 differ |
 | Baseline/identity manifests | ref/sarecomp/baseline/*.json | **present-verified** |
 | Katana AOT/native-port runtime source + headers | r354 bundle, `.local/baseline/r354/sdk`, `.local/linux-sdk` | **missing** |
-| Retained/generated title source | `.local/working-product/generated/code/unit-*.cpp`, `native-port-*-shard-*.cpp`, `title-source/src/*` | **missing** |
+| Retained/generated guest source | `.local/working-product/generated/code/unit-*.cpp`, `native-port-*-shard-*.cpp` | **missing** |
+| Retained r354 title/provider source | `.local/source-only/r354/title-source/` | **present-verified, partial** — 38/39 recovered by exact per-file hashes using `scripts/recover-title-source.py`; r354 CMakeLists.txt missing |
 | Generated AOT archive | `.local/baseline/r354/aot/katana_generated.lib` (Windows; not an Apple input) | **missing** |
 | Private SDK libs | `.local/toolchain/katana_core.lib`, `katana_runtime_core.lib` (Windows) | **missing** / not Apple inputs |
-| Katana source archive | r354 bundle `katana-source-178448be.zip` | **missing** |
-| Media/codec sources | FFmpeg + runtime media source for Apple rebuild (r354 sdk/ffmpeg, 154 files / 111.31 MB) | **missing** |
+| Katana source archive | `katana-source-178448be.zip`, 6,185,732 bytes, SHA-256 `85e5bd27952552f0957559cca82bde5b4024cd71e50e94650cd922f42430cd66` | **missing** |
+| Katana media/codec integration | Runtime audio/movie/codec source for Apple rebuild | **missing** |
+| FFmpeg implementation source | public revision `5a03dfa0f607ee6156a59bdad3987cd3b858ee5d`, archive SHA-256 `5de5245447bafc6734be2e6151becfc389550863d6bcef31b1146a21a69ac49a` | **present-verified archive, extracted source** — `.local/media-source/`, fetched with `scripts/fetch-media-source.py`; Apple build/decoder tests not-run |
+| r354 FFmpeg SDK artifacts | `sdk/ffmpeg`, 144 headers + 5 Windows .lib + 5 DLLs | **missing**; not implementation source or Apple inputs |
 | Katana `katana/runtime/*` headers | r354 `sdk/include` (177 files) + `sdk/generated/include` | **missing** — 103 `ref/sarecomp/src/*` files include them |
 | Guest generated units | r354 `product/generated/code`, 1,459 files / 4,353.14 MB | **missing** |
 | Retained guest product source | r354 `product` (3,263.19 MB of `katana_generated.lib` + 2,026.40 MB of other product source) | **missing** |
-| Ready-made native content | r354 `native-content`, 2,072 files / 1,052.27 MB | **missing** |
+| Native content assets | r354 `native-content`, 2,072 files / 1,052.27 MB | **missing**; derive from owner's supported disc, exclude from upstream source-only request |
 
 Owner-authenticated private development package recorded by
 `ref/sarecomp/baseline/r354.json`: build **r354**, version 0.49.9, upstream
@@ -58,7 +61,7 @@ bytes, pack SHA-256
 |---|---|---|
 | macOS | 27.0.1 (26A434), arm64 | present-verified |
 | Xcode | 27.0 (27A266a); macOS 27.0, iPhoneOS 27.0, iPhoneSimulator 27.0 SDKs installed | present; **license-blocked** |
-| Apple clang | 21.0.0 (CLT) | present; **license-blocked** |
+| Apple clang | 21.0.0 (CLT) | **present-verified and usable** with process-local `DEVELOPER_DIR=/Library/Developer/CommandLineTools`; native ARM64 compile/link/Foundation probe and 142 input checks pass |
 | CLT SDKs | MacOSX 12.0, 12.1, 26, 26.5, 27.0, 27 | present-verified |
 | Homebrew LLVM | 22.1.8 (+ ld64.lld) | present-verified (host logic only) |
 | CMake | 4.4.0 | present-verified |
@@ -66,6 +69,18 @@ bytes, pack SHA-256
 | Python | 3.14.6 | present-verified |
 | git / jq / rg | 2.36.1 / 1.7.1 / 15.2.0 | present-verified |
 | iOS Simulator runtimes | present in CoreSimulator | not re-verified this session — `xcrun simctl` is license-gated |
+
+The prior claim that every Apple compiler is license-blocked is superseded:
+full Xcode requires the newer license, but the independently installed CLT
+macOS lane works. `scripts/check-prerequisites.sh` records both results and
+returns 2 until full Xcode is usable. CoreSimulator device plists all record
+shutdown in this audit; this stored snapshot is not a live simctl result.
+
+Completed local scan: `~/GitHub`, `~/Documents`, `~/Downloads`, `~/Desktop`,
+`~/.local`, `/Volumes`; 1,235,012 filenames, no traversal errors, excluding
+`.git`, `node_modules`, `__pycache__`. No matching Katana source/header/library
+or GDI candidate. Evidence: `docs/artifacts/2026-10-05-astra/local-source-scan.json`.
+This replaces the earlier unsupported claim of an exhaustive machine-wide scan.
 
 ## Reference pins
 

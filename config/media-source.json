@@ -1,0 +1,8 @@
+{
+  "name": "FFmpeg",
+  "revision": "5a03dfa0f607ee6156a59bdad3987cd3b858ee5d",
+  "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/5a03dfa0f607ee6156a59bdad3987cd3b858ee5d",
+  "archive_sha256": "5de5245447bafc6734be2e6151becfc389550863d6bcef31b1146a21a69ac49a",
+  "provenance": "SARecomp d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2 tools/build-lean-ffmpeg.py",
+  "scope": "source only; Apple build and required decoder validation pending"
+}

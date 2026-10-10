@@ -1,0 +1,126 @@
+--- a/src/codegen/cpp_emitter.cpp
++++ b/src/codegen/cpp_emitter.cpp
+@@ -1360,6 +1360,9 @@
+     std::vector<std::uint8_t> vram;
+     std::vector<std::uint8_t> aica_ram;
+     std::vector<std::uint8_t> boot_rom_low;
++    // Explicit data input for BIOS services; never synthesize a console identity.
++    std::vector<std::uint8_t> system_flash;
++    bool system_info_initialized{};
+     std::vector<std::uint8_t> bios_font_rom;
+     std::array<std::uint8_t, kBiosFontNarrowGlyphs> bios_font_narrow_generated{};
+     std::vector<std::uint8_t> bios_font_wide_generated;
+@@ -2501,6 +2504,7 @@
+ void dc_load_bytes(DCRuntime& runtime, std::uint32_t address, const std::uint8_t* data, std::size_t size);
+ void dc_zero_bytes(DCRuntime& runtime, std::uint32_t address, std::size_t size);
+ void dc_setup_commercial_boot(SH4Context& ctx, DCRuntime& runtime);
++void dc_set_system_flash_image(DCRuntime& runtime, const std::vector<std::uint8_t>& bytes);
+ void dc_gdrom_load_disc_map(DCRuntime& runtime, const std::string& path);
+ void dc_gdrom_tick(DCRuntime& runtime, std::uint64_t sh4_cycles);
+ void dc_gdrom_sync_host(DCRuntime& runtime, std::uint64_t now_ns);
+@@ -16317,24 +16321,32 @@
+ }
+ 
+ 
++
++void require_system_flash(const DCRuntime& runtime) {
++    if (runtime.system_flash.size() != 128u * 1024u)
++        throw std::runtime_error("BIOS service requires an explicit system flash image");
++}
++
+ void native_bios_system(SH4Context& ctx, DCRuntime& runtime) {
+-    // Minimal HLE for the Dreamcast system syscall vector. The real BIOS fills
+-    // SYSINFO from flash; deterministic zero data is sufficient until a title
+-    // proves it consumes a specific field.
++    require_system_flash(runtime);
+     switch (ctx.r[7]) {
+-        case 0u: // SYSINFO_INIT
+-            dc_zero_bytes(runtime, 0x8C000068u, 24u);
++        case 0u: {
++            // System identity and factory properties; remaining bytes are padding.
++            std::array<std::uint8_t, 24> record{};
++            std::copy_n(runtime.system_flash.data() + 0x1A056u, 8u, record.data());
++            std::copy_n(runtime.system_flash.data() + 0x1A000u, 5u, record.data() + 8u);
++            dc_load_bytes(runtime, 0x8C000068u, record.data(), record.size());
++            runtime.system_info_initialized = true;
+             ctx.r[0] = 0u;
+             break;
+-        case 2u: // SYSINFO_ICON
+-            ctx.r[0] = ctx.r[4] <= 9u ? 704u : 0xFFFFFFFFu;
+-            break;
+-        case 3u: // SYSINFO_ID
++        }
++        case 3u:
++            if (!runtime.system_info_initialized)
++                throw std::runtime_error("SYSINFO_ID requires SYSINFO_INIT");
+             ctx.r[0] = 0x8C000068u;
+             break;
+         default:
+-            ctx.r[0] = 0xFFFFFFFFu;
+-            break;
++            throw std::runtime_error("Unsupported BIOS system command " + std::to_string(ctx.r[7]));
+     }
+     ctx.pc = ctx.pr;
+ }
+@@ -16351,10 +16363,40 @@
+     ctx.pc = ctx.pr;
+ }
+ 
+-void native_bios_flash(SH4Context& ctx, DCRuntime&) {
+-    // Partition-backed flash is a later milestone. Fail calls explicitly rather
+-    // than returning host garbage through an uninitialised BIOS vector.
+-    ctx.r[0] = 0xFFFFFFFFu;
++void native_bios_flash(SH4Context& ctx, DCRuntime& runtime) {
++    require_system_flash(runtime);
++    const auto destination = ctx.r[5];
++    std::size_t ram_index = 0;
++    switch (ctx.r[7]) {
++        case 0u: {
++            constexpr std::uint32_t partitions[5][2] = {
++                {0x1A000u, 0x2000u}, {0x18000u, 0x2000u},
++                {0x1C000u, 0x4000u}, {0x10000u, 0x8000u}, {0u, 0x10000u}
++            };
++            if (ctx.r[4] >= 5u) { ctx.r[0] = 0xFFFFFFFFu; break; }
++            if (!main_ram_range(destination, 8u, ram_index))
++                throw std::runtime_error("FLASHROM_INFO destination outside supported RAM range");
++            dc_write32(runtime, destination, partitions[ctx.r[4]][0]);
++            dc_write32(runtime, destination + 4u, partitions[ctx.r[4]][1]);
++            ctx.r[0] = 0u;
++            break;
++        }
++        case 1u: {
++            const std::size_t offset = ctx.r[4], size = ctx.r[6];
++            if (offset > runtime.system_flash.size() || size > runtime.system_flash.size() - offset) {
++                ctx.r[0] = 0xFFFFFFFFu;
++                break;
++            }
++            if (size && !main_ram_range(destination, size, ram_index))
++                throw std::runtime_error("FLASHROM_READ destination outside supported RAM range");
++            dc_load_bytes(runtime, destination, runtime.system_flash.data() + offset, size);
++            // Documented raw BIOS ABI: byte count on success (not status zero).
++            ctx.r[0] = static_cast<std::uint32_t>(size);
++            break;
++        }
++        default:
++            throw std::runtime_error("Unsupported BIOS flash command " + std::to_string(ctx.r[7]));
++    }
+     ctx.pc = ctx.pr;
+ }
+ 
+@@ -16506,7 +16548,16 @@
+ 
+ } // namespace
+ 
++void dc_set_system_flash_image(DCRuntime& runtime, const std::vector<std::uint8_t>& bytes) {
++    if (bytes.size() != 128u * 1024u)
++        throw std::runtime_error("System flash image must contain exactly 128 KiB");
++    runtime.system_flash = bytes;
++    runtime.system_info_initialized = false;
++}
++
++
+ void dc_setup_commercial_boot(SH4Context& ctx, DCRuntime& runtime) {
++    runtime.system_info_initialized = false;
+     // v0.1.1 CT2: retail IP.BIN expects the main executable in Dreamcast
+     // 32-byte-slice scrambled layout and descrambles it in-place.  The generated
+     // image embeds the plain executable for static analysis, so restage it only

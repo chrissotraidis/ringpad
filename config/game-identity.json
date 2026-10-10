@@ -1,0 +1,29 @@
+{
+  "schema": "sonicpad-game-identity-v1",
+  "private_only": true,
+  "supported": {
+    "release": "Sonic Adventure PAL v1.003 (1999)",
+    "product": "MK-5100050",
+    "format": "GDI with three referenced tracks",
+    "tracks": [
+      { "n": 1, "bytes": 26721072,   "lba": 0,     "type": 4, "sector_size": 2352, "sha256": "cb45a8de12af5b13abb559fc8acc714744a4e22965fe67158cdbd0037cace093" },
+      { "n": 2, "bytes": 13994400,   "lba": 11511, "type": 0, "sector_size": 2352, "sha256": "57eff24181c0581e969a40ec4972336da0891dcd093f814d7dd577c64e0142a6" },
+      { "n": 3, "bytes": 1185760800, "lba": 45000, "type": 4, "sector_size": 2352, "sha256": "189f89cb695ff81b40878463f326ead759437794d733329ebf3943196ad59b45" }
+    ],
+    "source": "ref/sarecomp/src/setup/supported_disc.hpp"
+  },
+  "provided_inputs": [
+    {
+      "path": "ref/Sonic Adventure.cdi",
+      "bytes": 757339066,
+      "sha256": "105b9a8849feeabf4b7b00a6f5d101d18789af82dfeba407952d884a726b9533",
+      "container": "DiscJuggler CDI",
+      "ip_bin_product": "MK-51000",
+      "ip_bin_version": "V1.004",
+      "ip_bin_region": "JUE",
+      "ip_bin_date": "19990812",
+      "note": "Byte-identical to ~/Documents/Systems/Sega Dreamcast/Sonic Adventure.cdi. Multi-region V1.004 master; NOT the supported PAL V1.003 GDI and below the data-track size, so no PAL track identity can pass."
+    }
+  ],
+  "verdict": "incompatible: provided dump is neither the supported GDI nor a PAL v1.003 source"
+}

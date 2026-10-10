@@ -1,0 +1,25 @@
+// Source-derived remaining dispatcher and instance return; no guest execution.
+#define main request_contract_standalone_main
+#include "startup-record-request-return.cpp"
+#undef main
+static unsigned movie_slot_six(auto&expected_ram,SH4Context&expected){const auto&ram=expected_ram;auto&er=expected.r;er[0]=0;expected.pc=expected.pr;need(expected.pc==0x8ceda5da&&er[13]==6,"Captured slot-six return differs");er[4]=er[0];expected.sr|=1u;unsigned cycles=6;
+  do{er[2]=static_cast<int16_t>(word(expected_ram,0x8ceda69e));++er[13];er[14]+=er[2];need(er[13]<er[11],"No next handler in expected prefix");expected.sr&=~1u;er[0]=static_cast<int16_t>(word(expected_ram,0x8ceda6ac));er[5]=word(expected_ram,er[14]+er[0]);expected.sr=(expected.sr&~1u)|unsigned(er[5]==0);cycles+=9;}while(!er[5]);er[0]=er[9];er[10]=er[5];er[7]=0;er[3]=word(expected_ram,er[10]+er[0]);er[5]=er[6]=0;expected.pr=0x8ceda5da;er[4]=er[12];expected.pc=0x8ceda5ca;cycles+=9;need(er[3]==0x8ced178c&&cycles==24,"Next slot/target differs");return cycles;}
+static unsigned movie_slot_seven(auto&expected_ram,SH4Context&expected){const auto&ram=expected_ram;auto&er=expected.r;need(er[13]==7,"Captured dispatcher index differs");er[15]-=4;put(expected_ram,er[15],expected.pr);er[3]=word(expected_ram,0x8ced17e0);need(er[3]==0x8ced44fc,"Retained query differs");expected.pr=0x8ced1794;er[5]=6;er[3]=static_cast<int16_t>(word(expected_ram,0x8ced456e));er[0]=er[5]<<2;er[3]+=er[4];er[0]=word(expected_ram,er[3]+er[0]);expected.pr=word(expected_ram,er[15]);er[15]+=4;expected.sr=(expected.sr&~1u)|unsigned(er[0]==0);er[0]=0;expected.pc=expected.pr;const auto handler_return=expected;
+  er[4]=er[0];expected.sr|=1u;unsigned cycles=20;
+  do{er[2]=static_cast<int16_t>(word(expected_ram,0x8ceda69e));++er[13];er[14]+=er[2];expected.sr=(expected.sr&~1u)|unsigned(static_cast<int32_t>(er[13])>=static_cast<int32_t>(er[11]));cycles+=5;if(expected.sr&1)break;er[0]=static_cast<int16_t>(word(expected_ram,0x8ceda6ac));er[5]=word(expected_ram,er[14]+er[0]);need(er[5]==0,"Last slot is not empty");expected.sr|=1u;cycles+=4;}while(true);
+  expected.pr=word(expected_ram,er[15]);er[15]+=4;er[0]=er[4];for(unsigned i=9;i<=14;++i){er[i]=word(expected_ram,er[15]);er[15]+=4;}expected.pc=expected.pr;cycles+=10;need(cycles==44,"Dispatcher finish timing differs");return cycles;}
+static unsigned movie_initializer_return(auto&expected_ram,SH4Context&expected){const auto&ram=expected_ram;const bool failure=expected.r[0]!=0;need(!failure,"Live initializer failure path differs");auto&er=expected.r;expected.sr=(expected.sr&~1u)|unsigned(er[0]==0);if(failure){er[0]=64;er[4]=0;put(expected_ram,er[14]+64,0);er[0]=68;put(expected_ram,er[14]+68,0);er[14]=0;}er[0]=er[14];er[15]+=4;expected.pr=word(expected_ram,er[15]);er[15]+=4;er[13]=word(expected_ram,er[15]);er[15]+=4;expected.pc=expected.pr;er[14]=word(expected_ram,er[15]);er[15]+=4;const unsigned cycles=failure?15:9;return cycles;}
+static unsigned movie_instance_return(auto&expected_ram,SH4Context&expected){const auto&ram=expected_ram;expected.r[15]+=8;expected.pr=word(expected_ram,expected.r[15]);expected.r[15]+=4;expected.pc=expected.pr;const unsigned cycles=5;need(expected.r[0]==0x8cee2210,"Instance handle differs");return cycles;}
+static unsigned movie_create_bind_resume(auto&expected_ram,SH4Context&expected){const auto&ram=expected_ram;auto&er=expected.r;need(er[0]==0x8cee2210,"Instance handle differs");er[14]=er[0];expected.sr&=~1u;er[2]=word(ram,0x8ced06ec);er[6]=0;er[5]=word(ram,0x8ced06e8);expected.pr=0x8ced05e0;er[4]=er[14];need(er[2]==0x8ced1afa&&er[5]==0x8ced07fc,"Bind target/arguments differ");er[15]-=4;put(expected_ram,er[15],er[14]);er[15]-=4;put(expected_ram,er[15],expected.pr);er[15]-=8;er[14]=er[4];put(expected_ram,er[15],er[5]);put(expected_ram,er[15]+4,er[6]);expected.pr=0x8ced1b16;expected.pc=0x8ced1b12;const unsigned cycles=20;return cycles;}
+
+int main(int argc,char**argv){try{
+need(argc==5,"usage RAM STATE TIMERS OUTPUT");auto m=read(argv[1]);auto c=state(argv[2]);auto rt=std::make_unique<DCRuntime>();load_timers(*rt,argv[3]);std::string out=argv[4];need(c.pc==0x8ceda5ca,"Wrong slot entry");unsigned cycles=0;
+auto save=[&](const char*label){const std::string stem=out+"/"+label;save_state(c,stem+"-state.txt");save_ram(m,stem+"-ram.bin");auto timers=rt->tmu;tick(timers,rt->tmu_tstr,cycles);save_timers(timers,rt->tmu_tstr,rt->tmu_tocr,stem+"-timers.txt");};
+cycles+=movie_slot_six(m,c);save("movie-slot-six");
+cycles+=movie_slot_seven(m,c);save("movie-slot-seven");
+cycles+=movie_initializer_return(m,c);save("movie-initializer-return");
+cycles+=movie_instance_return(m,c);save("movie-instance-return");
+cycles+=movie_create_bind_resume(m,c);save("end");
+need(cycles==102,"Instance return and caller cycles differ");
+std::ofstream(out+"/result.json")<<R"({"passed":true,"cycles":102,"guest_execution":false,"next_target":"8CED1BAA"})"<<'\n';std::cout<<"PASS instance return82cycles plus bind prefix20cycles\n";
+}catch(const std::exception&e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

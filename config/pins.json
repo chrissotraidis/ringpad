@@ -1,0 +1,41 @@
+{
+  "schema": "sonicpad-pins-v1",
+  "private_only": true,
+  "references": [
+    {
+      "name": "SARecomp",
+      "role": "game-specific runtime/adapters, content identities, source/baseline contracts",
+      "pin": "d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2",
+      "public": true,
+      "ref_path": "ref/sarecomp",
+      "push_url": "DISABLED",
+      "status": "cloned-present-verified"
+    },
+    {
+      "name": "SunPad",
+      "role": "primary touch/menu/controller/lifecycle shell donor",
+      "pin": "c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b",
+      "public": true,
+      "ref_path": "ref/sunpad",
+      "push_url": "DISABLED",
+      "status": "resolved-in-existing-clone-present-verified"
+    },
+    {
+      "name": "PaperPad",
+      "role": "secondary shell/process/testing/repository-safety reference",
+      "pin": "a6f6999a570156f6794ff3fa79f810cfad71c4fc",
+      "public": true,
+      "ref_path": "ref/paperpad",
+      "push_url": "DISABLED",
+      "status": "resolved-in-existing-clone-present-verified"
+    },
+    {
+      "name": "Katana runtime/generator",
+      "role": "recompiler runtime, generated headers, providers, media",
+      "pin": null,
+      "public": false,
+      "status": "unresolved-missing",
+      "note": "No public KatanaRecomp source located; see docs/BOOTSTRAP-BLOCKERS.md."
+    }
+  ]
+}

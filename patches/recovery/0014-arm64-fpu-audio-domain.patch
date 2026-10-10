@@ -1,0 +1,18 @@
+--- a/src/codegen/cpp_emitter.cpp
++++ b/src/codegen/cpp_emitter.cpp
+@@ -3536,6 +3536,7 @@
+     }
+ }
+ void aica_reg_write32(DCRuntime& runtime, std::uint32_t offset, std::uint32_t value) {
++    Arm64FpuEnvironmentScope fpu_environment(true);
+     runtime.mmio32[(kAicaRegsPhysicalBase + offset) & ~3u] = value;
+     aica_update_native_slot(runtime, offset, value);
+ 
+@@ -4137,6 +4138,7 @@
+     return s0 + (s1 - s0) * frac;
+ }
+ void aica_native_mix_frame(DCRuntime& runtime) {
++    Arm64FpuEnvironmentScope fpu_environment(true);
+     double mix_l = 0.0, mix_r = 0.0;
+ 
+     // 0.0.126: iterate only voices that are actually alive. Typical ChuChu

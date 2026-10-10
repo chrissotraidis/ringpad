@@ -1,0 +1,41 @@
+// Emit nine reviewed original MOVIE main-tail bodies; preserve backward tail branches.
+#include "dcrecomp/cpp_emitter.hpp"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+using namespace dcrecomp;
+int main(int argc,char**argv){try{
+ if(argc!=4)throw std::runtime_error("usage: generator IMAGE OUTPUT ADDRESS");
+ std::ifstream f(argv[1],std::ios::binary);if(!f)throw std::runtime_error("Missing image");
+ Elf32Image elf{};elf.type=2;elf.machine=42;elf.entry=std::stoul(argv[3],nullptr,16);
+ unsigned instructions=0,externals=0,blocks=0;std::string name,symbol,entries;
+ switch(elf.entry){
+ case 0x8CED0914:instructions=3;externals=1;blocks=1;name="main-tail";symbol="recomp_8CED0914";entries="main_tail_entries";break;
+ case 0x8CED5464:instructions=24;externals=1;blocks=6;name="main-tail-dispatch";symbol="recomp_8CED5464";entries="main_tail_dispatch_entries";break;
+ case 0x8CECFC58:instructions=29;externals=4;blocks=7;name="main-tail-callback";symbol="recomp_8CECFC58";entries="main_tail_callback_entries";break;
+ case 0x8CECFBA8:instructions=26;externals=1;blocks=5;name="main-tail-scan";symbol="recomp_8CECFBA8";entries="main_tail_scan_entries";break;
+ case 0x8CECFAE4:instructions=63;externals=4;blocks=9;name="main-tail-active";symbol="recomp_8CECFAE4";entries="main_tail_active_entries";break;
+ case 0x8CED59DE:instructions=22;externals=3;blocks=5;name="main-tail-service";symbol="recomp_8CED59DE";entries="main_tail_service_entries";break;
+ case 0x8CED56C0:instructions=12;externals=0;blocks=1;name="main-tail-lock";symbol="recomp_8CED56C0";entries="main_tail_lock_entries";break;
+ case 0x8CED56D8:instructions=11;externals=0;blocks=1;name="main-tail-unlock";symbol="recomp_8CED56D8";entries="main_tail_unlock_entries";break;
+ case 0x8CED09BE:instructions=3;externals=1;blocks=1;name="main-tail-record";symbol="recomp_8CED09BE";entries="main_tail_record_entries";break;
+ default:throw std::runtime_error("Unreviewed body");}
+ elf.bytes.assign(std::istreambuf_iterator<char>(f),{});
+ ElfSection section{};section.name=".original_boot";section.type=1;section.flags=6;section.address=elf.entry>=0x8CEB0000?0x8CEB0000:0x8C010000;section.size=elf.bytes.size();elf.sections.push_back(section);
+ ElfSymbol s{};s.name="fn_"+std::to_string(elf.entry);s.value=elf.entry;s.size=section.size-(s.value-section.address);s.info=0x12;s.section_index=0;elf.symbols.push_back(s);
+ ProgramAnalysisOptions options{};options.max_functions=1;options.native_override_symbols.clear();
+ auto p=analyze_reachable_program(elf,s.name,options);
+ std::cout<<"functions="<<p.functions.size()<<" instructions="<<p.functions[0].analysis.instructions.size()<<" unknown="<<p.functions[0].analysis.unknown<<" call_sites="<<p.external_calls.size()<<"\n";
+ if(p.functions.size()!=1||p.functions[0].analysis.instructions.size()!=instructions||p.functions[0].analysis.unknown||p.external_calls.size()!=externals)throw std::runtime_error("Bounded body differs from original review");
+ const auto emitted=emit_cpp_program(elf,p,{argv[2],false,false,false});
+ for(const auto&f:emitted.functions)if(f.raw_ops)throw std::runtime_error("RAW instruction");
+ const auto cfg=build_cfg(p.functions[0].analysis);if(cfg.blocks.size()!=blocks)throw std::runtime_error("CFG entries differ");
+
+ std::ofstream manifest(std::filesystem::path(argv[2])/(name+"-manifest.hpp"));
+ manifest<<"#pragma once\n#include \"dc_runtime.hpp\"\nnamespace dcrecomp_generated {\nvoid "<<symbol<<"(SH4Context&,DCRuntime&);\ninline const CodeModuleEntry "<<entries<<"[]={\n";
+ for(const auto&b:cfg.blocks)manifest<<"{0x"<<std::hex<<b.start_address<<"u,&"<<symbol<<"},\n";
+ manifest<<"};\n}\n";if(!manifest)throw std::runtime_error("Cannot write movie manifest");
+ std::cout<<"activation_manifest_entries="<<std::dec<<cfg.blocks.size()<<"\n";
+ std::cout<<"one_reviewed_original_body=1 cap=1; prefix reaches first real missing callee; no further reachability expansion\n";
+}catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

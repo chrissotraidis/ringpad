@@ -1,0 +1,41 @@
+// Emit nine reviewed original MOVIE frame-service bodies; preserve backward tail branches.
+#include "dcrecomp/cpp_emitter.hpp"
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+using namespace dcrecomp;
+int main(int argc,char**argv){try{
+ if(argc!=4)throw std::runtime_error("usage: generator IMAGE OUTPUT ADDRESS");
+ std::ifstream f(argv[1],std::ios::binary);if(!f)throw std::runtime_error("Missing image");
+ Elf32Image elf{};elf.type=2;elf.machine=42;elf.entry=std::stoul(argv[3],nullptr,16);
+ unsigned instructions=0,externals=0,blocks=0;std::string name,symbol,entries;
+ switch(elf.entry){
+ case 0x8CED5518:instructions=24;externals=1;blocks=6;name="frame-service-dispatch";symbol="recomp_8CED5518";entries="frame_service_dispatch_entries";break;
+ case 0x8CECFBDC:instructions=62;externals=3;blocks=7;name="frame-service-callback";symbol="recomp_8CECFBDC";entries="frame_service_callback_entries";break;
+ case 0x8CED38BA:instructions=3;externals=1;blocks=1;name="frame-service-notify";symbol="recomp_8CED38BA";entries="frame_service_notify_entries";break;
+ case 0x8CED478E:instructions=37;externals=1;blocks=6;name="frame-service-update";symbol="recomp_8CED478E";entries="frame_service_update_entries";break;
+ case 0x8CED47D8:instructions=23;externals=2;blocks=3;name="frame-service-instance";symbol="recomp_8CED47D8";entries="frame_service_instance_entries";break;
+ case 0x8CED47F8:instructions=26;externals=3;blocks=5;name="frame-service-instance-update";symbol="recomp_8CED47F8";entries="frame_service_instance_update_entries";break;
+ case 0x8CED14C8:instructions=52;externals=2;blocks=8;name="frame-service-instance-handler";symbol="recomp_8CED14C8";entries="frame_service_instance_handler_entries";break;
+ case 0x8CED482C:instructions=13;externals=0;blocks=4;name="frame-service-predicate";symbol="recomp_8CED482C";entries="frame_service_predicate_entries";break;
+ case 0x8CED4956:instructions=23;externals=0;blocks=6;name="frame-service-handler-helper";symbol="recomp_8CED4956";entries="frame_service_handler_helper_entries";break;
+ default:throw std::runtime_error("Unreviewed body");}
+ elf.bytes.assign(std::istreambuf_iterator<char>(f),{});
+ ElfSection section{};section.name=".original_boot";section.type=1;section.flags=6;section.address=elf.entry>=0x8CEB0000?0x8CEB0000:0x8C010000;section.size=elf.bytes.size();elf.sections.push_back(section);
+ ElfSymbol s{};s.name="fn_"+std::to_string(elf.entry);s.value=elf.entry;s.size=section.size-(s.value-section.address);s.info=0x12;s.section_index=0;elf.symbols.push_back(s);
+ ProgramAnalysisOptions options{};options.max_functions=1;options.native_override_symbols.clear();
+ auto p=analyze_reachable_program(elf,s.name,options);
+ std::cout<<"functions="<<p.functions.size()<<" instructions="<<p.functions[0].analysis.instructions.size()<<" unknown="<<p.functions[0].analysis.unknown<<" call_sites="<<p.external_calls.size()<<"\n";
+ if(p.functions.size()!=1||p.functions[0].analysis.instructions.size()!=instructions||p.functions[0].analysis.unknown||p.external_calls.size()!=externals)throw std::runtime_error("Bounded body differs from original review");
+ const auto emitted=emit_cpp_program(elf,p,{argv[2],false,false,false});
+ for(const auto&f:emitted.functions)if(f.raw_ops)throw std::runtime_error("RAW instruction");
+ const auto cfg=build_cfg(p.functions[0].analysis);if(cfg.blocks.size()!=blocks)throw std::runtime_error("CFG entries differ");
+
+ std::ofstream manifest(std::filesystem::path(argv[2])/(name+"-manifest.hpp"));
+ manifest<<"#pragma once\n#include \"dc_runtime.hpp\"\nnamespace dcrecomp_generated {\nvoid "<<symbol<<"(SH4Context&,DCRuntime&);\ninline const CodeModuleEntry "<<entries<<"[]={\n";
+ for(const auto&b:cfg.blocks)manifest<<"{0x"<<std::hex<<b.start_address<<"u,&"<<symbol<<"},\n";
+ manifest<<"};\n}\n";if(!manifest)throw std::runtime_error("Cannot write movie manifest");
+ std::cout<<"activation_manifest_entries="<<std::dec<<cfg.blocks.size()<<"\n";
+ std::cout<<"one_reviewed_original_body=1 cap=1; prefix reaches first real missing callee; no further reachability expansion\n";
+}catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

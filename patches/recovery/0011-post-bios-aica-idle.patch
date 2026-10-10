@@ -1,0 +1,13 @@
+--- a/src/codegen/cpp_emitter.cpp
++++ b/src/codegen/cpp_emitter.cpp
+@@ -16568,6 +16568,10 @@
+ 
+ void dc_setup_commercial_boot(SH4Context& ctx, DCRuntime& runtime) {
+     runtime.system_info_initialized = false;
++    // Public HLE post-BIOS handoff leaves the sound CPU in an ARM self-loop
++    // until the title asserts reset and loads its own driver (REIOS boot).
++    // This is initial firmware state, not a title callback or audio queue.
++    dc_write32(runtime, 0x00800000u, 0xEAFFFFFEu);
+     // v0.1.1 CT2: retail IP.BIN expects the main executable in Dreamcast
+     // 32-byte-slice scrambled layout and descrambles it in-place.  The generated
+     // image embeds the plain executable for static analysis, so restage it only

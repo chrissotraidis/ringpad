@@ -1,0 +1,54 @@
+// Original MOVIE callback prefix and existing exact-image module activation.
+#define main request_contract_standalone_main
+#include "startup-record-request-return.cpp"
+#undef main
+#include <functional>
+namespace dcrecomp_generated {void sevenbyte_register(DCRuntime&);void word_copy_register(DCRuntime&);void payload_validator_register(DCRuntime&);void block_iteration_register(DCRuntime&);void linked_blocks_register(DCRuntime&);void next_block_register(DCRuntime&);void timer_callback_register(DCRuntime&);void timer_tail_register(DCRuntime&);void record_update_register(DCRuntime&);void record_query_register(DCRuntime&);void record_reset_register(DCRuntime&);void record_counter_register(DCRuntime&);void record_buffer_register(DCRuntime&);void bit_expand_register(DCRuntime&);void rectangle_copy_register(DCRuntime&);void record_init_register(DCRuntime&);void record_info_register(DCRuntime&);void info_wrapper_register(DCRuntime&);void timestamp_register(DCRuntime&);void bcd_register(DCRuntime&);void count_blocks_register(DCRuntime&);void global_reset_register(DCRuntime&);void global_setup_register(DCRuntime&);void arena_init_register(DCRuntime&);void global_setter_register(DCRuntime&);void global_word_copy_register(DCRuntime&);void frame_dispatch_register(DCRuntime&);void input_status_register(DCRuntime&);void frame_adjust_register(DCRuntime&);void frame_quad_register(DCRuntime&);void quad_state_register(DCRuntime&);void quad_header_register(DCRuntime&);void quad_strip_register(DCRuntime&);void strip_writer_register(DCRuntime&);void record_state2_register(DCRuntime&);void record_ready_register(DCRuntime&);void ready_query_register(DCRuntime&);void ready_setter_register(DCRuntime&);void frame_sprites_register(DCRuntime&);void sprite_header_register(DCRuntime&);void mode_loader_register(DCRuntime&);void loader_owner_register(DCRuntime&);void file_transfer_register(DCRuntime&);}
+using SQFields=std::array<std::uint64_t,12>;
+static const char* sqkeys[]={"qacr0","qacr1","qacr_writes","pref_calls","pref_sq_calls","sq_commits","pref_ta_commits","pref_texture_commits","pref_other_commits","last_pref_address","last_pref_target","last_pref_source_pc"};
+static SQFields sqfields(const DCRuntime&r){return{r.qacr[0],r.qacr[1],r.qacr_writes,r.pref_calls,r.pref_sq_calls,r.sq_commits,r.pref_ta_commits,r.pref_texture_commits,r.pref_other_commits,r.last_pref_address,r.last_pref_target,r.last_pref_source_pc};}
+static SQFields read_sq(const char*path){std::ifstream f(path);need(bool(f),"Missing SQ state");SQFields a{};std::string line;for(unsigned i=0;i<12;++i){need(bool(std::getline(f,line)),"Incomplete SQ state");auto eq=line.find('=');need(line.substr(0,eq)==sqkeys[i],"SQ field order differs");a[i]=std::stoull(line.substr(eq+1),nullptr,16);}need(!std::getline(f,line),"Extra SQ state");return a;}
+static void restore_sq(DCRuntime&r,const auto&bytes,const SQFields&a){need(bytes.size()==64,"SQ fixture size differs");std::copy(bytes.begin(),bytes.end(),r.store_queues.begin());r.qacr={unsigned(a[0]),unsigned(a[1])};r.qacr_writes=a[2];r.pref_calls=a[3];r.pref_sq_calls=a[4];r.sq_commits=a[5];r.pref_ta_commits=a[6];r.pref_texture_commits=a[7];r.pref_other_commits=a[8];r.last_pref_address=a[9];r.last_pref_target=a[10];r.last_pref_source_pc=a[11];}
+static void save_sq(const auto&bytes,const SQFields&a,const std::string&stem){save_ram(bytes,stem+"-store-queues.bin");std::ofstream f(stem+"-store-queue-state.txt");for(unsigned i=0;i<12;++i)f<<sqkeys[i]<<'='<<std::hex<<a[i]<<'\n';need(bool(f),"Cannot save SQ expectation");}
+
+
+
+
+
+#include "movie-callback/movie-callback-manifest.hpp"
+
+struct MoviePrefix : RequestModel {
+ void prefix(){push(c.pr);c.r[3]=w(0x8ceb0720);need(c.r[3]==0x8c648422,"Unexpected first callback target");c.pr=0x8ceb06fc;c.pc=c.r[3];cycles=5;}
+};
+struct EntryBoundary {};
+static std::function<void(SH4Context&)> observe_entry;
+static RecompiledFunction real_first;
+static void measured_first(SH4Context&c,DCRuntime&rt){if(c.pr==0x8ceb06fc){observe_entry(c);throw EntryBoundary{};}real_first(c,rt);}
+template<class F>static void rejection(F f,const char*why){try{f();}catch(const std::runtime_error&e){need(std::string(e.what()).find(why)!=std::string::npos,"Wrong activation rejection");return;}throw std::runtime_error("Required activation rejection absent");}
+int main(int argc,char**argv){try{
+ need(argc==9,"usage: movie-entry RAM STATE SQ SQSTATE FLASH AICA MOVIE OUTPUT");const auto ram=read(argv[1]),sq=read(argv[3]),flash=read(argv[5]),sound=read(argv[6]),movie=read(argv[7]);const auto initial=state(argv[2]);const auto device=read_sq(argv[4]);const std::string out=argv[8];unsigned controls=0,guard_controls=0;
+ need(ram.size()==16777216&&sq.size()==64&&flash.size()==131072&&sound.size()==2097152&&movie.size()==184592,"Fixture sizes differ");need(std::equal(movie.begin(),movie.end(),ram.begin()+0xeb0000),"Captured loaded movie differs");
+ auto make=[&]{auto owner=std::make_unique<DCRuntime>();auto&rt=*owner;load_embedded_elf_image(rt);registers(rt);sevenbyte_register(rt);word_copy_register(rt);payload_validator_register(rt);block_iteration_register(rt);linked_blocks_register(rt);next_block_register(rt);timer_callback_register(rt);timer_tail_register(rt);record_update_register(rt);record_query_register(rt);record_reset_register(rt);record_counter_register(rt);record_buffer_register(rt);bit_expand_register(rt);rectangle_copy_register(rt);record_init_register(rt);record_info_register(rt);info_wrapper_register(rt);timestamp_register(rt);bcd_register(rt);count_blocks_register(rt);global_reset_register(rt);global_setup_register(rt);arena_init_register(rt);global_setter_register(rt);global_word_copy_register(rt);frame_dispatch_register(rt);input_status_register(rt);frame_adjust_register(rt);frame_quad_register(rt);quad_state_register(rt);quad_header_register(rt);quad_strip_register(rt);strip_writer_register(rt);record_state2_register(rt);record_ready_register(rt);ready_query_register(rt);ready_setter_register(rt);frame_sprites_register(rt);sprite_header_register(rt);mode_loader_register(rt);loader_owner_register(rt);file_transfer_register(rt);
+ rt.main_ram=ram;rt.system_flash=flash;rt.aica_ram=sound;load_timers(rt,argv[2]);restore_sq(rt,sq,device);return owner;};
+ auto activate=[&](DCRuntime&rt){dc_activate_code_module(rt,0x8ceb0000,movie.data(),movie.size(),movie_callback_entries,std::size(movie_callback_entries));};
+ // Retired/wrong-image/active/unknown-entry controls use the pinned module API.
+ {auto owner=make();auto&rt=*owner;dc_begin_code_module(rt,0x8ceb0000,movie.size());
+  for(unsigned address:{0x0ceb06f4u,0x8ceb06f4u,0xaceb06f4u,0x8deb06f4u}){auto c=initial;rejection([&]{call_recompiled(c,rt,address);},"Inactive or unregistered");++guard_controls;}
+  for(unsigned offset:{0u,184591u}){rt.main_ram[0xeb0000+offset]^=1;rejection([&]{activate(rt);},"image mismatch");need(!rt.targets.contains(0x8ceb06f4),"Mismatch installed entry");rt.main_ram[0xeb0000+offset]^=1;++guard_controls;}
+  activate(rt);rejection([&]{activate(rt);},"retired slot");++guard_controls;auto c=initial;rejection([&]{call_recompiled(c,rt,0x8ceb0004);},"Inactive or unregistered");++guard_controls;
+  need(rt.code_module_dispatch_depth==0,"Failed-call depth leaked");dc_begin_code_module(rt,0x8ceb0000,movie.size());rejection([&]{call_recompiled(c,rt,0x8ceb06f4);},"Inactive or unregistered");++guard_controls;activate(rt);need(rt.main_ram==ram,"Activation/retirement changed guest bytes");}
+ auto check=[&](unsigned argument,unsigned saved_pr,unsigned alias,unsigned bank,bool capture){auto owner=make();auto&rt=*owner;dc_begin_code_module(rt,0x8ceb0000,movie.size());activate(rt);auto c=initial;
+  if(!capture){c.r[4]=argument;c.r[15]=alias?0xacefe000:0x8cefe000;c.pr=saved_pr;c.sr=(c.sr&~0x20000001u)|(bank?0x20000001u:0u);c.fpscr=(c.fpscr&~(1u<<21))|(bank<<21);for(unsigned i=0;i<16;++i){c.fr_bits[i]=0x7fc01234u^(i<<16);c.xf_bits[i]=0x80000000u+i;}}
+
+  auto expected=rt.main_ram;MoviePrefix m{{c,expected}};m.prefix();auto timers=rt.tmu;const auto start=rt.tmu_tstr,tocr=rt.tmu_tocr;tick(timers,start,m.cycles);const auto vram=rt.vram;
+  if(capture){need(m.cycles==5,"Captured prefix timing differs");save_ram(expected,out+"/phase0-expected-ram.bin");save_state(m.c,out+"/phase0-expected-state.txt");save_timers(timers,start,tocr,out+"/phase0-expected-timers.txt");save_sq(sq,device,out+"/phase0-expected");}
+  unsigned seen=0;observe_entry=[&](SH4Context&actual){need(seen++==0,"Repeated movie first call");same(m.c,actual);need(expected==rt.main_ram,"Movie prefix RAM differs");for(unsigned i=0;i<3;++i)timer_same(timers[i],rt.tmu[i]);need(start==rt.tmu_tstr&&tocr==rt.tmu_tocr&&!rt.sh4_tick_pending_cycles&&rt.sh4_tick_batch_cycles==1,"Movie prefix timer controls differ");need(std::equal(sq.begin(),sq.end(),rt.store_queues.begin())&&device==sqfields(rt),"Movie prefix SQ/device differs");need(rt.aica_ram==sound&&rt.system_flash==flash&&rt.vram==vram&&!rt.device_clock_enabled&&!rt.aica_arm.instructions&&!rt.holly_irq_taken&&!rt.sh4_async_redirect&&rt.pvr_ta_stream.empty(),"Unexpected movie prefix device effect");};
+  real_first=rt.targets.at(0x8c648422);rt.register_target(0x8c648422,measured_first);bool stopped=false;try{call_recompiled(c,rt,alias?0xaceb06f4:0x8ceb06f4);}catch(const EntryBoundary&){stopped=true;}rt.register_target(0x8c648422,real_first);observe_entry={};need(stopped&&seen==1&&rt.code_module_dispatch_depth==0,"Movie prefix boundary/depth differs");
+  if(capture){save_ram(rt.main_ram,out+"/callback-observed-ram.bin");save_state(c,out+"/callback-observed-state.txt");save_timers(rt.tmu,start,tocr,out+"/callback-observed-timers.txt");save_sq(rt.store_queues,sqfields(rt),out+"/callback-observed");}else ++controls;
+  dc_begin_code_module(rt,0x8ceb0000,movie.size());need(!rt.targets.contains(0x8ceb06f4),"Retired movie entry remains");
+ };
+ for(unsigned argument:{0u,0xffffffffu})for(unsigned saved_pr:{0x8c649878u,0xac112234u})for(unsigned alias:{0u,1u})for(unsigned bank:{0u,1u})check(argument,saved_pr,alias,bank,false);check(0,0,0,0,true);
+
+ std::ofstream(out+"/result.json")<<"{\"passed\":true,\"controls\":"<<controls<<",\"activation_controls\":"<<guard_controls<<",\"captured_prefix_cycles\":5,\"activation_entries\":"<<std::size(movie_callback_entries)<<",\"whole_RAM_CPU_TMU_SQ_device_verified\":true,\"exact_loaded_image_activation_used\":true,\"retirement_verified\":true,\"intentional_stop_before_first_resident_call\":true,\"module_complete_execution_verified\":false,\"video_playback_verified\":false,\"normal_boot_verified\":false,\"G1_resolved\":false}\n";
+ std::cout<<"PASS original movie callback prefix: "<<controls<<" argument/PR/stack-alias/FPU controls;"<<guard_controls<<" activation controls;5cycle captured callback to real648422 boundary;resident callee not executed\n";
+}catch(const std::exception&e){std::cerr<<"FAIL "<<e.what()<<'\n';return 1;}}

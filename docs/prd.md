@@ -5,6 +5,13 @@ Written: **5 October 2026**. Working name: **SonicPad** (`sonicpad`), not a rese
 Audience: an autonomous coding agent operating on Chris's **Apple Silicon Mac**.
 Companion: [`goal-loop.md`](goal-loop.md). Read both before acting.
 
+**2026-10-05 research amendment:** Chris authorized bounded investigation of a
+public-source alternative after Katana acquisition failed. Execute
+[`RECOVERY-LOOP.md`](RECOVERY-LOOP.md) as an isolated feasibility workstream.
+The production foundation and exact PAL input requirements below remain pending
+an explicit, evidence-backed foundation decision; synthetic success does not
+clear the original G1.
+
 > **Decision: GO for a private source/bootstrap audit and bounded, source-independent shell work. HOLD on a complete SARecomp-based Apple build until G1 establishes access to the missing runtime and game-source inputs.**
 >
 > Sonic Adventure is a credible porting target, but the public SARecomp repository is **not a self-contained, portable source release**. This review does not establish an executable Apple port. Do not tell Chris that cloning the repository and adding touch controls is all that remains.

@@ -1,0 +1,130 @@
+--- a/src/codegen/cpp_emitter.cpp
++++ b/src/codegen/cpp_emitter.cpp
+@@ -1488,6 +1488,11 @@
+     std::uint64_t fpu_fmov64_reg_moves{};
+     // Native templates copied by the guest (notably VBR exception handlers)
+     // are rebound lazily by byte signature to their original recompiled entry.
++    // Explicit AOT overlay slots. Host must retire a slot before guest writes
++    // and activate only at a quiescent dispatch boundary after loading finishes.
++    struct CodeModuleSlot { std::uint32_t base; std::size_t size; bool active; };
++    std::vector<CodeModuleSlot> code_module_slots;
++    std::size_t code_module_dispatch_depth{};
+     std::unordered_map<std::uint32_t, std::uint32_t> relocated_code_aliases;
+     // While a copied SH-4 code template is executing through its original
+     // recompiled body, PC-relative addresses must retain the copied code
+@@ -2425,6 +2430,12 @@
+     void register_target(std::uint32_t address, RecompiledFunction function);
+ };
+ 
++struct CodeModuleEntry { std::uint32_t address; RecompiledFunction function; };
++void dc_begin_code_module(DCRuntime& runtime, std::uint32_t base, std::size_t capacity);
++void dc_activate_code_module(DCRuntime& runtime, std::uint32_t base,
++    const std::uint8_t* expected, std::size_t size,
++    const CodeModuleEntry* entries, std::size_t entry_count);
++
+ // 0.0.96: the generated SH-4 executes an enormous number of basic blocks.
+ // Keep the cheap cycle accumulator in the generated translation unit so the
+ // common (< batch) path does not cross into dc_runtime.cpp millions of times
+@@ -2606,7 +2617,8 @@
+ }
+ 
+ DCR_DISPATCH_FORCE_INLINE void dc_refresh_dispatch_ready(DCRuntime& runtime) noexcept {
+-    const bool context_clear = !runtime.trace_calls && !runtime.sh4_abi_audit &&
++    const bool context_clear = runtime.code_module_slots.empty() &&
++        !runtime.trace_calls && !runtime.sh4_abi_audit &&
+         runtime.active_relocation_source == 0u && runtime.active_relocation_target == 0u &&
+         runtime.pvr_scene_begin_target == 0u && runtime.pvr_scene_begin_txr_target == 0u &&
+         runtime.pvr_scene_begin_rtt_target == 0u;
+@@ -12352,6 +12364,66 @@
+     // never retain a stale function pointer.
+     auto& cached = dispatch_cache[(address >> 1u) & (kDispatchCacheSize - 1u)];
+     if (cached.requested == address || cached.target == address) cached = {};
++}
++
++// The manifest and function pointers are trusted build-time inputs. This binds
++// loaded bytes to that manifest, not arbitrary guest code to arbitrary host code.
++void dc_begin_code_module(DCRuntime& runtime, std::uint32_t base, std::size_t capacity) {
++    const auto physical = base & 0x1FFFFFFFu;
++    if (physical < DCRuntime::kMainRamPhysicalBase || capacity == 0u ||
++        physical >= DCRuntime::kMainRamPhysicalBase + DCRuntime::kMainRamSize ||
++        capacity > DCRuntime::kMainRamPhysicalBase + DCRuntime::kMainRamSize - physical ||
++        runtime.code_module_dispatch_depth || runtime.active_relocation_source || runtime.active_relocation_target)
++        throw std::runtime_error("Invalid or non-quiescent code module slot");
++    DCRuntime::CodeModuleSlot* slot = nullptr;
++    for (auto& existing : runtime.code_module_slots) {
++        if (existing.base == physical && existing.size == capacity) { slot = &existing; break; }
++        if (physical < existing.base + existing.size && existing.base < physical + capacity)
++            throw std::runtime_error("Overlapping code module slots");
++    }
++    if (!slot) {
++        runtime.code_module_slots.push_back({physical, capacity, false});
++        slot = &runtime.code_module_slots.back();
++    }
++    slot->active = false;
++    for (auto it = runtime.targets.begin(); it != runtime.targets.end();) {
++        auto address = it->first & 0x1FFFFFFFu;
++        if (address >= DCRuntime::kMainRamPhysicalBase && address < 0x10000000u)
++            address = DCRuntime::kMainRamPhysicalBase + ((address - DCRuntime::kMainRamPhysicalBase) & (DCRuntime::kMainRamSize - 1u));
++        if (address >= physical && address < physical + capacity) it = runtime.targets.erase(it);
++        else ++it;
++    }
++    // Flush all derived state, including aliases outside the slot whose source
++    // was in it. No active relocation context is allowed across this boundary.
++    runtime.relocated_code_aliases.clear();
++    runtime.dispatch_cache = {};
++    dc_refresh_dispatch_ready(runtime);
++}
++
++void dc_activate_code_module(DCRuntime& runtime, std::uint32_t base,
++    const std::uint8_t* expected, std::size_t size,
++    const CodeModuleEntry* entries, std::size_t entry_count) {
++    const auto physical = base & 0x1FFFFFFFu;
++    DCRuntime::CodeModuleSlot* slot = nullptr;
++    for (auto& candidate : runtime.code_module_slots)
++        if (candidate.base == physical) { slot = &candidate; break; }
++    if (!slot || slot->active || runtime.code_module_dispatch_depth || !expected || !size || size > slot->size || !entries || !entry_count)
++        throw std::runtime_error("Code module activation needs a retired slot and manifest");
++    for (std::size_t i = 0; i < size; ++i)
++        if (dc_read8(runtime, physical + static_cast<std::uint32_t>(i)) != expected[i])
++            throw std::runtime_error("Code module image mismatch");
++    for (std::size_t i = 0; i < entry_count; ++i) {
++        const auto address = entries[i].address & 0x1FFFFFFFu;
++        if (!entries[i].function || (address & 1u) || address < physical || address - physical >= size)
++            throw std::runtime_error("Invalid code module entry");
++        for (std::size_t j = 0; j < i; ++j)
++            if ((entries[j].address & 0x1FFFFFFFu) == address)
++                throw std::runtime_error("Duplicate code module entry");
++    }
++    for (std::size_t i = 0; i < entry_count; ++i)
++        runtime.register_target(0x80000000u | (entries[i].address & 0x1FFFFFFFu), entries[i].function);
++    slot->active = true;
++    dc_refresh_dispatch_ready(runtime);
+ }
+ 
+ void dc_maple_refresh_guest_state(DCRuntime& runtime) {
+@@ -16609,6 +16681,25 @@
+ }
+ 
+ void call_recompiled(SH4Context& ctx, DCRuntime& runtime, std::uint32_t target) {
++    struct DispatchScope {
++        std::size_t& depth;
++        explicit DispatchScope(std::size_t& value) : depth(value) { ++depth; }
++        ~DispatchScope() { --depth; }
++    } dispatch_scope(runtime.code_module_dispatch_depth);
++    // A managed overlay never falls through to signature-based relocation or a
++    // cached native function while retired, or for an unregistered entry.
++    auto physical = target & 0x1FFFFFFFu;
++    if (physical >= DCRuntime::kMainRamPhysicalBase && physical < 0x10000000u) {
++        physical = DCRuntime::kMainRamPhysicalBase + ((physical - DCRuntime::kMainRamPhysicalBase) & (DCRuntime::kMainRamSize - 1u));
++        for (const auto& slot : runtime.code_module_slots) {
++            if (physical < slot.base || physical - slot.base >= slot.size) continue;
++            const auto entry = runtime.targets.find(0x80000000u | physical);
++            if (!slot.active || entry == runtime.targets.end() || !entry->second)
++                throw std::runtime_error("Inactive or unregistered code module target");
++            target = 0x80000000u | physical;
++            break;
++        }
++    }
+     // Performance fast path for the overwhelmingly common retail case: the
+     // direct-mapped cache already knows the exact non-relocated generated
+     // function, no verbose trace is requested, and no KOS scene observer needs

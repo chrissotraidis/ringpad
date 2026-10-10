@@ -31,6 +31,7 @@ docs/artifacts/
 *.ksave
 *.ksave.bak
 *.vmu
+dreamcast_vmu_*.bin
 *.sav
 *.dmp
 *.ips

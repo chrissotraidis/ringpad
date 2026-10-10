@@ -1,0 +1,105 @@
+diff --git a/include/dcrecomp/dcir.hpp b/include/dcrecomp/dcir.hpp
+index 56d2df8..fcc6e90 100644
+--- a/include/dcrecomp/dcir.hpp
++++ b/include/dcrecomp/dcir.hpp
+@@ -50,6 +50,7 @@ enum class DCIROp {
+     Store8Disp,
+     Store16Disp,
+     Store32Disp,
++    Store32Gbr,
+     Load8Indexed,
+     Load16Indexed,
+     Load32Indexed,
+diff --git a/include/dcrecomp/sh4_decoder.hpp b/include/dcrecomp/sh4_decoder.hpp
+index 47a7399..6b241e7 100644
+--- a/include/dcrecomp/sh4_decoder.hpp
++++ b/include/dcrecomp/sh4_decoder.hpp
+@@ -122,6 +122,7 @@ enum class Opcode {
+     MovBDispLoad,
+     MovWDispLoad,
+     MovLDispStore,
++    MovLGbrStore,
+     MovLDispLoad,
+     MovBIndexedStore,
+     MovWIndexedStore,
+diff --git a/src/codegen/cpp_emitter.cpp b/src/codegen/cpp_emitter.cpp
+index 5000343..0d019ac 100644
+--- a/src/codegen/cpp_emitter.cpp
++++ b/src/codegen/cpp_emitter.cpp
+@@ -18145,6 +18145,7 @@ bool dcir_ta_fusion_safe_between(DCIROp op) {
+         case DCIROp::Load8PostInc: case DCIROp::Load16PostInc: case DCIROp::Load32PostInc:
+         case DCIROp::Load8Disp: case DCIROp::Load16Disp: case DCIROp::Load32Disp:
+         case DCIROp::Load8Indexed: case DCIROp::Load16Indexed: case DCIROp::Load32Indexed:
++        case DCIROp::Store32Gbr: // Observable memory access: forbid delaying SQ writes across it.
+         case DCIROp::Store8: case DCIROp::Store16:
+         case DCIROp::Store8PreDec: case DCIROp::Store16PreDec:
+         case DCIROp::Store8Disp: case DCIROp::Store16Disp:
+@@ -18493,6 +18494,10 @@ std::string emit_operation(const DCIRInstruction& i, const std::set<std::uint32_
+             out << "    dc_write16(runtime, " << r(i.dst) << " + "
+                 << static_cast<std::uint32_t>(i.immediate) << "u, static_cast<std::uint16_t>(" << r(i.src) << " & 0xFFFFu));\n";
+             break;
++        case DCIROp::Store32Gbr:
++            out << "    dc_guest_write32_hot(runtime, ctx.gbr + "
++                << static_cast<std::uint32_t>(i.immediate) << "u, " << r(0) << ");\n";
++            break;
+         case DCIROp::Store32Disp:
+             out << "    dc_guest_write32_hot(runtime, " << r(i.dst) << " + "
+                 << static_cast<std::uint32_t>(i.immediate) << "u, " << r(i.src) << ");\n";
+diff --git a/src/ir/dcir.cpp b/src/ir/dcir.cpp
+index bf79b22..b11db82 100644
+--- a/src/ir/dcir.cpp
++++ b/src/ir/dcir.cpp
+@@ -129,6 +129,8 @@ DCIRInstruction lower_one(const FunctionAnalysis& analysis, const sh4::Instructi
+             out.op = DCIROp::Store8Disp; out.dst = i.rn; out.src = 0; out.immediate = i.immediate; break;
+         case Opcode::MovWDispStore:
+             out.op = DCIROp::Store16Disp; out.dst = i.rn; out.src = 0; out.immediate = i.immediate; break;
++        case Opcode::MovLGbrStore:
++            out.op = DCIROp::Store32Gbr; out.src = 0; out.immediate = i.immediate; break;
+         case Opcode::MovLDispStore:
+             out.op = DCIROp::Store32Disp; out.dst = i.rn; out.src = i.rm; out.immediate = i.immediate * 4; break;
+         case Opcode::MovBIndexedLoad:
+@@ -481,6 +483,7 @@ const char* to_string(DCIROp op) {
+         case DCIROp::Store8Disp: return "STORE8_DISP";
+         case DCIROp::Store16Disp: return "STORE16_DISP";
+         case DCIROp::Store32Disp: return "STORE32_DISP";
++        case DCIROp::Store32Gbr: return "STORE32_GBR";
+         case DCIROp::Load8Indexed: return "LOAD8_INDEXED";
+         case DCIROp::Load16Indexed: return "LOAD16_INDEXED";
+         case DCIROp::Load32Indexed: return "LOAD32_INDEXED";
+@@ -800,6 +803,9 @@ std::string format_dcir(const DCIRInstruction& i) {
+         case DCIROp::Load32Disp:
+             r(i.dst); out << ", @(" << i.immediate << ","; r(i.src); out << ")";
+             break;
++        case DCIROp::Store32Gbr:
++            out << "@(" << i.immediate << ",GBR), R0";
++            break;
+         case DCIROp::Store8Disp:
+         case DCIROp::Store16Disp:
+         case DCIROp::Store32Disp:
+diff --git a/src/sh4/decoder.cpp b/src/sh4/decoder.cpp
+index 3bf1a51..da56461 100644
+--- a/src/sh4/decoder.cpp
++++ b/src/sh4/decoder.cpp
+@@ -258,6 +258,14 @@ Instruction decode(std::uint16_t raw, std::uint32_t address) {
+         return out;
+     }
+ 
++    // MOV.L R0,@(disp,GBR): unsigned disp8 scaled to bytes.
++    if ((raw & 0xFF00) == 0xC200) {
++        out.opcode = Opcode::MovLGbrStore;
++        out.rm = 0;
++        out.immediate = (raw & 0xFF) * 4;
++        return out;
++    }
++
+     // Indexed memory forms using R0 as the index register.
+     if ((raw & 0xF00F) == 0x0004) { out.opcode = Opcode::MovBIndexedStore; set_nm(out, raw); return out; }
+     if ((raw & 0xF00F) == 0x0005) { out.opcode = Opcode::MovWIndexedStore; set_nm(out, raw); return out; }
+@@ -596,6 +604,7 @@ std::string to_string(const Instruction& i) {
+         case Opcode::MovWDispStore: ss << "mov.w r0,@(" << i.immediate << ",r" << rn << ")"; break;
+         case Opcode::MovBDispLoad: ss << "mov.b @(" << i.immediate << ",r" << rm << "),r0"; break;
+         case Opcode::MovWDispLoad: ss << "mov.w @(" << i.immediate << ",r" << rm << "),r0"; break;
++        case Opcode::MovLGbrStore: ss << "mov.l r0,@(" << i.immediate << ",gbr)"; break;
+         case Opcode::MovLDispStore: ss << "mov.l r" << rm << ",@(" << (i.immediate * 4) << ",r" << rn << ")"; break;
+         case Opcode::MovLDispLoad: ss << "mov.l @(" << (i.immediate * 4) << ",r" << rm << "),r" << rn; break;
+         case Opcode::MovBIndexedStore: ss << "mov.b r" << rm << ",@(r0,r" << rn << ")"; break;

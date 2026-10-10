@@ -1,0 +1,111 @@
+--- a/src/disc/raw_recompiler.cpp
++++ b/src/disc/raw_recompiler.cpp
+@@ -36,6 +36,7 @@
+     std::vector<std::uint32_t> seed_entries;
+     std::vector<std::filesystem::path> seed_files;
+     bool no_emit{};
++    std::vector<std::pair<std::uint32_t, std::uint32_t>> data_ranges;
+ };
+ 
+ std::uint32_t parse_u32(const std::string& text) {
+@@ -55,7 +56,7 @@
+ Options parse(int argc, char** argv) {
+     if (argc < 2) {
+         std::cout << "dc_raw_recomp 0.1.0 <BOOT.BIN> [--base=0x8C010000] [--entry=0x8C010000] "
+-                     "[--seed=ADDR ...] [--seed-file=FILE ...] [--output=DIR] [--map=FILE] [--max-functions=N] [--max-closure-entries=N] [--closure-passes=N] [--no-emit]\n";
++                     "[--seed=ADDR ...] [--seed-file=FILE ...] [--output=DIR] [--map=FILE] [--max-functions=N] [--max-closure-entries=N] [--closure-passes=N] [--data-range=START:END ...] [--no-emit]\n";
+         std::exit(1);
+     }
+     Options o;
+@@ -71,6 +72,11 @@
+         else if (a.rfind("--closure-passes=", 0) == 0) o.closure_passes = parse_size(a.substr(17));
+         else if (a.rfind("--seed=", 0) == 0) o.seed_entries.push_back(parse_u32(a.substr(7)));
+         else if (a.rfind("--seed-file=", 0) == 0) o.seed_files.emplace_back(a.substr(12));
++        else if (a.rfind("--data-range=", 0) == 0) {
++            const auto split = a.find(':', 13u);
++            if (split == std::string::npos) throw std::runtime_error("data range needs START:END");
++            o.data_ranges.emplace_back(parse_u32(a.substr(13u, split - 13u)), parse_u32(a.substr(split + 1u)));
++        }
+         else if (a == "--no-emit") o.no_emit = true;
+         else throw std::runtime_error("unknown option: " + a);
+     }
+@@ -100,6 +106,12 @@
+     if (o.max_closure_entries != 0u && o.max_closure_entries >= o.max_functions)
+         throw std::runtime_error("--max-closure-entries must be smaller than --max-functions");
+     return o;
++}
++
++bool declared_data(const Options& o, std::uint32_t address) {
++    return std::any_of(o.data_ranges.begin(), o.data_ranges.end(), [address](const auto& range) {
++        return address >= range.first && address < range.second;
++    });
+ }
+ 
+ std::size_t closure_entry_limit(const Options& o) {
+@@ -2624,6 +2636,23 @@
+                 continue;
+             }
+             ++stats.analyzed_functions;
++            // Reject contradictory executable evidence before heuristics can
++            // discard a target (or a dirty source) and hide the conflict.
++            if (!o.data_ranges.empty()) {
++                const auto check_target = [&](std::uint32_t target) {
++                    const auto canonical = canonical_local_address(o.base, bytes.size(), target);
++                    if (canonical && (declared_data(o, *canonical) || declared_data(o, *canonical + 1u)))
++                        throw std::runtime_error("reachable instruction overlaps declared data");
++                };
++                for (const auto& insn : analysis.instructions) check_target(insn.address);
++                for (const auto& call : analysis.calls)
++                    if (call.resolved) check_target(call.target);
++                for (const auto* candidates : {&analysis.branch_selected_calls, &analysis.cfg_call_candidates})
++                    for (const auto& dispatch : *candidates)
++                        for (const auto target : dispatch.targets) check_target(target);
++                for (const auto& dispatch : analysis.dynamic_branches)
++                    for (const auto target : dispatch.targets) check_target(target);
++            }
+             for (const auto& insn : analysis.instructions) covered_code_addresses.insert(insn.address);
+ 
+             // A speculative entry that decodes UNKNOWN is not authoritative code
+@@ -3381,6 +3410,9 @@
+         // redundancy is what prevents one false-positive rule from cascading.
+         std::set<std::uint32_t> clean_additions;
+         for (const auto address : additions) {
++            // Only caller-supplied, independently validated data metadata may
++            // override heuristic promotion. Never infer data from UNKNOWN alone.
++            if (declared_data(o, address)) continue;
+             try {
+                 const auto fragment = dcrecomp::analyze_code_fragment_at(elf, address);
+                 if (fragment.unknown != 0u || fragment.instructions.empty()) {
+@@ -3437,6 +3469,18 @@
+         const auto o = parse(argc, argv);
+         const auto bytes = read_all(o.path);
+         if (!local_address(o.base, bytes.size(), o.entry)) throw std::runtime_error("entry lies outside raw image");
++        for (const auto& range : o.data_ranges) {
++            if (range.first >= range.second || range.first < o.base ||
++                static_cast<std::uint64_t>(range.second) > static_cast<std::uint64_t>(o.base) + bytes.size())
++                throw std::runtime_error("data range lies outside raw image or is empty");
++        }
++        if (declared_data(o, o.entry)) throw std::runtime_error("explicit entry overlaps declared data");
++        for (const auto seed : o.seed_entries) {
++            if (const auto canonical = canonical_local_address(o.base, bytes.size(), seed);
++                canonical && declared_data(o, *canonical))
++                throw std::runtime_error("explicit seed overlaps declared data");
++        }
++
+ 
+         ClosureStats closure;
+         const auto starts = discover_function_closure(bytes, o, closure);
+@@ -3452,6 +3496,13 @@
+             if (address != o.entry) analysis_options.seed_addresses.push_back(address);
+         }
+         const auto program = dcrecomp::analyze_reachable_program(elf, synthetic_name(o.entry), analysis_options);
++        // A direct/reachable edge into a declared data span is a contradiction,
++        // not permission to drop the edge. Fail before any map/source emission.
++        for (const auto& fn : program.functions)
++            for (const auto& insn : fn.analysis.instructions)
++                if (declared_data(o, insn.address) || declared_data(o, insn.address + 1u))
++                    throw std::runtime_error("reachable instruction overlaps declared data");
++
+ 
+         std::size_t total_instructions = 0u;
+         std::size_t total_known = 0u;

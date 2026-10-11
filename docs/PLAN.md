@@ -10,7 +10,7 @@ the evidence named in its row; record results in [STATUS.md](STATUS.md).
 | S1b Discovery | Static discovery from traced seeds; per-route coverage report | Fewer first-run misses on a new route | Open |
 | S2 macOS first play | D3 in [prd.md](prd.md) | Scripted replay plus a human run; save and reload verified; audio heard | Open |
 | S3 iOS performance | iOS build of core plus AOT blocks; one iPad Simulator; Chris measures Emerald Coast on device | Frame-rate log from the device build | Simulator part **done 11 Oct** (Chaos 0 reached); device measurement open |
-| S4 SonicPad shell | SunPad-derived UI, touch layer from `port/input`, GDI import with hash check, settings, diagnostics | Simulator UI tests and touch routing tests | Open |
+| S4 SonicPad shell | Landscape layout, touch layer from `port/input`, three-dot menu, GDI import with hash check | Simulator UI tests and touch routing tests | **Done 11 Oct** (4 UI tests pass); settings, diagnostics and controller support open |
 | S5 Coverage and stability | Seven stories, Chao, soak, renderer review | Trace manifests per story, scripted regressions | Open |
 | S6 Device acceptance | Chris tests the exact build | Recorded hashes and notes | Open |
 | S7 Publication | Separate approval | License and package audit | Not started |

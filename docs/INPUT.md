@@ -119,8 +119,12 @@ stick deflection.
    mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (50/50 pass)
    and the touch layout/arbiter by `tests/host/test_dreamcast_touch.cpp`
    (46/46 pass), both via the same runner.
-2. **Simulator view-event routing** — not run. `xcrun simctl io ... screenshot`
-   captures an image and does not test touch.
+2. **Simulator view-event routing** — passes as of 11 October 2026.
+   `tests/ios/SonicPadUITests.m` sends XCUITest taps, drags and holds to the
+   overlay in the iPad Simulator. It checks the resulting Flycast port-A
+   values: buttons, both stick axes with +Y up, the right-shoulder slide, and
+   that the three-dot menu never sends Start. Flycast's mapping is covered on
+   the host by `tests/host/test_flycast_bridge.cpp`.
 3. **Physical multitouch/controller** — not run; reserved for the owner on the
    exact candidate.
 

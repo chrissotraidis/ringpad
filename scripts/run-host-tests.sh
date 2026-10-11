@@ -95,6 +95,11 @@ run_suite test_dreamcast_touch \
 rc=$?
 [ "$rc" -eq 0 ] || exit "$rc"
 
+run_suite test_dcpad -I port/dcpad/core \
+    port/dcpad/core/DCPad.cpp tests/host/test_dcpad.cpp
+rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
 run_suite test_flycast_bridge \
     port/input/FlycastPadBridge.cpp port/input/DreamcastInputAdapter.cpp tests/host/test_flycast_bridge.cpp
 rc=$?

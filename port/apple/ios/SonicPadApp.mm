@@ -1,6 +1,6 @@
 // SonicPad iOS shell: a full-screen Metal layer driven by a display link,
-// SonicPad's single-stick touch overlay, a three-dot menu kept separate from
-// Start, and verified import of the owner's disc. Flycast's Vulkan renderer
+// the reusable DCPad Dreamcast touch controls and ••• menu (port/dcpad),
+// physical controller input, and verified import of the owner's disc. Flycast's Vulkan renderer
 // draws into the layer through MoltenVK; the recompiled game runs on Flycast's
 // emulation thread.
 #import <UIKit/UIKit.h>
@@ -9,7 +9,8 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "SPGameLibrary.h"
-#import "SPTouchOverlayView.h"
+#import "DCPadControllerInput.h"
+#import "DCPadOverlayView.h"
 
 #include "types.h"
 #include "emulator.h"
@@ -86,10 +87,14 @@ static void hideFlycastGamepad(Event, void *)
 }
 @end
 
-@interface SPGameViewController : UIViewController <UIDocumentPickerDelegate>
+@interface SPGameViewController : UIViewController <UIDocumentPickerDelegate, DCPadOverlayDelegate>
 @property (nonatomic, strong) CADisplayLink *displayLink;
-@property (nonatomic, strong) SPTouchOverlayView *overlay;
-@property (nonatomic, strong) UIButton *menuButton;
+@property (nonatomic, strong) DCPadOverlayView *overlay;
+@property (nonatomic, strong) DCPadControllerInput *controllerInput;
+@property (nonatomic, strong) NSMutableSet<NSString *> *pauseReasons;
+@property (nonatomic) BOOL stoppedByShell;
+- (void)setPaused:(BOOL)paused reason:(NSString *)reason;
+- (void)clearInput;
 @property (nonatomic, strong) UIView *importView;
 @property (nonatomic, strong) UILabel *importStatus;
 @property (nonatomic, strong) UIProgressView *importProgress;
@@ -97,7 +102,6 @@ static void hideFlycastGamepad(Event, void *)
 @property (nonatomic, strong) UIButton *importCancel;
 @property (nonatomic, strong) UILabel *inputDebug;
 @property (nonatomic) BOOL renderStarted;
-@property (nonatomic) BOOL resumeAfterMenu;
 @property (nonatomic) BOOL scriptedInput;
 @end
 
@@ -116,26 +120,12 @@ static void hideFlycastGamepad(Event, void *)
 	view.backgroundColor = UIColor.blackColor;
 	self.view = view;
 
-	self.overlay = [[SPTouchOverlayView alloc] initWithFrame:view.bounds];
+	self.overlay = [[DCPadOverlayView alloc] initWithFrame:view.bounds storageNamespace:@"SonicAdventure"];
 	self.overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+	self.overlay.menuTitle = @"SonicPad";
+	self.overlay.delegate = self;
 	[view addSubview:self.overlay];
-
-	UIButtonConfiguration *menuConfig = [UIButtonConfiguration plainButtonConfiguration];
-	menuConfig.image = [UIImage systemImageNamed:@"ellipsis.circle.fill"
-			withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:30]];
-	menuConfig.baseForegroundColor = [UIColor colorWithWhite:1 alpha:0.85];
-	self.menuButton = [UIButton buttonWithConfiguration:menuConfig primaryAction:nil];
-	self.menuButton.accessibilityIdentifier = @"sp.menu";
-	self.menuButton.accessibilityLabel = @"Menu";
-	[self.menuButton addTarget:self action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
-	self.menuButton.translatesAutoresizingMaskIntoConstraints = NO;
-	[view addSubview:self.menuButton];
-	[NSLayoutConstraint activateConstraints:@[
-		[self.menuButton.topAnchor constraintEqualToAnchor:view.safeAreaLayoutGuide.topAnchor constant:8],
-		[self.menuButton.trailingAnchor constraintEqualToAnchor:view.safeAreaLayoutGuide.trailingAnchor constant:-8],
-		[self.menuButton.widthAnchor constraintEqualToConstant:48],
-		[self.menuButton.heightAnchor constraintEqualToConstant:48],
-	]];
+	self.pauseReasons = [NSMutableSet set];
 
 	if (std::getenv("SONICPAD_INPUT_DEBUG") != nullptr) {
 		self.inputDebug = [[UILabel alloc] init];
@@ -237,6 +227,13 @@ static void hideFlycastGamepad(Event, void *)
 	[session setCategory:AVAudioSessionCategoryPlayback error:nil];
 	[session setActive:YES error:nil];
 
+	self.controllerInput = [[DCPadControllerInput alloc] initWithNamespace:@"SonicAdventure"];
+	__weak SPGameViewController *weakSelf = self;
+	self.controllerInput.connectionChanged = ^(BOOL connected) {
+		[weakSelf.overlay setControllerConnected:connected];
+	};
+	[self.controllerInput start];
+
 	if (const char *game = std::getenv("SONICPAD_GAME")) {
 		settings.content.path = game;
 	} else if (const char *folder = std::getenv("SONICPAD_IMPORT")) {
@@ -319,8 +316,8 @@ static void hideFlycastGamepad(Event, void *)
 		_maxY = MAX(_maxY, (int)pad.joyy);
 		_maxLT = MAX(_maxLT, (unsigned)pad.lt);
 		_maxRT = MAX(_maxRT, (unsigned)pad.rt);
-		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u",
-				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT];
+		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d",
+				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0];
 	}
 }
 
@@ -331,59 +328,122 @@ static void hideFlycastGamepad(Event, void *)
 	_hold.clear();
 }
 
-- (void)pauseGame
+// The game runs only while nothing needs it paused (menu, settings, layout
+// editing, import, background). Every change clears held input.
+- (void)setPaused:(BOOL)paused reason:(NSString *)reason
 {
 	[self clearInput];
-	self.resumeAfterMenu = emu.running();
-	if (self.resumeAfterMenu)
+	const BOOL wasPaused = self.pauseReasons.count > 0;
+	if (paused)
+		[self.pauseReasons addObject:reason];
+	else
+		[self.pauseReasons removeObject:reason];
+	const BOOL nowPaused = self.pauseReasons.count > 0;
+	if (nowPaused && !wasPaused && emu.running()) {
 		emu.stop();
-}
-
-- (void)resumeGame
-{
-	[self clearInput];
-	if (self.resumeAfterMenu && !emu.running())
+		self.stoppedByShell = YES;
+	} else if (!nowPaused && wasPaused && self.stoppedByShell) {
+		self.stoppedByShell = NO;
 		emu.start();
-	self.resumeAfterMenu = NO;
+	}
 }
 
-- (void)showMenu
+- (void)dcpadOverlay:(DCPadOverlayView *)overlay modalStateChanged:(BOOL)modal
 {
-	[self pauseGame];
-	UIAlertController *menu = [UIAlertController alertControllerWithTitle:@"SonicPad" message:nil
-			preferredStyle:UIAlertControllerStyleActionSheet];
-	[menu addAction:[UIAlertAction actionWithTitle:@"Resume" style:UIAlertActionStyleCancel
-			handler:^(UIAlertAction *) { [self resumeGame]; }]];
-	[menu addAction:[UIAlertAction actionWithTitle:@"Import Game…" style:UIAlertActionStyleDefault
-			handler:^(UIAlertAction *) { [self showImport:YES]; }]];
-	menu.popoverPresentationController.sourceView = self.menuButton;
-	menu.popoverPresentationController.sourceRect = self.menuButton.bounds;
-	[self presentViewController:menu animated:YES completion:nil];
+	[self setPaused:modal reason:@"overlay"];
+}
+
+- (void)dcpadOverlayRequestsControllerMapping:(DCPadOverlayView *)overlay
+{
+	[self setPaused:YES reason:@"mapping"];
+	[self.controllerInput presentMappingFrom:self];
+	[self watchPresentedControllerReleaseReason:@"mapping"];
+}
+
+// Alerts chain into each other; resume once none is showing.
+- (void)watchPresentedControllerReleaseReason:(NSString *)reason
+{
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		if (self.presentedViewController != nil)
+			[self watchPresentedControllerReleaseReason:reason];
+		else
+			[self setPaused:NO reason:reason];
+	});
+}
+
+- (NSArray<UIMenuElement *> *)dcpadOverlayMenuElements:(DCPadOverlayView *)overlay
+{
+	__weak SPGameViewController *weakSelf = self;
+	UIAction *importGame = [UIAction actionWithTitle:@"Import Game…" image:[UIImage systemImageNamed:@"square.and.arrow.down"]
+			identifier:nil handler:^(UIAction *) { [weakSelf showImport:YES]; }];
+	UIAction *reset = [UIAction actionWithTitle:@"Reset Game…" image:[UIImage systemImageNamed:@"arrow.counterclockwise"]
+			identifier:nil handler:^(UIAction *) { [weakSelf confirmReset]; }];
+	reset.attributes = settings.content.path.empty() ? UIMenuElementAttributesDisabled : 0;
+	UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
+			identifier:nil handler:^(UIAction *) {
+		config::ShowFPS = !config::ShowFPS;
+		SaveSettings();
+	}];
+	fps.state = config::ShowFPS ? UIMenuElementStateOn : UIMenuElementStateOff;
+	UIAction *about = [UIAction actionWithTitle:@"About This Build" image:[UIImage systemImageNamed:@"info.circle"]
+			identifier:nil handler:^(UIAction *) { [weakSelf showAbout]; }];
+	return @[
+		[UIMenu menuWithTitle:@"Game" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[importGame, reset]],
+		[UIMenu menuWithTitle:@"Display" image:[UIImage systemImageNamed:@"display"] identifier:nil options:0 children:@[fps, about]],
+	];
+}
+
+- (void)confirmReset
+{
+	[self setPaused:YES reason:@"reset"];
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Reset Game?"
+			message:@"The game restarts from the beginning. Progress since your last in-game save is lost." preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *) {
+		[self setPaused:NO reason:@"reset"];
+	}]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
+		[self.pauseReasons removeObject:@"reset"];
+		self.stoppedByShell = NO;   // reloading starts the emulator itself
+		if (!settings.content.path.empty())
+			gui_start_game(settings.content.path);
+	}]];
+	[self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)showAbout
+{
+	extern const char sp_aot_manifest_id[];
+	NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"?";
+	NSString *message = [NSString stringWithFormat:@"Version %@\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
+			version, sp_aot_manifest_id,
+			settings.content.path.empty() ? @"not loaded" : @"Sonic Adventure PAL v1.003"];
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"SonicPad" message:message
+			preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+	[self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)showImport:(BOOL)cancellable
 {
-	[self clearInput];
+	[self setPaused:YES reason:@"import"];
 	self.importStatus.text = nil;
 	self.importProgress.hidden = YES;
 	self.importChoose.enabled = YES;
 	self.importCancel.hidden = !cancellable;
 	self.importView.hidden = NO;
 	self.overlay.hidden = YES;
-	self.menuButton.hidden = YES;
 }
 
 - (void)hideImport
 {
 	self.importView.hidden = YES;
 	self.overlay.hidden = NO;
-	self.menuButton.hidden = NO;
 }
 
 - (void)cancelImport
 {
 	[self hideImport];
-	[self resumeGame];
+	[self setPaused:NO reason:@"import"];
 }
 
 - (void)chooseFolder
@@ -424,7 +484,8 @@ static void hideFlycastGamepad(Event, void *)
 				}
 				NSLog(@"SONICPAD_IMPORT ok %@", gdiPath);
 				[self hideImport];
-				self.resumeAfterMenu = NO;
+				[self.pauseReasons removeObject:@"import"];
+				self.stoppedByShell = NO;   // loading starts the emulator itself
 				[self startGame:gdiPath];
 			}];
 }
@@ -450,7 +511,6 @@ static void hideFlycastGamepad(Event, void *)
 
 @interface SPSceneDelegate : UIResponder <UIWindowSceneDelegate>
 @property (nonatomic, strong) UIWindow *window;
-@property (nonatomic) BOOL resumeOnForeground;
 @end
 
 @implementation SPSceneDelegate
@@ -470,17 +530,12 @@ static void hideFlycastGamepad(Event, void *)
 
 - (void)sceneDidEnterBackground:(UIScene *)scene
 {
-	[(SPGameViewController *)self.window.rootViewController clearInput];
-	self.resumeOnForeground = emu.running();
-	if (self.resumeOnForeground)
-		emu.stop();
+	[(SPGameViewController *)self.window.rootViewController setPaused:YES reason:@"background"];
 }
 
 - (void)sceneWillEnterForeground:(UIScene *)scene
 {
-	if (self.resumeOnForeground)
-		emu.start();
-	self.resumeOnForeground = NO;
+	[(SPGameViewController *)self.window.rootViewController setPaused:NO reason:@"background"];
 }
 
 @end

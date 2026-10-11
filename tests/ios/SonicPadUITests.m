@@ -2,7 +2,12 @@
 //
 // Run with scripts/ios/run-ui-tests.sh. The owner's disc is passed through
 // TEST_RUNNER_SONICPAD_GDI_DIR (folder) and TEST_RUNNER_SONICPAD_GDI (file).
+// Touch tests read Flycast's port-A values from the SONICPAD_INPUT_DEBUG label.
 #import <XCTest/XCTest.h>
+
+// Flycast DreamcastKey bits (core/input/gamepad.h).
+static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 4, kDown = 1u << 5,
+		kLeft = 1u << 6, kRight = 1u << 7, kY = 1u << 9, kX = 1u << 10;
 
 @interface SonicPadUITests : XCTestCase
 @end
@@ -22,7 +27,7 @@
 	return value;
 }
 
-- (void)attachScreenshot:(XCUIApplication *)app name:(NSString *)name
+- (void)attachScreenshot:(NSString *)name
 {
 	XCTAttachment *shot = [XCTAttachment attachmentWithScreenshot:XCUIScreen.mainScreen.screenshot];
 	shot.name = name;
@@ -30,21 +35,24 @@
 	[self addAttachment:shot];
 }
 
-- (XCUIApplication *)launchGameWithDebug
+// Launch with the disc, the input debug label, and a fresh touch layout.
+- (XCUIApplication *)launchGame
 {
 	XCUIApplication *app = [[XCUIApplication alloc] init];
 	app.launchEnvironment = @{ @"SONICPAD_GAME": [self env:@"SONICPAD_GDI"], @"SONICPAD_INPUT_DEBUG": @"1" };
+	app.launchArguments = @[@"-DCPad.SonicAdventure.tablet", @"{}", @"-DCPad.SonicAdventure.phone", @"{}"];
 	[app launch];
-	XCTAssertTrue([app.otherElements[@"sp.control.A"] waitForExistenceWithTimeout:30] ||
-			[app.buttons[@"sp.control.A"] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30]);
+	XCTAssertTrue([app.staticTexts[@"sp.inputDebug"] waitForExistenceWithTimeout:10]);
 	return app;
 }
 
 - (XCUIElement *)control:(NSString *)name in:(XCUIApplication *)app
 {
-	XCUIElement *element = app.buttons[[@"sp.control." stringByAppendingString:name]];
+	NSString *ident = [@"dcpad." stringByAppendingString:name];
+	XCUIElement *element = app.buttons[ident];
 	if (!element.exists)
-		element = app.otherElements[[@"sp.control." stringByAppendingString:name]];
+		element = app.otherElements[ident];
 	XCTAssertTrue(element.exists, @"control %@", name);
 	return element;
 }
@@ -52,33 +60,44 @@
 - (NSDictionary<NSString *, NSNumber *> *)inputState:(XCUIApplication *)app
 {
 	NSString *text = app.staticTexts[@"sp.inputDebug"].label;
-	NSMutableDictionary *out = [NSMutableDictionary dictionary];
 	NSScanner *scanner = [NSScanner scannerWithString:text];
 	unsigned kcode = 0, seen = 0;
-	int minX = 0, maxX = 0, minY = 0, maxY = 0, lt = 0, rt = 0;
-	if ([scanner scanString:@"kcode=" intoString:nil] && [scanner scanHexInt:&kcode]
+	int minX = 0, maxX = 0, minY = 0, maxY = 0, lt = 0, rt = 0, run = 0;
+	const BOOL ok = [scanner scanString:@"kcode=" intoString:nil] && [scanner scanHexInt:&kcode]
 			&& [scanner scanString:@"seen=" intoString:nil] && [scanner scanHexInt:&seen]
 			&& [scanner scanString:@"x=" intoString:nil] && [scanner scanInt:&minX]
 			&& [scanner scanString:@".." intoString:nil] && [scanner scanInt:&maxX]
 			&& [scanner scanString:@"y=" intoString:nil] && [scanner scanInt:&minY]
 			&& [scanner scanString:@".." intoString:nil] && [scanner scanInt:&maxY]
 			&& [scanner scanString:@"lt=" intoString:nil] && [scanner scanInt:&lt]
-			&& [scanner scanString:@"rt=" intoString:nil] && [scanner scanInt:&rt]) {
-		out[@"kcode"] = @(kcode);
-		out[@"seen"] = @(seen);
-		out[@"minX"] = @(minX);
-		out[@"maxX"] = @(maxX);
-		out[@"minY"] = @(minY);
-		out[@"maxY"] = @(maxY);
-		out[@"lt"] = @(lt);
-		out[@"rt"] = @(rt);
-	}
-	XCTAssertEqual(out.count, 8u, @"unparsed debug label: %@", text);
-	return out;
+			&& [scanner scanString:@"rt=" intoString:nil] && [scanner scanInt:&rt]
+			&& [scanner scanString:@"run=" intoString:nil] && [scanner scanInt:&run];
+	XCTAssertTrue(ok, @"unparsed debug label: %@", text);
+	return @{ @"kcode": @(kcode), @"seen": @(seen), @"minX": @(minX), @"maxX": @(maxX), @"minY": @(minY),
+			@"maxY": @(maxY), @"lt": @(lt), @"rt": @(rt), @"run": @(run) };
 }
 
-// Flycast DreamcastKey bits (core/input/gamepad.h).
-static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 4, kRight = 1u << 7, kX = 1u << 10;
+- (unsigned)seen:(XCUIApplication *)app
+{
+	return [[self inputState:app][@"seen"] unsignedIntValue];
+}
+
+- (void)openTouchSettings:(XCUIApplication *)app
+{
+	[app.buttons[@"dcpad.menu"] tap];
+	XCTAssertTrue([app.buttons[@"Controls"] waitForExistenceWithTimeout:5]);
+	[app.buttons[@"Controls"] tap];
+	XCTAssertTrue([app.buttons[@"Touch Control Settings…"] waitForExistenceWithTimeout:5]);
+	[app.buttons[@"Touch Control Settings…"] tap];
+}
+
+- (void)dismissMenu:(XCUIApplication *)app
+{
+	[[app coordinateWithNormalizedOffset:CGVectorMake(0.45, 0.5)] tap];
+	[NSThread sleepForTimeInterval:0.8];
+}
+
+#pragma mark - Import and lifecycle
 
 - (void)testFreshInstallShowsImportInLandscape
 {
@@ -90,12 +109,12 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	const CGRect window = app.windows.firstMatch.frame;
 	XCTAssertGreaterThan(window.size.width, window.size.height, @"app window is landscape");
 	XCTAssertFalse(app.buttons[@"sp.import.cancel"].exists, @"no cancel without an installed game");
-	[self attachScreenshot:app name:@"import-screen"];
+	XCTAssertFalse(app.buttons[@"dcpad.menu"].isHittable, @"no game controls on the import screen");
+	[self attachScreenshot:@"import-screen"];
 
 	[choose tap];
 	XCUIElement *pickerCancel = app.buttons[@"Cancel"];
 	XCTAssertTrue([pickerCancel waitForExistenceWithTimeout:20], @"folder picker appears");
-	[self attachScreenshot:app name:@"folder-picker"];
 	[pickerCancel tap];
 	XCTAssertTrue([choose waitForExistenceWithTimeout:10]);
 }
@@ -105,89 +124,189 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCUIApplication *app = [[XCUIApplication alloc] init];
 	app.launchEnvironment = @{ @"SONICPAD_IMPORT": [self env:@"SONICPAD_GDI_DIR"] };
 	[app launch];
-	XCUIElement *menu = app.buttons[@"sp.menu"];
+	XCUIElement *menu = app.buttons[@"dcpad.menu"];
 	XCTAssertTrue([menu waitForExistenceWithTimeout:120], @"import finished and the game view is shown");
 	XCTAssertTrue(menu.isHittable);
 	XCTAssertFalse(app.buttons[@"sp.import.choose"].exists);
-	[NSThread sleepForTimeInterval:15];
-	[self attachScreenshot:app name:@"after-import"];
+	[NSThread sleepForTimeInterval:10];
+	[self attachScreenshot:@"after-import"];
 
-	// Relaunch without any hook: the installed copy boots by itself.
 	[app terminate];
 	app.launchEnvironment = @{};
 	[app launch];
-	XCTAssertTrue([app.buttons[@"sp.menu"] waitForExistenceWithTimeout:30], @"installed game boots on relaunch");
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30], @"installed game boots on relaunch");
 	XCTAssertFalse(app.buttons[@"sp.import.choose"].exists);
 }
 
-- (void)testTouchControlsDriveFlycastInput
-{
-	XCUIApplication *app = [self launchGameWithDebug];
-	const CGRect window = app.windows.firstMatch.frame;
-	XCTAssertGreaterThan(window.size.width, window.size.height, @"app window is landscape");
-	XCTAssertTrue([app.staticTexts[@"sp.inputDebug"] waitForExistenceWithTimeout:10]);
-	NSDictionary *idle = [self inputState:app];
-	XCTAssertEqual([idle[@"seen"] unsignedIntValue], 0u, @"no input before any touch");
+#pragma mark - Touch controls
 
+- (void)testFaceButtonsAndStart
+{
+	XCUIApplication *app = [self launchGame];
+	XCTAssertEqual([self seen:app], 0u, @"no input before any touch");
 	[[self control:@"A" in:app] tap];
 	[[self control:@"X" in:app] tap];
-	[[self control:@"Up" in:app] tap];
-	[[self control:@"Start" in:app] tap];
-	NSDictionary *buttons = [self inputState:app];
-	const unsigned seen = [buttons[@"seen"] unsignedIntValue];
-	XCTAssertTrue(seen & kA, @"A reached Flycast");
-	XCTAssertTrue(seen & kX, @"X reached Flycast");
-	XCTAssertTrue(seen & kUp, @"D-pad up reached Flycast");
-	XCTAssertTrue(seen & kStart, @"Start reached Flycast");
-	XCTAssertFalse(seen & kB, @"B was not touched");
-	XCTAssertEqual([buttons[@"kcode"] unsignedIntValue], 0xFFFFFFFFu, @"every button released after the taps");
+	[[self control:@"start" in:app] tap];
+	unsigned seen = [self seen:app];
+	XCTAssertTrue(seen & kA, @"A");
+	XCTAssertTrue(seen & kX, @"X");
+	XCTAssertTrue(seen & kStart, @"Start");
+	XCTAssertFalse(seen & (kB | kY), @"B and Y untouched");
+	XCTAssertEqual([[self inputState:app][@"kcode"] unsignedIntValue], 0xFFFFFFFFu, @"everything released");
 
-	XCUIElement *stick = [self control:@"Move" in:app];
+	// Slide from A onto B without lifting: both register, as on a real pad.
+	XCUIElement *a = [self control:@"A" in:app], *b = [self control:@"B" in:app];
+	[[a coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] pressForDuration:0.2
+			thenDragToCoordinate:[b coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)]];
+	seen = [self seen:app];
+	XCTAssertTrue(seen & kB, @"sliding from A reaches B");
+	XCTAssertFalse(seen & kY, @"the slide never touched Y");
+
+	// Between A and B (the thumb's natural resting spot) presses both.
+	const CGRect af = a.frame, bf = b.frame;
+	XCUICoordinate *origin = [app coordinateWithNormalizedOffset:CGVectorMake(0, 0)];
+	XCUICoordinate *between = [origin coordinateWithOffset:CGVectorMake((CGRectGetMidX(af) + CGRectGetMidX(bf)) / 2,
+			(CGRectGetMidY(af) + CGRectGetMidY(bf)) / 2)];
+	[between tap];
+	XCTAssertTrue([self seen:app] & kY ? NO : YES, @"the A/B gap never fires Y");
+}
+
+- (void)testDPadEightWay
+{
+	XCUIElement *dpad = nil;
+	XCUIApplication *app = [self launchGame];
+	dpad = [self control:@"dpad" in:app];
+	[[dpad coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.12)] tap];
+	XCTAssertTrue([self seen:app] & kUp, @"up");
+	XCTAssertFalse([self seen:app] & (kLeft | kRight), @"pure up is not a diagonal");
+
+	// Roll from right to down-right to down without lifting.
+	[[dpad coordinateWithNormalizedOffset:CGVectorMake(0.88, 0.5)] pressForDuration:0.2
+			thenDragToCoordinate:[dpad coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.88)]];
+	const unsigned seen = [self seen:app];
+	XCTAssertTrue(seen & kRight, @"right");
+	XCTAssertTrue(seen & kDown, @"down after rolling the thumb");
+	XCTAssertEqual([[self inputState:app][@"kcode"] unsignedIntValue], 0xFFFFFFFFu, @"D-pad released");
+}
+
+- (void)testAnalogStickFixedAndFloating
+{
+	XCUIApplication *app = [self launchGame];
+	XCUIElement *stick = [self control:@"stick" in:app];
 	XCUICoordinate *center = [stick coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)];
-	[center pressForDuration:0.3 thenDragToCoordinate:[stick coordinateWithNormalizedOffset:CGVectorMake(1.0, 0.5)]];
-	[center pressForDuration:0.3 thenDragToCoordinate:[stick coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.0)]];
-	NSDictionary *stickState = [self inputState:app];
-	XCTAssertGreaterThan([stickState[@"maxX"] intValue], 20000, @"stick right reached Flycast");
-	XCTAssertLessThan([stickState[@"minY"] intValue], -20000, @"stick up is negative Flycast Y");
-	XCTAssertFalse([stickState[@"seen"] unsignedIntValue] & kRight, @"the stick never fires the D-pad");
+	// Hold at the end so the display link samples the final position.
+	[center pressForDuration:0.2 thenDragToCoordinate:[stick coordinateWithNormalizedOffset:CGVectorMake(0.95, 0.5)]
+			withVelocity:XCUIGestureVelocityDefault thenHoldForDuration:0.5];
+	NSDictionary *s = [self inputState:app];
+	XCTAssertGreaterThan([s[@"maxX"] intValue], 30000, @"full right from the stick");
+	XCTAssertFalse([s[@"seen"] unsignedIntValue] & (kLeft | kRight | kUp | kDown), @"the stick never fires the D-pad");
 
-	XCUIElement *shoulder = [self control:@"R" in:app];
-	[[shoulder coordinateWithNormalizedOffset:CGVectorMake(0.95, 0.5)] pressForDuration:0.3];
-	NSDictionary *triggers = [self inputState:app];
-	XCTAssertGreaterThan([triggers[@"rt"] intValue], 50000, @"right shoulder slide reached Flycast");
-	XCTAssertEqual([triggers[@"lt"] intValue], 0, @"left trigger untouched");
-	[self attachScreenshot:app name:@"touch-overlay"];
+	// Floating: start a touch in empty space above-right of the stick and push up.
+	const CGRect f = stick.frame;
+	XCUICoordinate *origin = [app coordinateWithNormalizedOffset:CGVectorMake(0, 0)];
+	XCUICoordinate *start = [origin coordinateWithOffset:CGVectorMake(CGRectGetMaxX(f) + f.size.width * 0.3, CGRectGetMinY(f) + 10)];
+	XCUICoordinate *end = [start coordinateWithOffset:CGVectorMake(0, -f.size.height * 0.45)];
+	[start pressForDuration:0.2 thenDragToCoordinate:end withVelocity:XCUIGestureVelocityDefault thenHoldForDuration:0.5];
+	s = [self inputState:app];
+	XCTAssertLessThan([s[@"minY"] intValue], -25000, @"the floating stick pushed up");
+	XCTAssertEqual([s[@"kcode"] unsignedIntValue], 0xFFFFFFFFu, @"nothing held afterwards");
 }
 
-- (void)testMenuIsSeparateFromStartAndPauses
+- (void)testAnalogTriggers
 {
-	XCUIApplication *app = [self launchGameWithDebug];
-	XCUIElement *menu = app.buttons[@"sp.menu"];
-	XCTAssertTrue([menu waitForExistenceWithTimeout:10]);
-	[menu tap];
-	XCUIElement *import = app.buttons[@"Import Game…"];
-	XCTAssertTrue([import waitForExistenceWithTimeout:10], @"menu offers import");
-	[self attachScreenshot:app name:@"menu"];
-	XCUIElement *resume = app.buttons[@"Resume"];
-	if (resume.exists)
-		[resume tap];
-	else
-		[[app coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] tap];
-	XCTAssertFalse([self.class bits:[self inputState:app] has:kStart], @"the menu never sends Start");
+	XCUIApplication *app = [self launchGame];
+	XCUIElement *r = [self control:@"R" in:app];
+	[[r coordinateWithNormalizedOffset:CGVectorMake(0.15, 0.5)] pressForDuration:0.4];
+	NSDictionary *s = [self inputState:app];
+	XCTAssertGreaterThan([s[@"rt"] intValue], 25000, @"a light touch on R is past the digital threshold");
+	XCTAssertLessThan([s[@"rt"] intValue], 60000, @"a light touch is not a full press");
+	[[r coordinateWithNormalizedOffset:CGVectorMake(0.95, 0.5)] pressForDuration:0.4];
+	XCTAssertEqual([[self inputState:app][@"rt"] intValue], 65535, @"the outer edge is a full press");
+	XCUIElement *l = [self control:@"L" in:app];
+	[[l coordinateWithNormalizedOffset:CGVectorMake(0.05, 0.5)] pressForDuration:0.4];
+	XCTAssertEqual([[self inputState:app][@"lt"] intValue], 65535, @"L full press at its outer (left) edge");
+}
 
-	[menu tap];
-	XCTAssertTrue([import waitForExistenceWithTimeout:10]);
-	[import tap];
+#pragma mark - Menu and settings
+
+- (void)testMenuPausesAndOffersControls
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:3];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
+	[app.buttons[@"dcpad.menu"] tap];
+	XCTAssertTrue([app.buttons[@"Import Game…"] waitForExistenceWithTimeout:10]);
+	XCTAssertTrue(app.buttons[@"Import Game…"].isHittable, @"top-level items fit on screen");
+	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
+	[self attachScreenshot:@"menu"];
+	[app.buttons[@"Controls"] tap];
+	XCTAssertTrue([app.buttons[@"Touch Control Settings…"] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue(app.buttons[@"Move Controls"].isHittable);
+	XCTAssertTrue(app.buttons[@"Controller Mapping…"].isHittable);
+	[self attachScreenshot:@"menu-controls"];
+	[self dismissMenu:app];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"closing the menu resumes");
+	XCTAssertFalse([self seen:app] & kStart, @"the menu never sends Start");
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Import Game…"] tap];
 	XCUIElement *cancel = app.buttons[@"sp.import.cancel"];
-	XCTAssertTrue([cancel waitForExistenceWithTimeout:10], @"import can be cancelled while a game is installed");
+	XCTAssertTrue([cancel waitForExistenceWithTimeout:10]);
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"import pauses the game");
 	[cancel tap];
-	XCTAssertTrue([menu waitForExistenceWithTimeout:10]);
-	XCTAssertTrue(menu.isHittable, @"back in the game after cancelling import");
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:10]);
+	[NSThread sleepForTimeInterval:1];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"cancelling import resumes");
 }
 
-+ (BOOL)bits:(NSDictionary *)state has:(unsigned)bit
+- (void)testSettingsAndMoveControlsPersist
 {
-	return ([state[@"seen"] unsignedIntValue] & bit) != 0;
+	XCUIApplication *app = [self launchGame];
+	XCUIElement *dpad = [self control:@"dpad" in:app];
+	const CGRect before = dpad.frame;
+
+	[self openTouchSettings:app];
+	XCUIElement *floating = app.switches[@"dcpad.settings.floating"];
+	XCTAssertTrue([floating waitForExistenceWithTimeout:5]);
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"settings pause the game");
+	[floating tap];
+	[app.sliders[@"dcpad.settings.size"] adjustToNormalizedSliderPosition:0.95];
+	[self attachScreenshot:@"settings"];
+	[app.buttons[@"dcpad.settings.move"] tap];
+
+	XCTAssertTrue([app.buttons[@"dcpad.edit.done"] waitForExistenceWithTimeout:5], @"layout editor open");
+	dpad = [self control:@"dpad" in:app];
+	const CGRect grown = dpad.frame;
+	XCTAssertGreaterThan(grown.size.width, before.size.width * 1.2, @"size slider grew the controls");
+	[[dpad coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] pressForDuration:0.3
+			thenDragToCoordinate:[app coordinateWithNormalizedOffset:CGVectorMake(0.35, 0.3)]];
+	[self attachScreenshot:@"move-controls"];
+	[app.buttons[@"dcpad.edit.done"] tap];
+	const CGRect moved = [self control:@"dpad" in:app].frame;
+	XCTAssertGreaterThan(CGRectGetMidX(moved), CGRectGetMidX(grown) + 100, @"D-pad moved right");
+	[NSThread sleepForTimeInterval:1];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game resumes after editing");
+
+	// Relaunch without resetting defaults: the layout and settings stay.
+	[app terminate];
+	app.launchArguments = @[];
+	[app launch];
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30]);
+	const CGRect after = [self control:@"dpad" in:app].frame;
+	XCTAssertEqualWithAccuracy(CGRectGetMidX(after), CGRectGetMidX(moved), 3, @"moved D-pad persists");
+	XCTAssertEqualWithAccuracy(after.size.width, moved.size.width, 3, @"size persists");
+	[self openTouchSettings:app];
+	XCTAssertTrue([app.switches[@"dcpad.settings.floating"] waitForExistenceWithTimeout:5]);
+	XCTAssertEqualObjects(app.switches[@"dcpad.settings.floating"].value, @"0", @"floating stick setting persists");
+
+	// Reset brings the defaults back.
+	[app.buttons[@"dcpad.settings.reset"] tap];
+	[app.alerts.buttons[@"Reset"] tap];
+	[app.buttons[@"dcpad.settings.close"] tap];
+	const CGRect reset = [self control:@"dpad" in:app].frame;
+	XCTAssertEqualWithAccuracy(CGRectGetMidX(reset), CGRectGetMidX(before), 3, @"reset restores the default position");
+	XCTAssertEqualWithAccuracy(reset.size.width, before.size.width, 3, @"reset restores the default size");
 }
 
 @end

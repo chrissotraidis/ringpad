@@ -83,16 +83,20 @@ if(IOS)
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
 	set(_sp_ios_shell
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPTouchOverlayView.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadOverlayView.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadSettingsStore.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadControllerInput.mm)
 	target_sources(flycast PRIVATE ${_sp_ios_shell}
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputAdapter.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputMixer.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastTouchLayout.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastControllerMapping.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/core/DCPad.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game
+		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/core ${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple)
 	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"
@@ -119,10 +123,12 @@ if(IOS)
 	target_link_libraries(flycast PRIVATE ${SONICPAD_MOLTENVK_XCFRAMEWORK}
 		"-framework Metal" "-framework QuartzCore" "-framework IOSurface"
 		# Flycast's controller rumble uses Core Haptics, which this SDK does not auto-link.
-		"-framework CoreHaptics" "-framework UniformTypeIdentifiers")
+		"-framework CoreHaptics" "-framework UniformTypeIdentifiers" "-framework GameController")
 	# UI tests: real UIKit touches against the shell in the Simulator.
 	find_package(XCTest REQUIRED)
-	xctest_add_bundle(SonicPadUITests flycast ${CMAKE_CURRENT_SOURCE_DIR}/tests/ios/SonicPadUITests.m)
+	xctest_add_bundle(SonicPadUITests flycast ${CMAKE_CURRENT_SOURCE_DIR}/tests/ios/SonicPadUITests.m
+		${CMAKE_CURRENT_SOURCE_DIR}/tests/ios/DCPadCaptureTests.m
+		${CMAKE_CURRENT_SOURCE_DIR}/tests/ios/DCPadPlayTests.mm)
 	set_target_properties(SonicPadUITests PROPERTIES
 		XCODE_PRODUCT_TYPE com.apple.product-type.bundle.ui-testing
 		XCODE_ATTRIBUTE_TEST_TARGET_NAME flycast
@@ -131,6 +137,7 @@ if(IOS)
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad.uitests"
 		XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
 		XCODE_ATTRIBUTE_GENERATE_INFOPLIST_FILE YES)
+	target_link_libraries(SonicPadUITests PRIVATE "-framework CoreGraphics" "-framework UIKit")
 endif()
 
 file(GLOB _sp_generated CONFIGURE_DEPENDS ${SONICPAD_RECOMP_DIR}/*.cpp)

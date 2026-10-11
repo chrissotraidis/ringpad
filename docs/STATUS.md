@@ -69,39 +69,30 @@ fight, with the HUD and Homing Attack hint on screen.
 - Shell gaps for S4: the app lays out in portrait instead of landscape, and
   Flycast's ImGui virtual gamepad still draws over the game.
 
-## S4 iOS shell (11 October 2026)
+## Touch controls: DCPad (11 October 2026)
 
-All four UI tests in `tests/ios/SonicPadUITests.m` pass on the iPad Air 11
-(M3) Simulator (`scripts/ios/run-ui-tests.sh`). They drive real UIKit
-touches through XCUITest, so this is input acceptance level 2 (view-event
-routing), not physical multitouch.
+The first S4 overlay (plain circles, fixed stick, four separate D-pad
+circles) was replaced by **DCPad** (@@port/dcpad@@). It is a reusable Dreamcast
+control kit built on SunPad's accepted layout and mechanisms, so the next
+Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.md).
 
-- Landscape: the scene requests landscape and the app window is wider than
-  tall in every test; the game fills the screen with small 4:3 side bars.
-- Touch layer: SonicPad's overlay draws the `port/input` layout (one stick,
-  D-pad, A/B/X/Y diamond, L/R, Start) inside the safe area, and Flycast's
-  virtual gamepad is hidden. Taps on A, X, D-pad Up and Start reach Flycast's
-  port A, B stays untouched, and every button is released afterwards.
-  Dragging the stick right and up gives +31,887 X and -31,887 Y. Sliding the
-  right shoulder gives a trigger value of 62,194, with the left trigger at 0.
-- Bridge: `port/input/FlycastPadBridge` maps the adapter snapshot to
-  Flycast's controller values. A tap stays held for at least three display
-  ticks so the 50 Hz PAL game cannot miss it between samples.
-- Menu: the three-dot button is separate from Start, never sends Start,
-  pauses the game, and offers Resume and Import Game.
-- Import: with no game installed, the app opens on an import screen with a
-  folder picker. `port/game/GameImport` checks the layout, size and SHA-256 of
-  all three tracks against the PAL v1.003 identity. It then copies the disc
-  into Application Support (cloned on APFS) and boots it. A relaunch without
-  any test hooks boots the installed copy. Host tests cover the rejections:
-  wrong hash, size, layout, missing track and two .gdi files.
-- Stability: one full UI run crashed during import. A progress callback held a
-  C++ reference to storage freed when the background import finished. The
-  block is now copied before dispatch, and two further full runs passed 8/8.
-  Faults now log `SONICPAD_FAULT` with the faulting symbol before the trap.
-- Host tests: 210/210 checks pass, including bridge and import tests and an
-  identity check of the owner's real disc.
+- **Controls:**
+  - floating analog stick whose base follows the thumb
+  - eight-way rolling D-pad
+  - colour-coded Dreamcast face diamond with slide and neighbour chords
+  - analog L/R sliders with a haptic full-press detent
+  - separate Start
+  - Core Animation drawing with pressed states
+- **••• menu:** a SunPad-style persistent menu. SonicPad adds Game (Import, Reset) and Display (Show FPS, About). DCPad adds Controls (Touch Control Settings, Move Controls, Controller Mapping). Opening any of these pauses the game and releases input, and closing them resumes it.
+- **Settings:** opacity, size, floating stick, haptics and hide-with-controller. Move Controls drags each control group and resizes it. Layouts persist per game and per phone or tablet; Reset restores the defaults.
+- **Physical controllers:** Apple game controllers feed the same mixer, with player-1 ownership and an A/B/X/Y remap (adapted from SunPad).
+- **Tests:**
+  - @@tests/host/test_dcpad.cpp@@ runs 311 layout and engine checks on six device classes: everything on screen, no overlaps, clear of the menu, minimum sizes, eight-way sectors, chords, trigger hysteresis, the floating stick and multi-finger ownership.
+  - Eight XCUITest UI tests pass on both the iPad Air 11 and iPhone 16 Pro Simulators with real taps, drags and holds. They cover buttons, slides, the D-pad roll, fixed and floating stick, light and full triggers, menu pause and resume, settings, Move Controls persistence across relaunch, Reset, import and relaunch.
+  - A touch-only UI test played from boot through the title, file and character select and the opening into Station Square on the iPad Simulator.
+- Fixed while iterating: the text fonts, the menu size on a landscape phone (Controls is now a submenu) and the editor bar covering controls.
 
+## Not yet verified
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.
@@ -121,6 +112,6 @@ routing), not physical multitouch.
 ## Next
 
 S3 device: sign a device build and measure Emerald Coast on Chris's iPad.
-S4 follow-ups: physical controller input through the mixer, settings and
-diagnostics. S2: extend the acceptance script through Station Square into
+S4 follow-ups: a physical iPad and iPhone pass on the touch controls, and
+Bluetooth controller acceptance. S2: extend the acceptance script through Station Square into
 Emerald Coast.

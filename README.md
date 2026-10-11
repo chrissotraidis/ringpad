@@ -8,8 +8,8 @@ compiled for arm64, and Flycast supplies the Dreamcast hardware layer. No JIT.
 boot through the title and Sonic's opening into the Chaos 0 fight, with over
 99.99% of executed instructions running as generated code and about 3.9x real-time
 throughput on an M1. The same build reaches the fight in the iPad Simulator,
-rendering through MoltenVK. The iOS app is landscape, uses the single-stick
-touch layer and imports the disc with a hash check. Device timing is next. See [STATUS.md](docs/STATUS.md).
+rendering through MoltenVK. The iOS app is landscape and uses DCPad, a reusable
+Dreamcast touch control kit (`port/dcpad`), and imports the disc with a hash check. Device timing is next. See [STATUS.md](docs/STATUS.md).
 
 - [PRD](docs/prd.md): goal, foundation decision, definition of done
 - [Plan](docs/PLAN.md): gates and work loop

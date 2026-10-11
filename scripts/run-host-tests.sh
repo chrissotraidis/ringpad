@@ -93,4 +93,27 @@ rc=$?
 run_suite test_dreamcast_touch \
     port/input/DreamcastTouchLayout.cpp tests/host/test_dreamcast_touch.cpp
 rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
+run_suite test_flycast_bridge \
+    port/input/FlycastPadBridge.cpp port/input/DreamcastInputAdapter.cpp tests/host/test_flycast_bridge.cpp
+rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
+run_suite test_game_import -I port/game \
+    port/game/GameImport.cpp tests/host/test_game_import.cpp
+rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
+# The app's built-in disc identity must match config/game-identity.json.
+python3 - <<'EOF' | tee -a "$log"
+import json, re, sys
+identity = json.load(open('config/game-identity.json'))['supported']
+source = open('port/game/GameImport.cpp').read()
+missing = [t['sha256'] for t in identity['tracks'] if t['sha256'] not in source or str(t['bytes']) not in source]
+missing += [identity['gdi_sha256']] if identity['gdi_sha256'] not in source else []
+print('game identity consistency:', 'PASS' if not missing else 'FAIL ' + ', '.join(missing))
+sys.exit(1 if missing else 0)
+EOF
+rc=$?
 exit "$rc"

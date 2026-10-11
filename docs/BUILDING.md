@@ -79,4 +79,16 @@ first use, builds, installs `com.chrissotraidis.sonicpad` and launches it with
 the `SONICPAD_*` variables passed through `SIMCTL_CHILD_`. The app reads the
 GDI directly from `ref/`; nothing is copied into the Simulator.
 
+UI tests (real UIKit touches, the folder picker and the import flow):
+
+```sh
+scripts/ios/run-ui-tests.sh <udid>
+```
+
+Set `SONICPAD_REAL_GDI=ref/<disc folder>` when running
+`scripts/run-host-tests.sh` to also verify the owner's disc on the host.
+On iOS, `SONICPAD_IMPORT=<folder>` runs the import flow on launch,
+`SONICPAD_IGNORE_INSTALLED=1` shows the import screen, and
+`SONICPAD_INPUT_DEBUG=1` shows the port-A values the tests read.
+
 Host input tests for the touch layer: `scripts/run-host-tests.sh`.

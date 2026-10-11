@@ -12,6 +12,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 endif()
 project(sonicpad C CXX OBJC OBJCXX)
 
+# Xcode schemes let xcodebuild run the iOS UI tests.
+set(CMAKE_XCODE_GENERATE_SCHEME ON)
+
 # Flycast forces Vulkan off for iOS in its cache; this normal variable takes
 # precedence (policy CMP0126) so iOS can render through MoltenVK.
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -78,8 +81,19 @@ if(IOS)
 	get_target_property(_sp_sources flycast SOURCES)
 	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|.*\\.storyboard|.*\\.xib)")
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
-	target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm)
-	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+	set(_sp_ios_shell
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPTouchOverlayView.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm)
+	target_sources(flycast PRIVATE ${_sp_ios_shell}
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputAdapter.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputMixer.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastTouchLayout.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
+	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
+	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"
 		MACOSX_BUNDLE_EXECUTABLE_NAME "SonicPad"
@@ -105,7 +119,18 @@ if(IOS)
 	target_link_libraries(flycast PRIVATE ${SONICPAD_MOLTENVK_XCFRAMEWORK}
 		"-framework Metal" "-framework QuartzCore" "-framework IOSurface"
 		# Flycast's controller rumble uses Core Haptics, which this SDK does not auto-link.
-		"-framework CoreHaptics")
+		"-framework CoreHaptics" "-framework UniformTypeIdentifiers")
+	# UI tests: real UIKit touches against the shell in the Simulator.
+	find_package(XCTest REQUIRED)
+	xctest_add_bundle(SonicPadUITests flycast ${CMAKE_CURRENT_SOURCE_DIR}/tests/ios/SonicPadUITests.m)
+	set_target_properties(SonicPadUITests PROPERTIES
+		XCODE_PRODUCT_TYPE com.apple.product-type.bundle.ui-testing
+		XCODE_ATTRIBUTE_TEST_TARGET_NAME flycast
+		XCODE_ATTRIBUTE_TEST_HOST ""
+		XCODE_ATTRIBUTE_BUNDLE_LOADER ""
+		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad.uitests"
+		XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+		XCODE_ATTRIBUTE_GENERATE_INFOPLIST_FILE YES)
 endif()
 
 file(GLOB _sp_generated CONFIGURE_DEPENDS ${SONICPAD_RECOMP_DIR}/*.cpp)

@@ -119,6 +119,10 @@ stick deflection.
    mechanisms are covered by `tests/host/test_dreamcast_shell.cpp` (50/50 pass)
    and the touch layout/arbiter by `tests/host/test_dreamcast_touch.cpp`
    (46/46 pass), both via the same runner.
+Touch controls are drawn and arbitrated by DCPad (`port/dcpad`, see its README),
+which replaced the first circle overlay and `DreamcastTouchLayout`'s role in the
+app. The touch-layout tests remain as a contract for the original layout.
+
 2. **Simulator view-event routing** — passes as of 11 October 2026.
    `tests/ios/SonicPadUITests.m` sends XCUITest taps, drags and holds to the
    overlay in the iPad Simulator. It checks the resulting Flycast port-A

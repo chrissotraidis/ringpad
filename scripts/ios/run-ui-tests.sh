@@ -16,6 +16,7 @@ if xcrun simctl list devices booted | grep Booted | grep -vq "$udid"; then
     exit 2
 fi
 TEST_RUNNER_SONICPAD_GDI="$gdi" \
+TEST_RUNNER_DCPAD_PREVIEW="${DCPAD_PREVIEW:-}" \
 TEST_RUNNER_SONICPAD_GDI_DIR="$(dirname "$gdi")" \
     xcodebuild test -project "$build/sonicpad.xcodeproj" -scheme flycast -configuration Release \
         -destination "id=$udid" -resultBundlePath "$results" "$@"

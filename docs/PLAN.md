@@ -6,9 +6,10 @@ the evidence named in its row; record results in [STATUS.md](STATUS.md).
 | Gate | Outcome | Evidence | Status |
 |---|---|---|---|
 | S0 Foundation proof | PAL GDI boots on macOS arm64 with no JIT; recompiled code runs from title to gameplay | Screenshots and `SONICPAD_STATS` from a scripted run | **Done 10 Oct** (Chaos 0 fight, over 99.99% AOT) |
-| S1 Recompiler hardening | Faster lookup and block chaining; inline common opcodes; static discovery from traced seeds; per-route coverage report | Differential opcode tests pass; host CPU per guest frame measured before and after | Open |
+| S1 Recompiler hardening | Faster lookup and block chaining; inline common opcodes; idle skipping; measured before and after | Startup differential self-test passes; `SONICPAD_PERF` on the Chaos 0 route | **Done 10 Oct** (2.50x to 3.91x uncapped; see STATUS) |
+| S1b Discovery | Static discovery from traced seeds; per-route coverage report | Fewer first-run misses on a new route | Open |
 | S2 macOS first play | D3 in [prd.md](prd.md) | Scripted replay plus a human run; save and reload verified; audio heard | Open |
-| S3 iOS performance | iOS build of core plus AOT blocks; one iPad Simulator; Chris measures Emerald Coast on device | Frame-rate log from the device build | Open; needs the Xcode licence accepted |
+| S3 iOS performance | iOS build of core plus AOT blocks; one iPad Simulator; Chris measures Emerald Coast on device | Frame-rate log from the device build | Open; blocked until the Xcode 27 licence is accepted |
 | S4 SonicPad shell | SunPad-derived UI, touch layer from `port/input`, GDI import with hash check, settings, diagnostics | Simulator UI tests and touch routing tests | Open |
 | S5 Coverage and stability | Seven stories, Chao, soak, renderer review | Trace manifests per story, scripted regressions | Open |
 | S6 Device acceptance | Chris tests the exact build | Recorded hashes and notes | Open |

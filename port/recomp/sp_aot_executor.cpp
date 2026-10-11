@@ -4,6 +4,8 @@
 // them in the next build. SONICPAD_STATS=1 reports AOT coverage.
 // SONICPAD_INPUT_SCRIPT=<file> replays pad input at guest times, one event per
 // line: "<start seconds> <duration seconds> <A|B|X|Y|START|UP|DOWN|LEFT|RIGHT|STICK:x,y>".
+// SONICPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
+// SONICPAD_EXIT_AT=<guest seconds> prints a SONICPAD_PERF line and exits.
 #include "sp_block_api.h"
 #include "hw/sh4/sh4_interpreter.h"
 #include "hw/sh4/sh4_interrupts.h"
@@ -20,8 +22,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <time.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -33,6 +37,13 @@ namespace {
 constexpr int kMaxBlockOps = 64;
 constexpr int kInterpreterCpuRatio = 8; // Sh4Interpreter's non-STRICT_MODE underclock
 constexpr double kSlicesPerSecond = 200000000.0 / SH4_TIMESLICE;
+
+double threadCpuSeconds()
+{
+	timespec ts;
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+	return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
 
 bool isRamAddress(u32 pc)
 {
@@ -93,8 +104,12 @@ public:
 			tracePath = trace;
 		statsEnabled = std::getenv("SONICPAD_STATS") != nullptr;
 		aotEnabled = std::getenv("SONICPAD_NO_AOT") == nullptr;
+		idleSkipEnabled = std::getenv("SONICPAD_NO_IDLE_SKIP") == nullptr;
 		if (const char *script = std::getenv("SONICPAD_INPUT_SCRIPT"))
 			loadScript(script);
+		uncapped = std::getenv("SONICPAD_UNCAPPED") != nullptr;
+		if (const char *exitAt = std::getenv("SONICPAD_EXIT_AT"))
+			exitAtSlices = u64(std::atof(exitAt) * kSlicesPerSecond);
 		loadTables();
 		lastReport = std::chrono::steady_clock::now();
 	}
@@ -110,10 +125,34 @@ public:
 	{
 		Instance = this;
 		ctx->restoreHostRoundingMode();
+		const double cpuAtStart = threadCpuSeconds();
+		if (!wallStarted)
+		{
+			wallStarted = true;
+			wallStart = std::chrono::steady_clock::now();
+			slicesAtWallStart = slices;
+		}
+		cpuBase = cpuAccumulated - cpuAtStart;
+		if (!selfTestDone)
+		{
+			selfTestDone = true;
+			if (aotEnabled && std::getenv("SONICPAD_SKIP_SELFTEST") == nullptr && !runSelfTest())
+			{
+				aotEnabled = false;
+				std::fprintf(stderr, "SONICPAD_AOT disabled: self-test failed\n");
+			}
+			if (std::getenv("SONICPAD_SELFTEST_ONLY") != nullptr)
+			{
+				std::fflush(stderr);
+				std::_Exit(aotEnabled ? 0 : 1);
+			}
+		}
 		try {
 			do
 			{
 				try {
+					if (uncapped)
+						settings.input.fastForwardMode = true;
 					do
 					{
 						runBlock();
@@ -125,6 +164,8 @@ public:
 						applyScript();
 					if (slices % 8192 == 0)
 						housekeeping();
+					if (exitAtSlices != 0 && slices >= exitAtSlices)
+						exitWithPerf();
 				} catch (const SH4ThrownException& ex) {
 					Do_Exception(ex.epc, ex.expEvn);
 					ctx->cycle_counter -= 5;
@@ -132,11 +173,116 @@ public:
 			} while (ctx->CpuRunning);
 		} catch (const debugger::Stop&) {
 		}
+		cpuAccumulated = cpuBase + threadCpuSeconds();
 		ctx->CpuRunning = false;
 		Instance = nullptr;
 	}
 
 private:
+	// Differential self-test: every inlined opcode value must leave the CPU
+	// context and memory exactly as Flycast's handler does.
+	bool runSelfTest()
+	{
+		if (sp_selftest_count == 0)
+			return true;
+		constexpr u32 kWindow = 0x8CFF0000;
+		constexpr u32 kWindowSize = 0x1000;
+		u8 *window = &mem_b[kWindow & RAM_MASK];
+		std::vector<u8> saved(window, window + kWindowSize), initial(kWindowSize), afterHandler(kWindowSize);
+		u64 seed = 0x9E3779B97F4A7C15ull;
+		auto next = [&seed]() {
+			seed ^= seed << 13;
+			seed ^= seed >> 7;
+			seed ^= seed << 17;
+			return seed;
+		};
+		static const u32 edges[] = {0, 1, 2, 0x7F, 0x80, 0xFF, 0x7FFF, 0x8000, 0xFFFF, 0x7FFFFFFF, 0x80000000u, 0xFFFFFFFFu};
+		size_t trials = 0, failures = 0, skipped = 0;
+		for (size_t i = 0; i < sp_selftest_count; i++)
+		{
+			const SpSelfTest& test = sp_selftests[i];
+			if (test.flags & 4)
+			{
+				skipped++;
+				continue;
+			}
+			const bool touchesMemory = test.flags & 1;
+			const int count = touchesMemory ? 8 : 32;
+			for (int k = 0; k < count; k++)
+			{
+				Sh4Context base = *ctx;
+				for (int r = 0; r < 16; r++)
+				{
+					const u64 v = next();
+					if (touchesMemory)
+						base.r[r] = kWindow + 0x100 + (u32(v) & 0x7F0);
+					else
+						base.r[r] = (v & 3) == 0 ? edges[(v >> 8) % (sizeof(edges) / sizeof(edges[0]))] : u32(v >> 16);
+				}
+				if (test.flags & 2)
+					base.r[0] = u32(next()) & 0xFC;
+				base.sr.T = next() & 1;
+				base.pr = u32(next());
+				base.pc = sp_selftest_pc + 2;
+				for (u32 j = 0; j < kWindowSize; j += 8)
+				{
+					const u64 v = next();
+					std::memcpy(window + j, &v, 8);
+				}
+				std::memcpy(initial.data(), window, kWindowSize);
+				Sh4Context viaHandler = base;
+				test.handler(&viaHandler, test.op);
+				std::memcpy(afterHandler.data(), window, kWindowSize);
+				std::memcpy(window, initial.data(), kWindowSize);
+				Sh4Context viaInline = base;
+				test.inlined(&viaInline);
+				trials++;
+				if (std::memcmp(&viaHandler, &viaInline, sizeof(Sh4Context)) != 0
+						|| std::memcmp(afterHandler.data(), window, kWindowSize) != 0)
+				{
+					if (failures++ < 10)
+						std::fprintf(stderr, "SONICPAD_SELFTEST mismatch op=%04X pc=%08X/%08X r0=%08X/%08X T=%u/%u\n",
+								test.op, viaHandler.pc, viaInline.pc, viaHandler.r[0], viaInline.r[0],
+								(unsigned)viaHandler.sr.T, (unsigned)viaInline.sr.T);
+					break;
+				}
+			}
+		}
+		std::memcpy(window, saved.data(), kWindowSize);
+		std::fprintf(stderr, "SONICPAD_SELFTEST forms=%zu trials=%zu skipped=%zu failures=%zu\n",
+				sp_selftest_count, trials, skipped, failures);
+		return failures == 0;
+	}
+
+	static constexpr u32 kPageBits = 12;
+	static constexpr u32 kPageMask = (1u << kPageBits) - 1;
+	static constexpr u32 kSlotsPerPage = 1u << (kPageBits - 1);
+
+	struct RtBlock
+	{
+		const SpAotBlock *block = nullptr;
+		RtBlock *variant = nullptr;   // other blocks compiled at the same RAM offset
+		RtBlock *succ[2] = {};        // chained successors seen at runtime
+		u32 succPc[2] = {};
+		u8 nextSlot = 0;
+	};
+
+	void exitWithPerf()
+	{
+		const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
+		const double guest = (slices - slicesAtWallStart) / kSlicesPerSecond;
+		const double cpu = cpuBase + threadCpuSeconds();
+		const double total = double(aotOps + interpretedOps);
+		std::fprintf(stderr, "SONICPAD_PERF guest_s=%.2f wall_s=%.2f speed=%.2fx sh4_cpu_s=%.2f sh4_cpu_per_guest_s=%.3f "
+				"blocks=%llu chained=%llu idle_skip_pct=%.2f aot_pct=%.3f uncapped=%d\n",
+				guest, wall, guest / wall, cpu, cpu / guest, (unsigned long long)blocksRun,
+				(unsigned long long)chainedRun, 100.0 * idleSkipped / (guest * 200000000.0), total > 0 ? 100.0 * aotOps / total : 0.0, uncapped ? 1 : 0);
+		writeTrace();
+		report(true);
+		std::fflush(stderr);
+		std::_Exit(0);
+	}
+
 	struct ScriptEvent
 	{
 		u64 start;
@@ -213,7 +359,8 @@ private:
 
 	void loadTables()
 	{
-		index.clear();
+		pages.clear();
+		runtime.clear();
 		for (size_t i = 0; i < sp_aot_opcheck_count; i++)
 		{
 			const SpOpCheck& check = sp_aot_opchecks[i];
@@ -226,12 +373,27 @@ private:
 		}
 		size_t blocks = 0;
 		for (size_t t = 0; t < sp_aot_table_count; t++)
+			blocks += sp_aot_tables[t].count;
+		runtime.resize(blocks);
+		pages.resize((RAM_MASK + 1) >> kPageBits);
+		size_t n = 0;
+		for (size_t t = 0; t < sp_aot_table_count; t++)
 			for (size_t b = 0; b < sp_aot_tables[t].count; b++)
 			{
 				const SpAotBlock *block = &sp_aot_tables[t].blocks[b];
-				index[block->pc].push_back(block);
-				knownShapes.insert(shapeKey(block->pc, block->code, block->nops));
-				blocks++;
+				if (!tracePath.empty())
+					knownShapes.insert(shapeKey(block->pc, block->code, block->nops));
+				if (!isRamAddress(block->pc))
+					continue;
+				RtBlock& rt = runtime[n++];
+				rt.block = block;
+				const u32 offset = block->pc & RAM_MASK;
+				auto& page = pages[offset >> kPageBits];
+				if (!page)
+					page.reset(new RtBlock *[kSlotsPerPage]());
+				RtBlock *& slot = page[(offset & kPageMask) >> 1];
+				rt.variant = slot;
+				slot = &rt;
 			}
 		std::fprintf(stderr, "SONICPAD_AOT manifest=%s blocks=%zu opchecks=%zu enabled=%d trace=%s\n",
 				sp_aot_manifest_id, blocks, sp_aot_opcheck_count, aotEnabled ? 1 : 0,
@@ -245,30 +407,117 @@ private:
 		return key;
 	}
 
-	const SpAotBlock *lookup(u32 pc)
+	// Page-indexed lookup; returns the chain of blocks compiled at this RAM offset.
+	RtBlock *tableLookup(u32 pc) const
 	{
 		if (!aotEnabled || !isRamAddress(pc))
 			return nullptr;
-		auto it = index.find(pc);
-		if (it == index.end())
-			return nullptr;
-		const u8 *guest = &mem_b[pc & RAM_MASK];
-		for (const SpAotBlock *block : it->second)
-			if (std::memcmp(block->code, guest, block->nops * sizeof(u16)) == 0)
-				return block;
-		return nullptr;
+		const u32 offset = pc & RAM_MASK;
+		const auto& page = pages[offset >> kPageBits];
+		return page ? page[(offset & kPageMask) >> 1] : nullptr;
+	}
+
+	// The compiled block runs only if guest memory still holds the exact bytes
+	// it was generated from.
+	static bool codeMatches(const SpAotBlock *block, const u8 *guest)
+	{
+		const u8 *code = reinterpret_cast<const u8 *>(block->code);
+		u32 bytes = block->nops * sizeof(u16);
+		while (bytes >= 8)
+		{
+			u64 a, b;
+			std::memcpy(&a, code, 8);
+			std::memcpy(&b, guest, 8);
+			if (a != b)
+				return false;
+			code += 8;
+			guest += 8;
+			bytes -= 8;
+		}
+		if (bytes >= 4)
+		{
+			u32 a, b;
+			std::memcpy(&a, code, 4);
+			std::memcpy(&b, guest, 4);
+			if (a != b)
+				return false;
+			code += 4;
+			guest += 4;
+			bytes -= 4;
+		}
+		if (bytes >= 2)
+		{
+			u16 a, b;
+			std::memcpy(&a, code, 2);
+			std::memcpy(&b, guest, 2);
+			return a == b;
+		}
+		return true;
+	}
+
+	// A pure self-loop that leaves registers and T unchanged will spin until
+	// something outside the SH-4 changes memory, which only happens at the next
+	// timeslice boundary. Skip straight there (at most SH4_TIMESLICE cycles).
+	void runIdleCandidate(const SpAotBlock *block)
+	{
+		u32 before[16];
+		std::memcpy(before, ctx->r, sizeof(before));
+		const u32 t = ctx->sr.T;
+		block->fn(ctx);
+		if (ctx->pc == block->pc && ctx->sr.T == t && std::memcmp(before, ctx->r, sizeof(before)) == 0
+				&& ctx->cycle_counter > 0 && idleSkipEnabled)
+		{
+			idleSkipped += ctx->cycle_counter;
+			ctx->cycle_counter = 0;
+		}
 	}
 
 	void runBlock()
 	{
 		const u32 pc = ctx->pc;
-		if (const SpAotBlock *block = lookup(pc))
+		RtBlock *head = nullptr;
+		if (prev != nullptr)
 		{
-			aotOps += block->nops;
-			ctx->cycle_counter -= block->cycles;
-			block->fn(ctx);
-			return;
+			if (prev->succPc[0] == pc && prev->succ[0] != nullptr)
+				head = prev->succ[0];
+			else if (prev->succPc[1] == pc && prev->succ[1] != nullptr)
+				head = prev->succ[1];
+			if (head != nullptr)
+				chainedRun++;
 		}
+		if (head == nullptr)
+		{
+			head = tableLookup(pc);
+			if (head != nullptr && prev != nullptr)
+			{
+				const int slot = prev->nextSlot;
+				prev->succ[slot] = head;
+				prev->succPc[slot] = pc;
+				prev->nextSlot = u8(slot ^ 1);
+			}
+		}
+		if (head != nullptr)
+		{
+			const u8 *guest = &mem_b[pc & RAM_MASK];
+			for (RtBlock *rt = head; rt != nullptr; rt = rt->variant)
+			{
+				const SpAotBlock *block = rt->block;
+				if (block->pc != pc || !codeMatches(block, guest))
+					continue;
+				prev = rt;
+				aotOps += block->nops;
+				blocksRun++;
+				ctx->cycle_counter -= block->cycles;
+				if (block->flags & kSpPureSelfLoop)
+				{
+					runIdleCandidate(block);
+					return;
+				}
+				block->fn(ctx);
+				return;
+			}
+		}
+		prev = nullptr;
 		u16 ops[kMaxBlockOps];
 		const int nops = isRamAddress(pc) ? decodeBlock(pc, ops) : 0;
 		if (nops > 0 && !tracePath.empty())
@@ -367,7 +616,9 @@ private:
 		int cycles;
 	};
 
-	std::unordered_map<u32, std::vector<const SpAotBlock *>> index;
+	std::vector<RtBlock> runtime;
+	std::vector<std::unique_ptr<RtBlock *[]>> pages;
+	RtBlock *prev = nullptr;
 	std::unordered_map<u32, u64> missCounts;
 	std::unordered_set<std::string> knownShapes;
 	std::vector<Traced> traced;
@@ -380,6 +631,18 @@ private:
 	u64 aotOps = 0;
 	u64 interpretedOps = 0;
 	u64 slices = 0;
+	u64 blocksRun = 0;
+	u64 chainedRun = 0;
+	u64 exitAtSlices = 0;
+	u64 slicesAtWallStart = 0;
+	bool uncapped = false;
+	bool wallStarted = false;
+	bool selfTestDone = false;
+	bool idleSkipEnabled = true;
+	u64 idleSkipped = 0;
+	double cpuBase = 0;
+	double cpuAccumulated = 0;
+	std::chrono::steady_clock::time_point wallStart;
 	std::chrono::steady_clock::time_point lastReport;
 };
 

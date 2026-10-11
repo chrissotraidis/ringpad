@@ -6,8 +6,8 @@ compiled for arm64, and Flycast supplies the Dreamcast hardware layer. No JIT.
 
 **Status, 10 October 2026:** on macOS arm64 the recompiled build plays from
 boot through the title and Sonic's opening into the Chaos 0 fight, with over
-99.99% of executed instructions running as generated code. Runtime hardening, first
-play and iOS are next. See [STATUS.md](docs/STATUS.md).
+99.99% of executed instructions running as generated code and about 3.9x real-time
+throughput on an M1. First play and iOS are next. See [STATUS.md](docs/STATUS.md).
 
 - [PRD](docs/prd.md): goal, foundation decision, definition of done
 - [Plan](docs/PLAN.md): gates and work loop

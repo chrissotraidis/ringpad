@@ -46,5 +46,16 @@ and rewrites `generated/recomp/`. Both are game-derived and stay ignored.
 | `SONICPAD_STATS=1` | Print AOT coverage every 2 s and the top misses on exit. |
 | `SONICPAD_INPUT_SCRIPT=<file>` | Replay pad input at guest times: `<start s> <duration s> <A,B,X,Y,START,UP,DOWN,LEFT,RIGHT or STICK:x,y>`. |
 | `SONICPAD_NO_AOT=1` | Ignore generated code, for interpreter comparison. |
+| `SONICPAD_UNCAPPED=1` | Run without audio pacing, to measure throughput. |
+| `SONICPAD_EXIT_AT=<s>` | Print a `SONICPAD_PERF` line at that guest time and exit. |
+| `SONICPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
+| `SONICPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
+| `SONICPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
+
+`scripts/recomp/run-route.sh <script> <exit s> <log> [VAR=value ...]` runs one
+route with vsync off and prints the `SONICPAD_AOT` and `SONICPAD_PERF` lines.
+`generate_blocks.py --no-inline` emits handler calls only, for comparisons.
+For profiling with symbols, configure a second build directory with
+`-DCMAKE_BUILD_TYPE=RelWithDebInfo`; Flycast strips Release binaries.
 
 Host input tests for the touch layer: `scripts/run-host-tests.sh`.

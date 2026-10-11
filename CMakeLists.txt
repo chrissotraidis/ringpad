@@ -7,7 +7,16 @@
 cmake_minimum_required(VERSION 3.24)
 
 set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "SonicPad builds arm64 only")
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "16.0" CACHE STRING "Minimum iOS version")
+endif()
 project(sonicpad C CXX OBJC OBJCXX)
+
+# Flycast forces Vulkan off for iOS in its cache; this normal variable takes
+# precedence (policy CMP0126) so iOS can render through MoltenVK.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+	set(USE_VULKAN ON)
+endif()
 
 set(SONICPAD_FLYCAST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ref/flycast CACHE PATH "Pinned Flycast checkout")
 set(SONICPAD_RECOMP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated/recomp CACHE PATH "Generated AOT block sources")
@@ -20,7 +29,7 @@ set(USE_VULKAN OFF CACHE BOOL "" FORCE)
 set(USE_BREAKPAD OFF CACHE BOOL "" FORCE)
 set(USE_LUA OFF CACHE BOOL "" FORCE)
 set(USE_OPENMP OFF CACHE BOOL "" FORCE)
-if(APPLE AND NOT ZLIB_LIBRARY)
+if(APPLE AND NOT CMAKE_GENERATOR STREQUAL "Xcode" AND NOT ZLIB_LIBRARY)
 	find_library(SONICPAD_SYSTEM_ZLIB z REQUIRED)
 	set(ZLIB_LIBRARY ${SONICPAD_SYSTEM_ZLIB} CACHE STRING "System zlib" FORCE)
 endif()
@@ -51,6 +60,8 @@ function(sonicpad_patch_flycast_source rel old new prefix)
 	if(options)
 		set_source_files_properties(${out} PROPERTIES COMPILE_OPTIONS "${options}")
 	endif()
+	get_filename_component(dir ${src} DIRECTORY)
+	target_include_directories(flycast PRIVATE ${dir})
 	target_sources(flycast PRIVATE ${out})
 endfunction()
 
@@ -61,12 +72,40 @@ sonicpad_patch_flycast_source(core/emulator.cpp
 	"class Sh4Executor;\nSh4Executor *SonicPad_CreateSh4Executor();\n")
 
 if(IOS)
-	# The iOS shell ignores launch arguments; boot the game named by SONICPAD_GAME.
-	sonicpad_patch_flycast_source(shell/apple/emulator-ios/emulator/FlycastViewController.mm
-		"flycast_init(0, nullptr);"
-		"flycast_init(0, nullptr);\n\tif (const char *sonicpadGame = getenv(\"SONICPAD_GAME\"))\n\t\tsettings.content.path = sonicpadGame;"
-		"")
-	target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/shell/apple/emulator-ios/emulator)
+	# SonicPad's own iOS shell replaces Flycast's GLKit shell: OpenGL ES is
+	# deprecated and unavailable in the Apple Silicon Simulator, so iOS renders
+	# with Flycast's Vulkan renderer on MoltenVK (Metal).
+	get_target_property(_sp_sources flycast SOURCES)
+	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|.*\\.storyboard|.*\\.xib)")
+	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
+	target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm)
+	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+	set_target_properties(flycast PROPERTIES
+		OUTPUT_NAME "SonicPad"
+		MACOSX_BUNDLE_EXECUTABLE_NAME "SonicPad"
+		MACOSX_BUNDLE_GUI_IDENTIFIER "com.chrissotraidis.sonicpad"
+		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Info.plist.in
+		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad"
+		# Xcode 27's Swift compiler rejects Flycast's "5.0" language version.
+		Swift_LANGUAGE_VERSION 5
+		XCODE_ATTRIBUTE_SWIFT_VERSION 5)
+	set_target_properties(AltKit PROPERTIES Swift_LANGUAGE_VERSION 5 XCODE_ATTRIBUTE_SWIFT_VERSION 5)
+
+	# Flycast loads Vulkan with dlopen; SonicPad links MoltenVK statically and
+	# hands Flycast its entry point instead.
+	sonicpad_patch_flycast_source(core/rend/vulkan/vulkan_context.cpp
+		"static vk::detail::DynamicLoader dl;"
+		"static SonicPadVkLoader dl;"
+		"extern \"C\" void *SonicPad_VkGetInstanceProcAddr();\nstruct SonicPadVkLoader { template <typename T> T getProcAddress(const char *) const { return reinterpret_cast<T>(SonicPad_VkGetInstanceProcAddr()); } };\n")
+	set(SONICPAD_MOLTENVK_XCFRAMEWORK ${CMAKE_CURRENT_SOURCE_DIR}/ref/moltenvk-all/MoltenVK/MoltenVK/static/MoltenVK.xcframework
+		CACHE PATH "MoltenVK v1.4.2 static xcframework")
+	if(NOT EXISTS ${SONICPAD_MOLTENVK_XCFRAMEWORK})
+		message(FATAL_ERROR "MoltenVK xcframework missing at ${SONICPAD_MOLTENVK_XCFRAMEWORK}; see docs/BUILDING.md")
+	endif()
+	target_link_libraries(flycast PRIVATE ${SONICPAD_MOLTENVK_XCFRAMEWORK}
+		"-framework Metal" "-framework QuartzCore" "-framework IOSurface"
+		# Flycast's controller rumble uses Core Haptics, which this SDK does not auto-link.
+		"-framework CoreHaptics")
 endif()
 
 file(GLOB _sp_generated CONFIGURE_DEPENDS ${SONICPAD_RECOMP_DIR}/*.cpp)

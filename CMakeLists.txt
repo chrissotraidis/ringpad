@@ -27,22 +27,47 @@ endif()
 
 add_subdirectory(${SONICPAD_FLYCAST_DIR} flycast)
 
-# Replace Flycast's SH-4 executor with the SonicPad AOT executor. The pinned
-# checkout stays untouched; a configured copy of emulator.cpp is compiled instead.
-set(_sp_emu_src ${SONICPAD_FLYCAST_DIR}/core/emulator.cpp)
-file(READ ${_sp_emu_src} _sp_emu)
-string(REPLACE "interpreter = Get_Sh4Interpreter();" "interpreter = SonicPad_CreateSh4Executor();" _sp_emu_patched "${_sp_emu}")
-if(_sp_emu_patched STREQUAL _sp_emu)
-	message(FATAL_ERROR "Flycast executor hook not found in ${_sp_emu_src}; update the SonicPad hook for this pin")
-endif()
-set(_sp_emu_out ${CMAKE_BINARY_DIR}/sonicpad/emulator.cpp)
-file(WRITE ${_sp_emu_out}.tmp "class Sh4Executor;\nSh4Executor *SonicPad_CreateSh4Executor();\n${_sp_emu_patched}")
-configure_file(${_sp_emu_out}.tmp ${_sp_emu_out} COPYONLY)
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_sp_emu_src})
+# SonicPad hooks into Flycast are applied to configured copies of individual
+# source files, so the pinned checkout stays untouched. Each replacement must
+# match exactly once, or configuration fails and the hook needs updating.
+function(sonicpad_patch_flycast_source rel old new prefix)
+	set(src ${SONICPAD_FLYCAST_DIR}/${rel})
+	file(READ ${src} text)
+	string(FIND "${text}" "${old}" first)
+	string(FIND "${text}" "${old}" last REVERSE)
+	if(first EQUAL -1 OR NOT first EQUAL last)
+		message(FATAL_ERROR "SonicPad hook for ${rel} must match exactly once; update it for this Flycast pin")
+	endif()
+	string(REPLACE "${old}" "${new}" patched "${text}")
+	get_filename_component(name ${rel} NAME)
+	set(out ${CMAKE_BINARY_DIR}/sonicpad/${name})
+	file(WRITE ${out}.tmp "${prefix}${patched}")
+	configure_file(${out}.tmp ${out} COPYONLY)
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${src})
+	get_target_property(sources flycast SOURCES)
+	list(REMOVE_ITEM sources ${rel} ${src})
+	set_property(TARGET flycast PROPERTY SOURCES ${sources})
+	get_source_file_property(options ${src} COMPILE_OPTIONS)
+	if(options)
+		set_source_files_properties(${out} PROPERTIES COMPILE_OPTIONS "${options}")
+	endif()
+	target_sources(flycast PRIVATE ${out})
+endfunction()
 
-get_target_property(_sp_sources flycast SOURCES)
-list(REMOVE_ITEM _sp_sources core/emulator.cpp ${_sp_emu_src})
-set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
+# Use the SonicPad AOT executor in place of Flycast's SH-4 interpreter.
+sonicpad_patch_flycast_source(core/emulator.cpp
+	"interpreter = Get_Sh4Interpreter();"
+	"interpreter = SonicPad_CreateSh4Executor();"
+	"class Sh4Executor;\nSh4Executor *SonicPad_CreateSh4Executor();\n")
+
+if(IOS)
+	# The iOS shell ignores launch arguments; boot the game named by SONICPAD_GAME.
+	sonicpad_patch_flycast_source(shell/apple/emulator-ios/emulator/FlycastViewController.mm
+		"flycast_init(0, nullptr);"
+		"flycast_init(0, nullptr);\n\tif (const char *sonicpadGame = getenv(\"SONICPAD_GAME\"))\n\t\tsettings.content.path = sonicpadGame;"
+		"")
+	target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/shell/apple/emulator-ios/emulator)
+endif()
 
 file(GLOB _sp_generated CONFIGURE_DEPENDS ${SONICPAD_RECOMP_DIR}/*.cpp)
 if(NOT _sp_generated)
@@ -51,7 +76,7 @@ endif()
 list(LENGTH _sp_generated _sp_generated_count)
 message(STATUS "SonicPad AOT sources: ${_sp_generated_count}")
 
-target_sources(flycast PRIVATE ${_sp_emu_out} ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp ${_sp_generated})
+target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp ${_sp_generated})
 target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp)
 target_compile_definitions(flycast PRIVATE TARGET_NO_REC)
 set_source_files_properties(${_sp_generated} PROPERTIES COMPILE_OPTIONS "-O2;-Wno-unused-function")

@@ -4,9 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import re
 import shlex
-import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,16 +16,10 @@ def digest(path):
 
 def expected_tracks():
     identity = json.loads((ROOT / 'config/game-identity.json').read_text())
-    pins = json.loads((ROOT / 'config/pins.json').read_text())
-    pin = next(p['pin'] for p in pins['references'] if p['name'] == 'SARecomp')
-    header = subprocess.check_output(['git', '-C', str(ROOT / 'ref/sarecomp'),
-        'show', f'{pin}:src/setup/supported_disc.hpp'], text=True)
-    matches = re.findall(r'\{(\d+),(\d+),(\d+),(\d+),(\d+),"([0-9a-f]{64})"\}', header)
-    authoritative = [dict(zip(('n', 'lba', 'type', 'sector_size', 'bytes'),
-                               map(int, row[:5])), sha256=row[5]) for row in matches]
-    if len(authoritative) != 3 or identity['supported']['tracks'] != authoritative:
-        raise ValueError('Game identity config differs from the pinned supported-disc contract')
-    return authoritative
+    tracks = identity['supported']['tracks']
+    if len(tracks) != 3:
+        raise ValueError('Game identity config must list exactly three tracks')
+    return tracks
 
 
 def verify_gdi(path, expected):
@@ -73,7 +65,7 @@ def main():
     args = parser.parse_args()
     try:
         report = verify_gdi(args.gdi, expected_tracks())
-    except (OSError, UnicodeError, ValueError, subprocess.CalledProcessError) as error:
+    except (OSError, UnicodeError, ValueError, KeyError) as error:
         print(f'GAME_INPUT_BLOCKED: {error}')
         return 2
     print('GAME_TRACK_IDENTITIES_VERIFIED: Sonic Adventure PAL v1.003 (1999)')

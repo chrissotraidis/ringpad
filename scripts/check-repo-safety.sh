@@ -27,11 +27,11 @@ tracked_disc=$(git ls-files | grep -Ei '\.(gdi|cdi|chd|iso|cue|7z)$|(^|/)track[0
 if [ -z "$tracked_disc" ]; then ok "no disc/archive/track file tracked"; else bad "tracked disc data: $tracked_disc"; fi
 
 printf '\nPrivate development material is never tracked:\n'
-tracked_priv=$(git ls-files | grep -Ei '(katana_generated\.lib|\.local/|/title-source/|native_title_adapter\.cpp|unit-[0-9]+\.cpp|\.ksave|\.vmu$|dreamcast_vmu_.*\.bin$|\.dmp$)' || true)
+tracked_priv=$(git ls-files | grep -Ei '(katana_generated\.lib|\.local/|/title-source/|native_title_adapter\.cpp|unit-[0-9]+\.cpp|sp_aot_blocks_|sp_aot_index\.cpp|recomp-manifest|\.ksave|\.vmu$|dreamcast_vmu_.*\.bin$|\.dmp$)' || true)
 if [ -z "$tracked_priv" ]; then ok "no private SDK/AOT/save artifacts tracked"; else bad "tracked private material: $tracked_priv"; fi
 
 printf '\nPinned references cannot push:\n'
-for refdir in ref/sarecomp ref/sunpad ref/paperpad; do
+for refdir in ref/flycast ref/sunpad ref/sarecomp ref/paperpad; do
     if [ -d ".git/$([ -d "$refdir/.git" ] && echo)" ]; then :; fi
     if [ -e "$refdir/.git" ]; then
         url=$(git -C "$refdir" remote get-url --push origin 2>/dev/null || echo "")

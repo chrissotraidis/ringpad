@@ -47,12 +47,34 @@ the dispatch loop (byte check, chain check and indirect call per block), then
 memory access functions, floating-point handlers, the AICA sound CPU and the
 game's frame-wait loop, which calls a function each pass and so is not skipped.
 
+## S3 iPad Simulator (11 October 2026)
+
+SonicPad.app (com.chrissotraidis.sonicpad) builds for the iOS Simulator with
+Xcode 27 and runs on a dedicated "SonicPad iPad Air 11 (M3)" Simulator on the
+iOS 26.5 runtime. The scripted Chaos 0 route ran from boot through the memory
+card prompt, file and character select and Sonic's opening into the playable
+fight, with the HUD and Homing Attack hint on screen.
+
+- Rendering: Flycast's iOS shell is GLKit-only, and OpenGL ES is unavailable in
+  the Apple Silicon Simulator. SonicPad has its own minimal iOS shell
+  (`port/apple/ios/SonicPadApp.mm`): UIScene lifecycle, a `CAMetalLayer`
+  view and a display link driving Flycast's Vulkan renderer on MoltenVK 1.4.2,
+  linked statically.
+- Recompiled code ran over 99.99% of executed instructions (32,408 interpreted)
+  and the startup self-test passed in the iOS build.
+- Speed: 205 guest seconds took 246 wall seconds (0.83x real time) while the
+  SH-4 thread used 0.336 s CPU per guest second. The Simulator runs on the
+  Mac's CPU and GPU path, so this is not a device measurement; the limit here
+  is presentation, not the recompiled code. Device timing is the next S3 step.
+- Shell gaps for S4: the app lays out in portrait instead of landscape, and
+  Flycast's ImGui virtual gamepad still draws over the game.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.
 - Performance on iOS. Floating-point opcodes still call Flycast's handlers.
-- iOS and Simulator builds: the Xcode licence on this Mac is recorded for
-  Xcode 26.6, so Xcode 27.0 tools refuse to run until it is accepted again.
+- Physical iPad and iPhone builds: they need a signing identity and Chris's
+  device; nothing has run on device hardware yet.
 
 ## Known limits of the current runtime
 
@@ -65,6 +87,7 @@ game's frame-wait loop, which calls a function each pass and so is not skipped.
 
 ## Next
 
-S3: build the core and generated blocks for the iPad Simulator once the
-Xcode licence is accepted. S2: extend the acceptance script through Station
-Square into Emerald Coast.
+S3 device: sign a device build and measure Emerald Coast on Chris's iPad.
+S4: landscape layout, the `port/input` single-stick touch layer in place of
+Flycast's virtual gamepad, and GDI import. S2: extend the acceptance script
+through Station Square into Emerald Coast.

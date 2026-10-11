@@ -58,4 +58,25 @@ route with vsync off and prints the `SONICPAD_AOT` and `SONICPAD_PERF` lines.
 For profiling with symbols, configure a second build directory with
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`; Flycast strips Release binaries.
 
+## iOS Simulator
+
+Needs Xcode with its licence accepted and the MoltenVK v1.4.2 package
+(`MoltenVK-all.tar`, SHA-256
+`562a15a29bc358446a56a4091c5f7e08f604184187c1d34f712148b61ef17276`):
+
+```sh
+mkdir -p ref/moltenvk-all && cd ref/moltenvk-all
+gh release download v1.4.2 -R KhronosGroup/MoltenVK -p MoltenVK-all.tar
+tar xf MoltenVK-all.tar && cd ../..
+xcrun simctl create "SonicPad iPad Air 11 (M3)" \
+  com.apple.CoreSimulator.SimDeviceType.iPad-Air-11-inch-M3 \
+  com.apple.CoreSimulator.SimRuntime.iOS-26-5
+scripts/ios/run-sim.sh <udid> tests/acceptance/first-play-chaos0.txt 205 /tmp/sim.log
+```
+
+The script configures `generated/build-iossim` with the Xcode generator on
+first use, builds, installs `com.chrissotraidis.sonicpad` and launches it with
+the `SONICPAD_*` variables passed through `SIMCTL_CHILD_`. The app reads the
+GDI directly from `ref/`; nothing is copied into the Simulator.
+
 Host input tests for the touch layer: `scripts/run-host-tests.sh`.

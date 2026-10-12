@@ -44,13 +44,29 @@ and rewrites `generated/recomp/`. Both are game-derived and stay ignored.
 |---|---|
 | `SONICPAD_TRACE=<file>` | Record blocks that ran on the interpreter. |
 | `SONICPAD_STATS=1` | Print AOT coverage every 2 s and the top misses on exit. |
-| `SONICPAD_INPUT_SCRIPT=<file>` | Replay pad input at guest times: `<start s> <duration s> <A,B,X,Y,START,UP,DOWN,LEFT,RIGHT or STICK:x,y>`. |
+| `SONICPAD_INPUT_SCRIPT=<file>` | Replay pad input at guest times, one event per line: `<start s> <duration s> <what>`. See the script commands below. |
+| `SONICPAD_SHOT_DIR=<dir>` | Where `SHOT:` screenshots go (default `generated/shots`). |
+| `SONICPAD_STATE_LOAD=<file>` | Resume from a development state written by `STATE:`; the script continues from the saved time. |
 | `SONICPAD_NO_AOT=1` | Ignore generated code, for interpreter comparison. |
 | `SONICPAD_UNCAPPED=1` | Run without audio pacing, to measure throughput. |
 | `SONICPAD_EXIT_AT=<s>` | Print a `SONICPAD_PERF` line at that guest time and exit. |
 | `SONICPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
 | `SONICPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
 | `SONICPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
+
+Input script commands:
+
+| `<what>` | Effect |
+|---|---|
+| `A`, `B`, `X`, `Y`, `START`, `UP`, `DOWN`, `LEFT`, `RIGHT` | Hold the button for the duration. |
+| `LT`, `RT` | Hold the analog trigger fully. |
+| `STICK:x,y` | Stick position, about ±32000; y grows downwards. |
+| `ANGLE:deg[,pct]` | Stick by angle (0 = up, 90 = right) at a percentage of full tilt (default 100). |
+| `SHOT:<name>` | With duration 0: save a PNG of the last frame as `<name>.png`. |
+| `STATE:<file>` | With duration 0: write a development save state, for iterating a long route one segment at a time. |
+
+Development states are for building routes only. Acceptance runs replay the
+whole route from boot without loading one.
 
 `scripts/recomp/run-route.sh <script> <exit s> <log> [VAR=value ...]` runs one
 route with vsync off and prints the `SONICPAD_AOT` and `SONICPAD_PERF` lines.

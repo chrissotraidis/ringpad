@@ -9,6 +9,7 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "SPGameLibrary.h"
+#import "SPPortMenu.h"
 #import "DCPadControllerInput.h"
 #import "DCPadOverlayView.h"
 
@@ -87,9 +88,10 @@ static void hideFlycastGamepad(Event, void *)
 }
 @end
 
-@interface SPGameViewController : UIViewController <UIDocumentPickerDelegate, DCPadOverlayDelegate>
+@interface SPGameViewController : UIViewController <UIDocumentPickerDelegate, DCPadOverlayDelegate, SPPortMenuHost>
 @property (nonatomic, strong) CADisplayLink *displayLink;
 @property (nonatomic, strong) DCPadOverlayView *overlay;
+@property (nonatomic, strong) SPPortMenu *portMenu;
 @property (nonatomic, strong) DCPadControllerInput *controllerInput;
 @property (nonatomic, strong) NSMutableSet<NSString *> *pauseReasons;
 @property (nonatomic) BOOL stoppedByShell;
@@ -126,6 +128,7 @@ static void hideFlycastGamepad(Event, void *)
 	self.overlay.delegate = self;
 	[view addSubview:self.overlay];
 	self.pauseReasons = [NSMutableSet set];
+	self.portMenu = [[SPPortMenu alloc] initWithHost:self];
 
 	if (std::getenv("SONICPAD_INPUT_DEBUG") != nullptr) {
 		self.inputDebug = [[UILabel alloc] init];
@@ -374,23 +377,34 @@ static void hideFlycastGamepad(Event, void *)
 - (NSArray<UIMenuElement *> *)dcpadOverlayMenuElements:(DCPadOverlayView *)overlay
 {
 	__weak SPGameViewController *weakSelf = self;
+	const BOOL loaded = !settings.content.path.empty();
 	UIAction *importGame = [UIAction actionWithTitle:@"Import Game…" image:[UIImage systemImageNamed:@"square.and.arrow.down"]
 			identifier:nil handler:^(UIAction *) { [weakSelf showImport:YES]; }];
-	UIAction *reset = [UIAction actionWithTitle:@"Reset Game…" image:[UIImage systemImageNamed:@"arrow.counterclockwise"]
+	importGame.subtitle = @"Your Sonic Adventure disc folder";
+	UIAction *reset = [UIAction actionWithTitle:@"Reset" image:[UIImage systemImageNamed:@"arrow.counterclockwise"]
 			identifier:nil handler:^(UIAction *) { [weakSelf confirmReset]; }];
-	reset.attributes = settings.content.path.empty() ? UIMenuElementAttributesDisabled : 0;
-	UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
-			identifier:nil handler:^(UIAction *) {
-		config::ShowFPS = !config::ShowFPS;
-		SaveSettings();
-	}];
-	fps.state = config::ShowFPS ? UIMenuElementStateOn : UIMenuElementStateOff;
+	reset.attributes = loaded ? 0 : UIMenuElementAttributesDisabled;
 	UIAction *about = [UIAction actionWithTitle:@"About This Build" image:[UIImage systemImageNamed:@"info.circle"]
 			identifier:nil handler:^(UIAction *) { [weakSelf showAbout]; }];
+	// Save, load and reset sit in one row of icons at the top: the things a
+	// player reaches for most. The rest stays one level down so the menu
+	// fits a landscape phone.
+	NSMutableArray *quick = [[self.portMenu saveStateElementsForGameLoaded:loaded] mutableCopy];
+	[quick addObject:reset];
+	UIMenu *quickRow = [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:quick];
+	quickRow.preferredElementSize = UIMenuElementSizeMedium;
+	UIMenu *files = [UIMenu menuWithTitle:@"Game Files" image:[UIImage systemImageNamed:@"folder"] identifier:nil options:0
+			children:@[importGame, [self.portMenu exportVMUActionForGameLoaded:loaded]]];
 	return @[
-		[UIMenu menuWithTitle:@"Game" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[importGame, reset]],
-		[UIMenu menuWithTitle:@"Display" image:[UIImage systemImageNamed:@"display"] identifier:nil options:0 children:@[fps, about]],
+		quickRow,
+		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline
+				children:@[[self.portMenu displayMenu], [self.portMenu soundMenu], files, about]],
 	];
+}
+
+- (void)portMenuShowMessage:(NSString *)message
+{
+	[self.overlay showMessage:message];
 }
 
 - (void)confirmReset

@@ -182,8 +182,11 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	BOOL _stickWasActive;
 	CALayer *_face[4];
 	CAShapeLayer *_faceCircle[4];
+	CAGradientLayer *_faceSheen[4];
 	CATextLayer *_faceText[4];
-	CAShapeLayer *_trigShape[2], *_trigFill[2], *_trigMask[2], *_trigDetent[2];
+	CAShapeLayer *_trigShape[2], *_trigMask[2], *_trigDetent[2];
+	CAGradientLayer *_trigFill[2];
+	CAGradientLayer *_stickShade;
 	CATextLayer *_trigText[2];
 	CAShapeLayer *_startShape;
 	CATextLayer *_startText;
@@ -201,6 +204,9 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	CGFloat _panelContentHeight;
 	dcpad::Visual _preview;
 	BOOL _previewing;
+	UILabel *_message;
+	NSUInteger _messageToken;
+	BOOL _messageVisible;
 }
 
 - (UIButton *)menuButton
@@ -224,8 +230,49 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	[self buildMenuButton];
 	[self buildPanel];
 	[self buildEditorBar];
+	[self buildMessage];
 	[self loadPreview];
 	return self;
+}
+
+- (void)buildMessage
+{
+	_message = [UILabel new];
+	_message.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+	_message.textColor = UIColor.whiteColor;
+	_message.textAlignment = NSTextAlignmentCenter;
+	_message.backgroundColor = kSurfacePressed();
+	_message.layer.cornerRadius = 18;
+	_message.layer.borderWidth = 1.5;
+	_message.layer.borderColor = kRim().CGColor;
+	_message.layer.masksToBounds = YES;
+	_message.alpha = 0;
+	_message.accessibilityIdentifier = @"dcpad.message";
+	[self addSubview:_message];
+}
+
+- (void)showMessage:(NSString *)message
+{
+	_message.text = message;
+	const CGRect safe = [self safeRect];
+	const CGFloat w = MIN(safe.size.width - 120, [_message sizeThatFits:CGSizeMake(CGFLOAT_MAX, 36)].width + 36);
+	_message.frame = CGRectMake(CGRectGetMidX(safe) - w / 2, CGRectGetMinY(safe) + 14, w, 36);
+	[self bringSubviewToFront:_message];
+	const NSUInteger token = ++_messageToken;
+	_messageVisible = YES;
+	[self updateAccessibility];
+	[UIView animateWithDuration:0.15 animations:^{ self->_message.alpha = 1; }];
+	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, message);
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		if (token != self->_messageToken)
+			return;
+		[UIView animateWithDuration:0.35 animations:^{ self->_message.alpha = 0; } completion:^(BOOL) {
+			if (token != self->_messageToken)
+				return;
+			self->_messageVisible = NO;
+			[self updateAccessibility];
+		}];
+	});
 }
 
 // DCPAD_PREVIEW="stick=0.7,-0.5 dpad=up face=AB l=128 r=255 start" draws a
@@ -317,6 +364,13 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_stickThumb.shadowOpacity = 0.45;
 	_stickThumb.shadowRadius = 6;
 	_stickThumb.shadowOffset = CGSizeMake(0, 3);
+	// Shading toward the bottom gives the thumb a rounded, lit-from-above look.
+	_stickShade = [CAGradientLayer layer];
+	_stickShade.colors = @[(id)[UIColor colorWithWhite:0 alpha:0].CGColor, (id)[UIColor colorWithWhite:0 alpha:0.20].CGColor];
+	_stickShade.startPoint = CGPointMake(0.5, 0.35);
+	_stickShade.endPoint = CGPointMake(0.5, 1.0);
+	_stickShade.masksToBounds = YES;
+	[_stickThumb addSublayer:_stickShade];
 	_stickDish = shape(_stickThumb);
 	_stickDish.fillColor = [UIColor colorWithWhite:0 alpha:0.05].CGColor;
 	_stickDish.strokeColor = [UIColor colorWithWhite:0 alpha:0.14].CGColor;
@@ -344,14 +398,31 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		_faceCircle[i].strokeColor = st.glyph.CGColor;
 		_faceCircle[i].lineWidth = 2.5;
 		glow(_faceCircle[i], st.fill);
+		_faceSheen[i] = [CAGradientLayer layer];
+		_faceSheen[i].colors = @[(id)[UIColor colorWithWhite:1 alpha:0.20].CGColor, (id)[UIColor colorWithWhite:1 alpha:0].CGColor];
+		_faceSheen[i].startPoint = CGPointMake(0.5, 0);
+		_faceSheen[i].endPoint = CGPointMake(0.5, 0.6);
+		_faceSheen[i].masksToBounds = YES;
+		[_face[i] addSublayer:_faceSheen[i]];
 		_faceText[i] = TextLayer(st.name, 30, st.glyph, scale);
+		_faceText[i].shadowColor = UIColor.blackColor.CGColor;
+		_faceText[i].shadowOpacity = 0.35;
+		_faceText[i].shadowRadius = 2;
+		_faceText[i].shadowOffset = CGSizeMake(0, 1);
 		[_face[i] addSublayer:_faceText[i]];
 	}
 
 	for (int i = 0; i < 2; i++) {
 		_trigShape[i] = shape(_controls);
 		surface(_trigShape[i]);
-		_trigFill[i] = shape(_controls);
+		// The fill brightens toward the outer, full-press end.
+		_trigFill[i] = [CAGradientLayer layer];
+		UIColor *deep = RGBA(0.78, 0.30, 0.07, 0.85), *bright = RGBA(1.0, 0.62, 0.26, 0.95);
+		_trigFill[i].colors = i == 0 ? @[(id)bright.CGColor, (id)deep.CGColor] : @[(id)deep.CGColor, (id)bright.CGColor];
+		_trigFill[i].startPoint = CGPointMake(0, 0.5);
+		_trigFill[i].endPoint = CGPointMake(1, 0.5);
+		_trigFill[i].masksToBounds = YES;
+		[_controls addSublayer:_trigFill[i]];
 		_trigMask[i] = [CAShapeLayer layer];
 		_trigFill[i].mask = _trigMask[i];
 		_trigDetent[i] = shape(_controls);
@@ -446,7 +517,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	// A submenu keeps the top level short enough for a landscape phone.
 	[items addObject:[UIMenu menuWithTitle:@"Controls" image:[UIImage systemImageNamed:@"gamecontroller.fill"]
 			identifier:nil options:0 children:controls]];
-	return @[[UIMenu menuWithTitle:self.menuTitle image:nil identifier:nil options:UIMenuOptionsDisplayInline children:items]];
+	// The title header costs a row a landscape phone does not have.
+	return @[[UIMenu menuWithTitle:_phone ? @"" : self.menuTitle image:nil identifier:nil options:UIMenuOptionsDisplayInline children:items]];
 }
 
 #pragma mark Settings panel
@@ -666,6 +738,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	const CGFloat t = r * kThumbFraction;
 	_stickThumb.path = circle(t);
 	_stickThumb.shadowPath = _stickThumb.path;
+	_stickShade.frame = CGRectMake(-t, -t, 2 * t, 2 * t);
+	_stickShade.cornerRadius = t;
 	_stickDish.path = circle(t * 0.62);
 
 	const CGRect dpad = CG(_layout.frame(Control::DPad));
@@ -689,6 +763,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		_face[i].position = CGPointMake(cx, cy);
 		_faceCircle[i].path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(1.25, 1.25, 2 * fr - 2.5, 2 * fr - 2.5)].CGPath;
 		_faceCircle[i].shadowPath = _faceCircle[i].path;
+		_faceSheen[i].frame = CGRectInset(_face[i].bounds, 2.5, 2.5);
+		_faceSheen[i].cornerRadius = fr - 2.5;
 		CenterText(_faceText[i], _face[i].bounds, fr * 0.92);
 	}
 
@@ -698,7 +774,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		UIBezierPath *pill = [UIBezierPath bezierPathWithRoundedRect:f cornerRadius:f.size.height / 2];
 		_trigShape[i].path = pill.CGPath;
 		_trigShape[i].shadowPath = pill.CGPath;
-		_trigMask[i].path = pill.CGPath;
+		_trigFill[i].frame = f;
+		_trigFill[i].cornerRadius = f.size.height / 2;
 		// Full-press point; both sliders grow toward the screen edge.
 		const CGFloat x = i == 0 ? CGRectGetMaxX(f) - f.size.width * dcpad::kTriggerFullAt : f.origin.x + f.size.width * dcpad::kTriggerFullAt;
 		UIBezierPath *tick = [UIBezierPath bezierPath];
@@ -784,6 +861,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		_faceCircle[i].fillColor = (down ? st.fill : kSurface()).CGColor;
 		_faceCircle[i].strokeColor = (down ? [UIColor colorWithWhite:1 alpha:0.9] : st.glyph).CGColor;
 		_faceCircle[i].shadowOpacity = down ? 0.9 : 0;
+		_faceSheen[i].opacity = down ? 0.6 : 1.0;
 		_faceText[i].foregroundColor = (down ? st.pressedText : st.glyph).CGColor;
 	}
 
@@ -796,8 +874,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		fill.size.width = f.size.width * (values[i] / 255.0);
 		if (i == 0)
 			fill.origin.x = CGRectGetMaxX(f) - fill.size.width;   /* L fills toward the left edge */
-		_trigFill[i].path = [UIBezierPath bezierPathWithRect:fill].CGPath;
-		_trigFill[i].fillColor = [kAccent() colorWithAlphaComponent:fulls[i] ? 0.92 : 0.55].CGColor;
+		_trigMask[i].path = [UIBezierPath bezierPathWithRect:CGRectOffset(fill, -f.origin.x, -f.origin.y)].CGPath;
+		_trigFill[i].opacity = fulls[i] ? 1.0 : 0.72;
 		_trigShape[i].strokeColor = (fulls[i] ? kAccent() : kRim()).CGColor;
 		_trigShape[i].lineWidth = fulls[i] ? 2.5 : 1.5;
 		_trigShape[i].shadowColor = (fulls[i] ? kAccent() : UIColor.blackColor).CGColor;
@@ -852,6 +930,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		add(@"dcpad.start", @"Start", CG(_layout.frame(Control::Start)));
 	}
 	[elements addObject:_menuButton];
+	if (_messageVisible)
+		[elements addObject:_message];
 	if (!_panel.hidden)
 		[elements addObject:_panel];
 	if (!_editorBar.hidden)

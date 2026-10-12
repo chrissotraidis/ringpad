@@ -5,10 +5,24 @@ port can reuse it unchanged. It turns multi-touch and Apple game controllers
 into one Dreamcast controller state, and gives every port the same **•••**
 menu, touch settings and layout editor.
 
-The design follows SunPad, whose layout was accepted on a physical iPad: a
-large stick low on the left, the D-pad above it, the face buttons low on the
-right, L and R as analog sliders across the top corners, a persistent •••
-button, a settings panel, Move Controls editing and per-device layouts.
+DCPad keeps SunPad's mechanisms (a persistent ••• button, a settings panel,
+Move Controls editing and per-device layouts) and lays the controls out for
+how the device is held:
+
+- **Where thumbs rest.** In landscape a thumb pivots on the side edge: on a
+  tablet held by its sides about 45 mm above the bottom, on a phone near the
+  lower corner. `thumb_pivot()` encodes this, and the host test checks that
+  every default control is 15–60 mm from it on six iPad and iPhone sizes
+  (24–52 mm today). The stick, the most used control, sits where the thumb
+  rests (under 45 mm).
+- **The Dreamcast arrangement.** As on the real controller, the stick is high
+  and the D-pad is below and inward of it. L and R sit at the top of each
+  thumb's arc on the side edges, the face diamond is under the right thumb and
+  Start just inward of it. The middle of the screen stays clear.
+- **Anchored to the corners.** Defaults are measured in points from the bottom
+  corners rather than as fractions of the screen, because thumbs do not grow
+  with the screen: a 13-inch iPad keeps the same reach as an 11-inch one.
+
 DCPad adds what a Dreamcast pad needs:
 
 | Control | Behaviour |
@@ -17,8 +31,8 @@ DCPad adds what a Dreamcast pad needs:
 | D-pad | One eight-way cross. Roll the thumb between directions without lifting; cardinals own 60° and diagonals 30°. Keeps tracking if the thumb drifts off the cross. Pressed arms light up inside the cross. |
 | A / B / X / Y | Dreamcast diamond and colours (A red bottom, B blue right, X yellow left, Y green top). Slide between buttons without lifting. Resting between two neighbours presses both, but opposite buttons never chord. |
 | L / R | Analog sliders. A light touch is already past the game's digital threshold; pressure grows toward the outer screen edge, and past the marked line (72% of the length) is a full press with a haptic tap, a glow and hysteresis. |
-| Start | Separate pill at the bottom centre, never part of the ••• menu. |
-| ••• menu | The host adds its own items (SonicPad adds Import Game, Reset Game, Show FPS and About). DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. |
+| Start | Separate pill beside the right thumb, never part of the ••• menu. |
+| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); About. `showMessage:` confirms actions such as "Saved to Slot 1". |
 
 Each finger owns one control from touch-down to lift, so lifting one thumb
 never releases another's input, and a second finger can't take over a stick,

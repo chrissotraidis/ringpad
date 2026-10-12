@@ -107,6 +107,24 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
 - **Reuse:** DCPad is now its own CMake library (`port/dcpad/CMakeLists.txt`), so another port needs one `add_subdirectory` and one `target_link_libraries` line.
 - **Tests:** 314 host checks pass, including new stick travel checks. All 10 UI tests (the eight control tests, the capture and the touch play-through) pass on the iPad Air 11 and iPhone 16 Pro Simulators.
 
+### Hold-based layout and port menu (12 October 2026)
+
+- **Placement:** the default controls now follow a landscape grip and the Dreamcast controller.
+  - The stick sits where the left thumb rests, with the D-pad below and inward of it as on the real pad.
+  - L and R sit on the side edges at the top of each thumb's arc, the face diamond is under the right thumb, and Start is just inward of it rather than at the bottom centre.
+  - Defaults are anchored to the bottom corners in points, so a 13-inch iPad keeps an 11-inch reach.
+  - A new host test measures each control against a thumb pivot in millimetres on six device sizes. Every control is 24–52 mm away, inside the 15–60 mm comfortable band, and the stick is under 45 mm.
+- **Look:** face buttons have a soft top sheen and a letter shadow, the stick thumb is shaded, and the L/R fills brighten toward the full-press end.
+- **••• menu:** the reusable `port/apple/ios/SPPortMenu` adds what players expect from a Dreamcast port.
+  - A top row of icons: Save State and Load State, each with three slots showing when they were saved, plus Reset.
+  - Display: render resolution (Original 480p, 2×, 3×) and Show FPS.
+  - Sound: Full, Half or Off.
+  - Game Files: Import Game and Export VMU Save, which backs up the in-game save through the share sheet.
+  - About This Build, then DCPad's Controls.
+  - DCPad shows a short confirmation such as "Saved to Slot 1".
+  - Widescreen was tried and dropped: Flycast's widescreen mode shrinks the picture in SonicPad's host, and Sonic Adventure has no native widescreen.
+- **Tests:** 377 DCPad host checks pass. The UI suite adds save/load state and live resolution change tests.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.

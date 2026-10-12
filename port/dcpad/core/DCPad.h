@@ -80,6 +80,13 @@ struct Layout {
 /* Build the layout for a safe area (points) on a phone or tablet. */
 Layout resolve_layout(const Rect& safe, bool phone, const Settings& settings);
 
+/* Ergonomic reference for the default layout: where the base of a thumb sits
+ * when the device is held in landscape. On a tablet held by its sides that is
+ * the side edge, 30% of the height above the bottom but no more than 233 pt
+ * (about 45 mm); on a phone cradled in the palms it is near the lower corner
+ * (12% up). */
+void thumb_pivot(const Layout& layout, bool left_hand, float* x, float* y);
+
 /* Topmost control group whose hit region contains the point (the floating
  * stick zone counts as Stick only when floating is enabled). */
 Control control_at(const Layout& layout, const Settings& settings, float x, float y);

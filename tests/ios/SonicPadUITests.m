@@ -91,6 +91,12 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[app.buttons[@"Touch Control Settings…"] tap];
 }
 
+// Menu items with a subtitle expose "Title, subtitle" as their label.
+- (XCUIElement *)menuItem:(NSString *)title in:(XCUIApplication *)app
+{
+	return [app.buttons matchingPredicate:[NSPredicate predicateWithFormat:@"label BEGINSWITH %@", title]].firstMatch;
+}
+
 - (void)dismissMenu:(XCUIApplication *)app
 {
 	[[app coordinateWithNormalizedOffset:CGVectorMake(0.45, 0.5)] tap];
@@ -235,8 +241,9 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[NSThread sleepForTimeInterval:3];
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
-	XCTAssertTrue([app.buttons[@"Import Game…"] waitForExistenceWithTimeout:10]);
-	XCTAssertTrue(app.buttons[@"Import Game…"].isHittable, @"top-level items fit on screen");
+	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Display", @"Sound", @"Game Files", @"About This Build"])
+		XCTAssertTrue(app.buttons[item].isHittable, @"top-level item %@ fits on screen", item);
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
 	[self attachScreenshot:@"menu"];
@@ -250,7 +257,10 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertFalse([self seen:app] & kStart, @"the menu never sends Start");
 
 	[app.buttons[@"dcpad.menu"] tap];
-	[app.buttons[@"Import Game…"] tap];
+	[app.buttons[@"Game Files"] tap];
+	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Export VMU Save…" in:app].exists);
+	[[self menuItem:@"Import Game…" in:app] tap];
 	XCUIElement *cancel = app.buttons[@"sp.import.cancel"];
 	XCTAssertTrue([cancel waitForExistenceWithTimeout:10]);
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"import pauses the game");
@@ -258,6 +268,66 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:10]);
 	[NSThread sleepForTimeInterval:1];
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"cancelling import resumes");
+}
+
+// Save states from the ••• menu: save to slot 1, see its date under Load
+// State, load it, and the game keeps running afterwards.
+- (void)testSaveAndLoadState
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:6];
+	[app.buttons[@"dcpad.menu"] tap];
+	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
+	[self attachScreenshot:@"menu-top"];
+	[app.buttons[@"Save State"] tap];
+	XCUIElement *slot = [self menuItem:@"Slot 1" in:app];
+	XCTAssertTrue([slot waitForExistenceWithTimeout:5]);
+	[slot tap];
+	[NSThread sleepForTimeInterval:0.5];
+	[self attachScreenshot:@"saved"];   // shows the "Saved to Slot 1" confirmation
+	[NSThread sleepForTimeInterval:2.5];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game resumes after saving");
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Load State"] tap];
+	XCUIElement *load = [self menuItem:@"Slot 1" in:app];
+	XCTAssertTrue([load waitForExistenceWithTimeout:5]);
+	XCTAssertTrue(load.isEnabled, @"slot 1 can be loaded once saved");
+	XCTAssertFalse([load.label containsString:@"Empty"], @"slot 1 shows when it was saved: %@", load.label);
+	[self attachScreenshot:@"load-menu"];
+	[load tap];
+	[NSThread sleepForTimeInterval:0.5];
+	[self attachScreenshot:@"loaded"];
+	[NSThread sleepForTimeInterval:2.5];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game runs after loading");
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Display"] tap];
+	XCTAssertTrue([app.buttons[@"Resolution"] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue(app.buttons[@"Show FPS"].exists);
+	[self attachScreenshot:@"display-menu"];
+	[self dismissMenu:app];
+}
+
+// Render resolution applies while the game runs, then returns to the default.
+- (void)testDisplayOptionsApply
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:8];
+	[self attachScreenshot:@"display-default"];
+	void (^choose)(NSArray<NSString *> *) = ^(NSArray<NSString *> *path) {
+		[app.buttons[@"dcpad.menu"] tap];
+		for (NSString *item in path) {
+			XCUIElement *e = [self menuItem:item in:app];
+			XCTAssertTrue([e waitForExistenceWithTimeout:5], @"%@", item);
+			[e tap];
+		}
+		[NSThread sleepForTimeInterval:2];
+	};
+	choose(@[@"Display", @"Resolution", @"2×"]);
+	[self attachScreenshot:@"display-2x"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at 2x");
+	choose(@[@"Display", @"Resolution", @"Original"]);
 }
 
 - (void)testSettingsAndMoveControlsPersist
@@ -280,11 +350,13 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	const CGRect grown = dpad.frame;
 	XCTAssertGreaterThan(grown.size.width, before.size.width * 1.2, @"size slider grew the controls");
 	[[dpad coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] pressForDuration:0.3
-			thenDragToCoordinate:[app coordinateWithNormalizedOffset:CGVectorMake(0.35, 0.3)]];
+			thenDragToCoordinate:[app coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.3)]];
 	[self attachScreenshot:@"move-controls"];
 	[app.buttons[@"dcpad.edit.done"] tap];
 	const CGRect moved = [self control:@"dpad" in:app].frame;
-	XCTAssertGreaterThan(CGRectGetMidX(moved), CGRectGetMidX(grown) + 100, @"D-pad moved right");
+	// Dragged from its centre, the D-pad lands where the finger stopped.
+	XCTAssertEqualWithAccuracy(CGRectGetMidX(moved), CGRectGetWidth(app.frame) * 0.5, 30, @"D-pad follows the drag");
+	XCTAssertGreaterThan(CGRectGetMidX(moved) - CGRectGetMidX(grown), 50, @"D-pad moved right");
 	[NSThread sleepForTimeInterval:1];
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game resumes after editing");
 

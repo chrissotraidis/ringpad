@@ -83,7 +83,8 @@ if(IOS)
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
 	set(_sp_ios_shell
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPPortMenu.mm)
 	# The touch kit is its own library so other Dreamcast ports can reuse it.
 	add_subdirectory(port/dcpad)
 	target_link_libraries(flycast PRIVATE dcpad)

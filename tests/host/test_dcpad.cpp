@@ -34,15 +34,15 @@ static const char *name(Control c) {
     }
 }
 
-struct Device { const char *name; Rect safe; bool phone; };
-/* Landscape safe areas in points. */
+struct Device { const char *name; Rect safe; bool phone; float pt_per_mm; };
+/* Landscape safe areas in points, and screen density in points per millimetre. */
 static const Device kDevices[] = {
-    {"iPad Air 11", {0, 24, 1180, 776}, false},
-    {"iPad mini", {0, 24, 1133, 720}, false},
-    {"iPad Pro 13", {0, 24, 1376, 1008}, false},
-    {"iPhone 16 Pro", {62, 0, 750, 381}, true},
-    {"iPhone SE", {0, 0, 667, 375}, true},
-    {"iPhone 16 Pro Max", {62, 0, 832, 419}, true},
+    {"iPad Air 11", {0, 24, 1180, 776}, false, 5.2f},
+    {"iPad mini", {0, 24, 1133, 720}, false, 6.4f},
+    {"iPad Pro 13", {0, 24, 1376, 1008}, false, 5.2f},
+    {"iPhone 16 Pro", {62, 0, 750, 381}, true, 6.0f},
+    {"iPhone SE", {0, 0, 667, 375}, true, 6.4f},
+    {"iPhone 16 Pro Max", {62, 0, 832, 419}, true, 6.0f},
 };
 
 static bool overlaps(const Rect& a, const Rect& b, float gap) {
@@ -78,6 +78,48 @@ static void test_layouts() {
         }
         CHECK(control_at(l, s, d.safe.midX(), d.safe.y + d.safe.h * 0.4f) == Control::None,
               std::string(d.name) + ": the middle of the screen is free");
+    }
+}
+
+/* Every default control sits inside a thumb's comfortable reach: at least
+ * 15 mm from the base of the thumb (not under the palm) and at most 60 mm
+ * (reachable without shifting the grip). Face buttons are checked one by one. */
+static void test_reach() {
+    Settings s;
+    for (const Device& d : kDevices) {
+        Layout l = resolve_layout(d.safe, d.phone, s);
+        auto reach = [&](const char *what, float x, float y, bool left) {
+            float px, py;
+            thumb_pivot(l, left, &px, &py);
+            const float mm = std::hypot(x - px, y - py) / d.pt_per_mm;
+            CHECK(mm >= 15.0f && mm <= 60.0f, std::string(d.name) + ": " + what + " within thumb reach (" +
+                  std::to_string(int(mm)) + " mm)");
+        };
+        reach("stick", l.frame(Control::Stick).midX(), l.frame(Control::Stick).midY(), true);
+        reach("D-pad", l.frame(Control::DPad).midX(), l.frame(Control::DPad).midY(), true);
+        reach("L", l.frame(Control::LTrigger).midX(), l.frame(Control::LTrigger).midY(), true);
+        reach("R", l.frame(Control::RTrigger).midX(), l.frame(Control::RTrigger).midY(), false);
+        reach("Start", l.frame(Control::Start).midX(), l.frame(Control::Start).midY(), false);
+        const Face faces[4] = {FaceA, FaceB, FaceX, FaceY};
+        const char *names[4] = {"A", "B", "X", "Y"};
+        for (int i = 0; i < 4; i++) {
+            float x, y;
+            l.face_center(faces[i], &x, &y);
+            reach(names[i], x, y, false);
+        }
+        /* The stick, the most used control, gets the most comfortable spot. */
+        float px, py;
+        thumb_pivot(l, true, &px, &py);
+        const float stickMm = std::hypot(l.frame(Control::Stick).midX() - px, l.frame(Control::Stick).midY() - py) / d.pt_per_mm;
+        CHECK(stickMm <= 45.0f, std::string(d.name) + ": the stick sits where the thumb rests");
+        /* Thumbs do not grow with the screen: the D-pad is as far from the
+         * bottom-left corner on every tablet. */
+        if (!d.phone) {
+            const Layout air = resolve_layout(kDevices[0].safe, false, s);
+            const float a = air.safe.y + air.safe.h - air.frame(Control::DPad).midY();
+            const float b = l.safe.y + l.safe.h - l.frame(Control::DPad).midY();
+            CHECK(std::fabs(a - b) < 1, std::string(d.name) + ": D-pad anchored to the bottom corner");
+        }
     }
 }
 
@@ -285,6 +327,7 @@ static void test_overrides() {
 
 int main() {
     test_layouts();
+    test_reach();
     test_dpad();
     test_face();
     test_triggers();

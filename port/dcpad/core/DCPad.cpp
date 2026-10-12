@@ -11,9 +11,16 @@ namespace {
 
 constexpr float kPi = 3.14159265f;
 
-/* Default centres, normalized to the safe area. Tablet values follow the
- * SunPad arrangement accepted on a physical iPad (stick low-left, cluster
- * low-right), with the C-stick and Z removed and the D-pad above the stick. */
+/* Default centres are anchored to the bottom corners, in points at size 1:
+ * x is the distance from the near side edge and y the height above the bottom
+ * edge. Thumbs do not grow with the screen, so a 13-inch iPad keeps the same
+ * reach as an 11-inch one and the top of the screen stays clear.
+ *
+ * The arrangement follows the Dreamcast controller and a landscape grip: the
+ * stick sits where the left thumb rests, the D-pad below and inward of it (as
+ * on the real pad), L and R at the top of each thumb's arc, the face diamond
+ * under the right thumb and Start just inward of it. tests/host/test_dcpad.cpp
+ * checks every control against thumb_pivot() in millimetres. */
 struct Spot { float x, y; };
 struct Defaults {
     Spot stick, dpad, face, l, r, start;
@@ -21,20 +28,17 @@ struct Defaults {
 };
 
 constexpr Defaults kTablet = {
-    {0.135f, 0.73f}, {0.115f, 0.385f}, {0.865f, 0.70f}, {0.105f, 0.115f}, {0.855f, 0.115f}, {0.50f, 0.925f},
+    {150.f, 310.f}, {240.f, 120.f}, {160.f, 310.f}, {118.f, 470.f}, {118.f, 470.f}, {240.f, 104.f},
     200.f, 150.f, 84.f, 76.f, 156.f, 58.f, 104.f, 42.f,
 };
 
+/* Phones are laid out on an 800 x 380 reference and scaled down to fit. */
 constexpr Defaults kPhone = {
-    {0.150f, 0.70f}, {0.125f, 0.33f}, {0.860f, 0.665f}, {0.110f, 0.105f}, {0.835f, 0.105f}, {0.50f, 0.915f},
+    {92.f, 210.f}, {226.f, 76.f}, {108.f, 196.f}, {84.f, 340.f}, {132.f, 340.f}, {232.f, 52.f},
     136.f, 108.f, 60.f, 55.f, 112.f, 46.f, 88.f, 44.f,
 };
 
 float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
-
-Rect centered(const Rect& safe, Spot s, float w, float h) {
-    return {safe.x + s.x * safe.w - w * 0.5f, safe.y + s.y * safe.h - h * 0.5f, w, h};
-}
 
 /* Keep a frame inside the safe area (frames larger than it are centred). */
 Rect clamp_into(Rect f, const Rect& safe) {
@@ -78,24 +82,33 @@ Layout resolve_layout(const Rect& safe, bool phone, const Settings& settings) {
     const float base = phone ? std::min(1.0f, std::min(safe.w / 800.0f, safe.h / 380.0f)) : 1.0f;
     const float global = clampf(settings.size, 0.7f, 1.4f) * base;
 
-    auto place = [&](Control c, Spot spot, float w, float h) {
+    /* Offsets scale with the global size so a larger pad grows out of the
+     * corners without its groups running into each other. */
+    auto place = [&](Control c, Spot spot, bool right, float w, float h) {
         const ControlOverride& o = settings.over(c);
         const float s = global * clampf(o.scale, 0.6f, 1.75f);
-        Spot at = o.has_position ? Spot{clampf(o.nx, 0, 1), clampf(o.ny, 0, 1)} : spot;
-        out.frame(c) = clamp_into(centered(safe, at, w * s, h * s), safe);
+        float cx, cy;
+        if (o.has_position) {
+            cx = safe.x + clampf(o.nx, 0, 1) * safe.w;
+            cy = safe.y + clampf(o.ny, 0, 1) * safe.h;
+        } else {
+            cx = right ? safe.x + safe.w - spot.x * global : safe.x + spot.x * global;
+            cy = safe.y + safe.h - spot.y * global;
+        }
+        out.frame(c) = clamp_into({cx - w * s * 0.5f, cy - h * s * 0.5f, w * s, h * s}, safe);
         return s;
     };
-    const float ss = place(Control::Stick, d.stick, d.stick_d, d.stick_d);
+    const float ss = place(Control::Stick, d.stick, false, d.stick_d, d.stick_d);
     out.stick_radius = d.stick_d * ss * 0.5f;
-    const float ds = place(Control::DPad, d.dpad, d.dpad_d, d.dpad_d);
+    const float ds = place(Control::DPad, d.dpad, false, d.dpad_d, d.dpad_d);
     out.dpad_radius = d.dpad_d * ds * 0.5f;
     const float cluster = 2.0f * d.face_s + d.face_d;
-    const float fs = place(Control::Face, d.face, cluster, cluster);
+    const float fs = place(Control::Face, d.face, true, cluster, cluster);
     out.face_spacing = d.face_s * fs;
     out.face_radius = d.face_d * fs * 0.5f;
-    place(Control::LTrigger, d.l, d.trig_w, d.trig_h);
-    place(Control::RTrigger, d.r, d.trig_w, d.trig_h);
-    place(Control::Start, d.start, d.start_w, d.start_h);
+    place(Control::LTrigger, d.l, false, d.trig_w, d.trig_h);
+    place(Control::RTrigger, d.r, true, d.trig_w, d.trig_h);
+    place(Control::Start, d.start, true, d.start_w, d.start_h);
 
     /* Floating stick: the lower-left part of the screen, from the top of the
      * stick's home position down, up to 42% of the width. */
@@ -104,6 +117,14 @@ Layout resolve_layout(const Rect& safe, bool phone, const Settings& settings) {
     const float right = std::max(st.x + st.w, safe.x + safe.w * 0.42f);
     out.stick_zone = {safe.x, top, right - safe.x, safe.y + safe.h - top};
     return out;
+}
+
+void thumb_pivot(const Layout& l, bool left_hand, float* x, float* y) {
+    *x = left_hand ? l.safe.x : l.safe.x + l.safe.w;
+    /* A larger tablet is still gripped at about the same height above its
+     * bottom edge, so the tablet pivot is capped at the iPad Air's 233 pt. */
+    const float above = l.phone ? l.safe.h * 0.12f : std::min(l.safe.h * 0.30f, 233.0f);
+    *y = l.safe.y + l.safe.h - above;
 }
 
 Control control_at(const Layout& l, const Settings& settings, float x, float y) {

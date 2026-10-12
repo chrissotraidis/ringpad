@@ -43,6 +43,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setControllerConnected:(BOOL)connected;
 - (void)showSettingsPanel;
 - (void)beginLayoutEditing;
+/* A short confirmation ("Saved to Slot 1") that fades out over the game. */
+- (void)showMessage:(NSString *)message;
 
 @end
 

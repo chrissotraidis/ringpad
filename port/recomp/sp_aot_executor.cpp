@@ -3,10 +3,17 @@
 // SONICPAD_TRACE=<file> records missed blocks so the generator can compile
 // them in the next build. SONICPAD_STATS=1 reports AOT coverage.
 // SONICPAD_INPUT_SCRIPT=<file> replays pad input at guest times, one event per
-// line: "<start seconds> <duration seconds> <A|B|X|Y|START|UP|DOWN|LEFT|RIGHT|STICK:x,y>".
+// line: "<start seconds> <duration seconds> <what>", where <what> is one of
+// A|B|X|Y|START|UP|DOWN|LEFT|RIGHT|LT|RT, STICK:x,y or ANGLE:deg[,pct] (0 = up,
+// 90 = right). Duration-0 actions: SHOT:<name> writes a PNG of the last frame to
+// SONICPAD_SHOT_DIR (default generated/shots); STATE:<file> writes a development
+// save state. SONICPAD_STATE_LOAD=<file> resumes from such a state at boot.
 // SONICPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
 // SONICPAD_EXIT_AT=<guest seconds> prints a SONICPAD_PERF line and exits.
 #include "sp_block_api.h"
+#include "emulator.h"
+#include "serialize.h"
+#include "hw/pvr/Renderer_if.h"
 #include "hw/sh4/sh4_interpreter.h"
 #include "hw/sh4/sh4_interrupts.h"
 #include "hw/sh4/sh4_mem.h"
@@ -15,9 +22,12 @@
 #include "debug/gdb_server.h"
 #include "input/gamepad.h"
 #include "input/gamepad_device.h"
+#include "ui/gui.h"
+#include "stb_image_write.h"
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -25,6 +35,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
 #include <time.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -107,6 +118,8 @@ public:
 		idleSkipEnabled = std::getenv("SONICPAD_NO_IDLE_SKIP") == nullptr;
 		if (const char *script = std::getenv("SONICPAD_INPUT_SCRIPT"))
 			loadScript(script);
+		if (const char *state = std::getenv("SONICPAD_STATE_LOAD"))
+			stateLoadPath = state;
 		uncapped = std::getenv("SONICPAD_UNCAPPED") != nullptr;
 		if (const char *exitAt = std::getenv("SONICPAD_EXIT_AT"))
 			exitAtSlices = u64(std::atof(exitAt) * kSlicesPerSecond);
@@ -160,6 +173,8 @@ public:
 					ctx->cycle_counter += SH4_TIMESLICE;
 					UpdateSystem_INTC();
 					++slices;
+					if (!stateLoadPath.empty() && slices == 64)
+						loadState();
 					if (!script.empty() && slices % 256 == 0)
 						applyScript();
 					if (slices % 8192 == 0)
@@ -285,13 +300,18 @@ private:
 
 	struct ScriptEvent
 	{
+		enum Kind : u8 { Input, Shot, State };
 		u64 start;
 		u64 end;
-		u32 buttons;
-		bool stick;
-		s16 x;
-		s16 y;
-		bool announced;
+		u32 buttons = 0;
+		bool stick = false;
+		s16 x = 0;
+		s16 y = 0;
+		u8 lt = 0;
+		u8 rt = 0;
+		Kind kind = Input;
+		std::string arg;
+		bool announced = false;
 	};
 
 	void loadScript(const char *path)
@@ -311,18 +331,43 @@ private:
 			std::string what;
 			if (!(fields >> start >> duration >> what))
 				continue;
-			ScriptEvent event{u64(start * kSlicesPerSecond), u64((start + duration) * kSlicesPerSecond), 0, false, 0, 0, false};
+			ScriptEvent event;
+			event.start = u64(start * kSlicesPerSecond);
+			event.end = u64((start + duration) * kSlicesPerSecond);
 			int x = 0, y = 0;
+			double deg = 0, pct = 100;
 			if (std::sscanf(what.c_str(), "STICK:%d,%d", &x, &y) == 2)
 			{
 				event.stick = true;
 				event.x = s16(x);
 				event.y = s16(y);
 			}
+			else if (std::sscanf(what.c_str(), "ANGLE:%lf,%lf", &deg, &pct) >= 1)
+			{
+				// Dreamcast stick axes: x grows to the right, y grows downwards.
+				const double r = 32000.0 * std::clamp(pct, 0.0, 100.0) / 100.0;
+				event.stick = true;
+				event.x = s16(std::lround(std::sin(deg * M_PI / 180.0) * r));
+				event.y = s16(std::lround(-std::cos(deg * M_PI / 180.0) * r));
+			}
+			else if (what == "LT")
+				event.lt = 255;
+			else if (what == "RT")
+				event.rt = 255;
+			else if (what.rfind("SHOT:", 0) == 0)
+			{
+				event.kind = ScriptEvent::Shot;
+				event.arg = what.substr(5);
+			}
+			else if (what.rfind("STATE:", 0) == 0)
+			{
+				event.kind = ScriptEvent::State;
+				event.arg = what.substr(6);
+			}
 			for (const auto& name : names)
 				if (what == name.first)
 					event.buttons = name.second;
-			if (event.buttons != 0 || event.stick)
+			if (event.buttons != 0 || event.stick || event.lt != 0 || event.rt != 0 || event.kind != ScriptEvent::Input)
 			{
 				script.push_back(event);
 				scriptMask |= event.buttons;
@@ -335,11 +380,26 @@ private:
 	{
 		u32 pressed = 0;
 		s16 x = 0, y = 0;
+		u8 l = 0, r = 0;
 		for (ScriptEvent& event : script)
 		{
+			if (event.kind != ScriptEvent::Input)
+			{
+				if (!event.announced && slices >= event.start)
+				{
+					event.announced = true;
+					if (event.kind == ScriptEvent::Shot)
+						takeShot(event.arg);
+					else
+						saveState(event.arg);
+				}
+				continue;
+			}
 			if (slices < event.start || slices >= event.end)
 				continue;
 			pressed |= event.buttons;
+			l = std::max(l, event.lt);
+			r = std::max(r, event.rt);
 			if (event.stick)
 			{
 				x = event.x;
@@ -348,13 +408,95 @@ private:
 			if (!event.announced)
 			{
 				event.announced = true;
-				std::fprintf(stderr, "SONICPAD_SCRIPT t=%.2f buttons=%04X stick=%d,%d\n",
-						slices / kSlicesPerSecond, event.buttons, event.x, event.y);
+				std::fprintf(stderr, "SONICPAD_SCRIPT t=%.2f buttons=%04X stick=%d,%d lt=%u rt=%u\n",
+						slices / kSlicesPerSecond, event.buttons, event.x, event.y, event.lt, event.rt);
 			}
 		}
 		kcode[0] = (kcode[0] | scriptMask) & ~pressed;
 		joyx[0] = x;
 		joyy[0] = y;
+		lt[0] = l;
+		rt[0] = r;
+	}
+
+	// Development aid: PNG of the last presented frame, written on the UI thread.
+	void takeShot(const std::string& name)
+	{
+		const char *dir = std::getenv("SONICPAD_SHOT_DIR");
+		const std::string folder = dir != nullptr ? dir : "generated/shots";
+		mkdir(folder.c_str(), 0755);
+		const std::string path = folder + "/" + name + ".png";
+		const double t = slices / kSlicesPerSecond;
+		gui_runOnUiThread([path, t]() {
+			std::vector<u8> rgb;
+			int w = 0, h = 0;
+			const bool got = renderer != nullptr && renderer->GetLastFrame(rgb, w, h) && !rgb.empty();
+			bool ok = false;
+			if (got)
+			{
+				stbi_flip_vertically_on_write(0);
+				ok = stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3) != 0;
+			}
+			std::fprintf(stderr, "SONICPAD_SHOT t=%.2f %s %dx%d ok=%d\n", t, path.c_str(), w, h, ok ? 1 : 0);
+		});
+	}
+
+	// Development save states let a route be iterated segment by segment. They
+	// are written at a timeslice boundary and carry the slice count so that the
+	// script timeline continues where it stopped. Acceptance runs never use them.
+	static constexpr char kStateMagic[8] = {'S', 'P', 'S', 'T', 'A', 'T', 'E', '1'};
+
+	void saveState(const std::string& file)
+	{
+		Serializer sizer;
+		dc_serialize(sizer);
+		std::vector<u8> data(sizer.size());
+		Serializer ser(data.data(), data.size());
+		dc_serialize(ser);
+		FILE *f = std::fopen(file.c_str(), "wb");
+		bool ok = f != nullptr;
+		if (f != nullptr)
+		{
+			ok = std::fwrite(kStateMagic, sizeof(kStateMagic), 1, f) == 1
+					&& std::fwrite(&slices, sizeof(slices), 1, f) == 1
+					&& std::fwrite(data.data(), data.size(), 1, f) == 1;
+			ok = std::fclose(f) == 0 && ok;
+		}
+		std::fprintf(stderr, "SONICPAD_STATE save t=%.2f %s bytes=%zu ok=%d\n", slices / kSlicesPerSecond,
+				file.c_str(), data.size(), ok ? 1 : 0);
+	}
+
+	void loadState()
+	{
+		const std::string file = stateLoadPath;
+		stateLoadPath.clear();
+		std::ifstream in(file, std::ios::binary);
+		std::vector<u8> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+		u64 savedSlices = 0;
+		if (bytes.size() <= sizeof(kStateMagic) + sizeof(savedSlices)
+				|| std::memcmp(bytes.data(), kStateMagic, sizeof(kStateMagic)) != 0)
+		{
+			std::fprintf(stderr, "SONICPAD_STATE load failed: %s is not a SonicPad state\n", file.c_str());
+			return;
+		}
+		std::memcpy(&savedSlices, bytes.data() + sizeof(kStateMagic), sizeof(savedSlices));
+		const size_t offset = sizeof(kStateMagic) + sizeof(savedSlices);
+		try {
+			Deserializer deser(bytes.data() + offset, bytes.size() - offset);
+			emu.loadstate(deser);
+		} catch (const std::exception& e) {
+			std::fprintf(stderr, "SONICPAD_STATE load failed: %s\n", e.what());
+			return;
+		}
+		Instance = this;
+		prev = nullptr;
+		slices = savedSlices;
+		slicesAtWallStart = slices;
+		wallStart = std::chrono::steady_clock::now();
+		for (ScriptEvent& event : script)
+			if (event.start < slices)
+				event.announced = true;
+		std::fprintf(stderr, "SONICPAD_STATE load t=%.2f %s\n", slices / kSlicesPerSecond, file.c_str());
 	}
 
 	void loadTables()
@@ -624,6 +766,7 @@ private:
 	std::vector<Traced> traced;
 	std::vector<ScriptEvent> script;
 	u32 scriptMask = 0;
+	std::string stateLoadPath;
 	std::string tracePath;
 	bool traceDirty = false;
 	bool aotEnabled = true;

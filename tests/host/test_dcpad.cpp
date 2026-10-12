@@ -190,6 +190,23 @@ static void test_stick() {
     CHECK(st.moveY > 60 && st.moveX == 0, "dragging up is positive Y");
     e.end(1);
 
+    /* Stick travel: a shorter travel reaches full tilt sooner; it is latched
+     * at touch-down so changing the setting never jolts a held stick. */
+    Settings shortTravel = s;
+    shortTravel.stick_travel = 0.5f;
+    e.begin(4, home.midX(), home.midY(), l, shortTravel);
+    e.move(4, home.midX() + r * 0.5f, home.midY(), l, shortTravel);
+    CHECK(e.state().moveX == 127, "short travel reaches full tilt at half the radius");
+    e.move(4, home.midX() + r * 0.25f, home.midY(), l, s);
+    CHECK(std::abs(e.state().moveX - 64) <= 1, "travel stays latched for the held touch");
+    e.end(4);
+    Settings tooShort = s;
+    tooShort.stick_travel = 0.1f;
+    e.begin(5, home.midX(), home.midY(), l, tooShort);
+    e.move(5, home.midX() + r * 0.25f, home.midY(), l, tooShort);
+    CHECK(std::abs(e.state().moveX - 64) <= 1, "travel is clamped to at least half the radius");
+    e.end(5);
+
     /* Floating: a touch elsewhere in the zone becomes the stick centre. */
     const float fx = l.stick_zone.x + l.stick_zone.w * 0.85f, fy = l.stick_zone.y + l.stick_zone.h * 0.15f;
     CHECK(control_at(l, s, fx, fy) == Control::Stick, "the floating zone starts the stick");

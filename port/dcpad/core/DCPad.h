@@ -50,6 +50,7 @@ struct ControlOverride {
 struct Settings {
     float opacity = 0.75f;        /* 0.25 .. 1 */
     float size = 1.0f;            /* global size multiplier, 0.7 .. 1.4 */
+    float stick_travel = 0.85f;   /* full tilt at this fraction of the stick radius, 0.5 .. 1 */
     bool floating_stick = true;   /* stick re-centres where the thumb lands */
     bool haptics = true;
     bool hide_with_controller = true;
@@ -127,6 +128,7 @@ private:
         Control control = Control::None;
         float base_x = 0, base_y = 0;   /* stick base for this touch */
         float x = 0, y = 0;             /* stick vector -1..1, +y down */
+        float travel = 0.85f;           /* full-tilt fraction latched at touch-down */
         uint8_t bits = 0;               /* D-pad dirs or face buttons */
         uint8_t trigger = 0;
         bool full = false;
@@ -139,7 +141,9 @@ private:
     unsigned press_events_ = 0;
 };
 
-/* Stick deflection reaches full scale at this fraction of the base radius. */
+/* Default stick travel: full scale at this fraction of the base radius. */
 inline constexpr float kStickFullTilt = 0.85f;
+/* Trigger sliders become a full press at this fraction of their length. */
+inline constexpr float kTriggerFullAt = 0.72f;
 
 } /* namespace dcpad */

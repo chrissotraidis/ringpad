@@ -92,7 +92,21 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
   - A touch-only UI test played from boot through the title, file and character select and the opening into Station Square on the iPad Simulator.
 - Fixed while iterating: the text fonts, the menu size on a landscape phone (Controls is now a submenu) and the editor bar covering controls.
 
-## Not yet verified
+### Refinement pass (11 October 2026, evening)
+
+- **Look:** every control now uses one style: dark glass, a thin light rim and a soft shadow, with Dreamcast orange for anything held. This replaces the solid orange trigger slabs, grey outlined D-pad and flat discs.
+  - Face buttons show coloured rings and letters at rest and fill with their colour when pressed.
+  - The D-pad is one cross whose pressed arms light up inside it (two for a diagonal).
+  - The stick shows a direction arc on its rim, plus a dashed ring at its full-tilt point while held, and the thumb eases home on release.
+  - L and R mark their full-press point, keep their label at the light-press end, and glow at full press.
+  - The settings panel, the editor bar and the ••• button match the controls.
+- **Feel:**
+  - A **Stick travel** setting (full tilt at 50–100% of the stick radius, default 85%) lets short thumb movements reach full speed. It is latched per touch, so changing it never jolts a held stick.
+  - Swipes that start at a screen edge now reach the game before iOS gestures such as Control Center or Home.
+  - The settings panel fits a landscape phone without scrolling.
+- **Reuse:** DCPad is now its own CMake library (`port/dcpad/CMakeLists.txt`), so another port needs one `add_subdirectory` and one `target_link_libraries` line.
+- **Tests:** 314 host checks pass, including new stick travel checks. All 10 UI tests (the eight control tests, the capture and the touch play-through) pass on the iPad Air 11 and iPhone 16 Pro Simulators.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.

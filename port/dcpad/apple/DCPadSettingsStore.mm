@@ -28,6 +28,7 @@ static NSString *const kControlKeys[] = {@"stick", @"dpad", @"face", @"l", @"r",
 		return s;
 	if (NSNumber *v = d[@"opacity"]) s.opacity = std::clamp(v.floatValue, 0.25f, 1.0f);
 	if (NSNumber *v = d[@"size"]) s.size = std::clamp(v.floatValue, 0.7f, 1.4f);
+	if (NSNumber *v = d[@"stickTravel"]) s.stick_travel = std::clamp(v.floatValue, 0.5f, 1.0f);
 	if (NSNumber *v = d[@"floating"]) s.floating_stick = v.boolValue;
 	if (NSNumber *v = d[@"haptics"]) s.haptics = v.boolValue;
 	if (NSNumber *v = d[@"hideWithController"]) s.hide_with_controller = v.boolValue;
@@ -66,6 +67,7 @@ static NSString *const kControlKeys[] = {@"stick", @"dpad", @"face", @"l", @"r",
 	NSDictionary *d = @{
 		@"opacity": @(s.opacity),
 		@"size": @(s.size),
+		@"stickTravel": @(s.stick_travel),
 		@"floating": @(s.floating_stick),
 		@"haptics": @(s.haptics),
 		@"hideWithController": @(s.hide_with_controller),

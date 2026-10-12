@@ -19,6 +19,8 @@
 {
 	XCUIDevice.sharedDevice.orientation = UIDeviceOrientationLandscapeLeft;
 	XCUIApplication *app = [[XCUIApplication alloc] init];
+	// Default touch settings, whatever earlier tests saved.
+	app.launchArguments = @[@"-DCPad.SonicAdventure.tablet", @"{}", @"-DCPad.SonicAdventure.phone", @"{}"];
 	NSMutableDictionary *env = [@{ @"SONICPAD_INPUT_DEBUG": @"1" } mutableCopy];
 	NSString *gdi = NSProcessInfo.processInfo.environment[@"SONICPAD_GDI"];
 	if (gdi != nil)

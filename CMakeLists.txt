@@ -83,20 +83,15 @@ if(IOS)
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
 	set(_sp_ios_shell
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadOverlayView.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadSettingsStore.mm
-		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple/DCPadControllerInput.mm)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm)
+	# The touch kit is its own library so other Dreamcast ports can reuse it.
+	add_subdirectory(port/dcpad)
+	target_link_libraries(flycast PRIVATE dcpad)
 	target_sources(flycast PRIVATE ${_sp_ios_shell}
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputAdapter.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastInputMixer.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input/DreamcastControllerMapping.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/core/DCPad.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
-		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game
-		${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/core ${CMAKE_CURRENT_SOURCE_DIR}/port/dcpad/apple)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"

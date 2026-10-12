@@ -14,22 +14,31 @@ namespace {
 
 UIColor *RGBA(CGFloat r, CGFloat g, CGFloat b, CGFloat a) { return [UIColor colorWithRed:r green:g blue:b alpha:a]; }
 
-struct FaceStyle { dcpad::Face face; NSString *name; UIColor *fill; UIColor *text; };
+struct FaceStyle { dcpad::Face face; NSString *name; UIColor *fill; UIColor *glyph; UIColor *pressedText; };
 
 NSArray *FaceIds() { return @[@"A", @"B", @"X", @"Y"]; }
 
-/* Dreamcast controller colours: A red, B blue, X yellow, Y green. */
+/* Dreamcast controller colours: A red, B blue, X yellow, Y green. 'fill' is
+ * the pressed colour; 'glyph' is a lighter tint that reads on dark glass. */
 FaceStyle FaceStyles(int i)
 {
 	switch (i) {
-		case 0: return {dcpad::FaceA, @"A", RGBA(0.86, 0.19, 0.20, 1), UIColor.whiteColor};
-		case 1: return {dcpad::FaceB, @"B", RGBA(0.18, 0.43, 0.88, 1), UIColor.whiteColor};
-		case 2: return {dcpad::FaceX, @"X", RGBA(0.96, 0.77, 0.17, 1), RGBA(0.18, 0.14, 0.02, 1)};
-		default: return {dcpad::FaceY, @"Y", RGBA(0.22, 0.67, 0.33, 1), UIColor.whiteColor};
+		case 0: return {dcpad::FaceA, @"A", RGBA(0.86, 0.19, 0.20, 1), RGBA(1.00, 0.42, 0.40, 1), UIColor.whiteColor};
+		case 1: return {dcpad::FaceB, @"B", RGBA(0.18, 0.43, 0.88, 1), RGBA(0.45, 0.66, 1.00, 1), UIColor.whiteColor};
+		case 2: return {dcpad::FaceX, @"X", RGBA(0.96, 0.77, 0.17, 1), RGBA(1.00, 0.85, 0.30, 1), RGBA(0.18, 0.14, 0.02, 1)};
+		default: return {dcpad::FaceY, @"Y", RGBA(0.22, 0.67, 0.33, 1), RGBA(0.42, 0.86, 0.50, 1), UIColor.whiteColor};
 	}
 }
 
-UIColor *const kAccent() { return RGBA(0.96, 0.45, 0.13, 1); }   /* Dreamcast swirl orange */
+/* One visual language for every control: dark glass, a thin light rim and a
+ * soft shadow so controls read on both bright and dark scenes. Active state
+ * is always the Dreamcast swirl orange. */
+UIColor *kAccent() { return RGBA(0.96, 0.45, 0.13, 1); }
+UIColor *kSurface() { return [UIColor colorWithWhite:0.03 alpha:0.46]; }
+UIColor *kSurfacePressed() { return [UIColor colorWithWhite:0.03 alpha:0.62]; }
+UIColor *kRim() { return [UIColor colorWithWhite:1 alpha:0.36]; }
+UIColor *kGlyph() { return [UIColor colorWithWhite:1 alpha:0.78]; }
+
 
 CGRect CG(const dcpad::Rect& r) { return CGRectMake(r.x, r.y, r.w, r.h); }
 
@@ -54,9 +63,12 @@ void CenterText(CATextLayer *t, CGRect frame, CGFloat size)
 	t.frame = CGRectMake(frame.origin.x, CGRectGetMidY(frame) - h / 2, frame.size.width, h);
 }
 
+constexpr CGFloat kArmFraction = 0.36;    /* D-pad arm width / cross size */
+constexpr CGFloat kThumbFraction = 0.42;  /* stick thumb radius / base radius */
+
 UIBezierPath *CrossPath(CGRect f)
 {
-	const CGFloat arm = f.size.width * 0.36, r = arm * 0.22;
+	const CGFloat arm = f.size.width * kArmFraction, r = arm * 0.28;
 	UIBezierPath *v = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(CGRectGetMidX(f) - arm / 2, f.origin.y, arm, f.size.height) cornerRadius:r];
 	UIBezierPath *h = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(f.origin.x, CGRectGetMidY(f) - arm / 2, f.size.width, arm) cornerRadius:r];
 	[v appendPath:h];
@@ -64,9 +76,10 @@ UIBezierPath *CrossPath(CGRect f)
 	return v;
 }
 
+/* Outer part of one arm (where its arrow sits). */
 CGRect ArmRect(CGRect f, uint8_t dir)
 {
-	const CGFloat arm = f.size.width * 0.36, len = (f.size.width - arm) / 2;
+	const CGFloat arm = f.size.width * kArmFraction, len = (f.size.width - arm) / 2;
 	switch (dir) {
 		case dcpad::DPadUp: return CGRectMake(CGRectGetMidX(f) - arm / 2, f.origin.y, arm, len);
 		case dcpad::DPadDown: return CGRectMake(CGRectGetMidX(f) - arm / 2, CGRectGetMaxY(f) - len, arm, len);
@@ -75,9 +88,22 @@ CGRect ArmRect(CGRect f, uint8_t dir)
 	}
 }
 
+/* One arm from the centre hub to its end; clipped to the cross when drawn so
+ * it keeps the rounded end. A diagonal lights its two arms. */
+CGRect HalfRect(CGRect f, uint8_t dir)
+{
+	const CGFloat arm = f.size.width * kArmFraction, half = f.size.width / 2;
+	switch (dir) {
+		case dcpad::DPadUp: return CGRectMake(CGRectGetMidX(f) - arm / 2, f.origin.y, arm, half);
+		case dcpad::DPadDown: return CGRectMake(CGRectGetMidX(f) - arm / 2, CGRectGetMidY(f), arm, half);
+		case dcpad::DPadLeft: return CGRectMake(f.origin.x, CGRectGetMidY(f) - arm / 2, half, arm);
+		default: return CGRectMake(CGRectGetMidX(f), CGRectGetMidY(f) - arm / 2, half, arm);
+	}
+}
+
 UIBezierPath *ArrowPath(CGRect arm, uint8_t dir)
 {
-	const CGFloat s = MIN(arm.size.width, arm.size.height) * 0.30;
+	const CGFloat s = MIN(arm.size.width, arm.size.height) * 0.22;
 	const CGPoint c = CGPointMake(CGRectGetMidX(arm), CGRectGetMidY(arm));
 	UIBezierPath *p = [UIBezierPath bezierPath];
 	switch (dir) {
@@ -89,6 +115,7 @@ UIBezierPath *ArrowPath(CGRect arm, uint8_t dir)
 	[p closePath];
 	return p;
 }
+
 
 const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad::DPadRight};
 
@@ -150,12 +177,13 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	BOOL _dragMoved;
 
 	CALayer *_controls;
-	CAShapeLayer *_stickBase, *_stickRing, *_stickThumb;
-	CAShapeLayer *_dpadShape, *_dpadArms[4], *_dpadArrows;
+	CAShapeLayer *_stickBase, *_stickGate, *_stickArc, *_stickThumb, *_stickDish;
+	CAShapeLayer *_dpadShape, *_dpadPressed, *_dpadMask, *_dpadCenter, *_dpadArrows;
+	BOOL _stickWasActive;
 	CALayer *_face[4];
 	CAShapeLayer *_faceCircle[4];
 	CATextLayer *_faceText[4];
-	CAShapeLayer *_trigShape[2], *_trigFill[2];
+	CAShapeLayer *_trigShape[2], *_trigFill[2], *_trigMask[2], *_trigDetent[2];
 	CATextLayer *_trigText[2];
 	CAShapeLayer *_startShape;
 	CATextLayer *_startText;
@@ -163,7 +191,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 
 	DCPadMenuButton *_menuButton;
 	UIView *_panel;
-	UISlider *_opacitySlider, *_sizeSlider;
+	UISlider *_opacitySlider, *_sizeSlider, *_travelSlider;
 	UISwitch *_floatingSwitch, *_hapticsSwitch, *_hideSwitch;
 	UIView *_editorBar;
 	UILabel *_editorLabel;
@@ -252,67 +280,92 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[parent addSublayer:s];
 		return s;
 	};
+	auto surface = [&](CAShapeLayer *s) {
+		s.fillColor = kSurface().CGColor;
+		s.strokeColor = kRim().CGColor;
+		s.lineWidth = 1.5;
+		s.shadowColor = UIColor.blackColor.CGColor;
+		s.shadowOpacity = 0.28;
+		s.shadowRadius = 6;
+		s.shadowOffset = CGSizeMake(0, 2);
+	};
+	auto glow = [&](CAShapeLayer *s, UIColor *color) {
+		s.shadowColor = color.CGColor;
+		s.shadowOffset = CGSizeZero;
+		s.shadowRadius = 8;
+		s.shadowOpacity = 0;
+	};
+
 	_stickBase = shape(_controls);
-	_stickBase.fillColor = [UIColor colorWithWhite:0.05 alpha:0.42].CGColor;
-	_stickBase.strokeColor = [UIColor colorWithWhite:1 alpha:0.55].CGColor;
-	_stickBase.lineWidth = 2.5;
-	_stickRing = shape(_controls);
-	_stickRing.fillColor = UIColor.clearColor.CGColor;
-	_stickRing.strokeColor = [UIColor colorWithWhite:1 alpha:0.16].CGColor;
-	_stickRing.lineWidth = 1.5;
+	surface(_stickBase);
+	_stickGate = shape(_controls);
+	_stickGate.fillColor = UIColor.clearColor.CGColor;
+	_stickGate.strokeColor = [UIColor colorWithWhite:1 alpha:0.16].CGColor;
+	_stickGate.lineWidth = 1;
+	_stickGate.lineDashPattern = @[@2, @6];
+	_stickArc = shape(_controls);
+	_stickArc.fillColor = UIColor.clearColor.CGColor;
+	_stickArc.strokeColor = kAccent().CGColor;
+	_stickArc.lineWidth = 4;
+	_stickArc.lineCap = kCALineCapRound;
+	glow(_stickArc, kAccent());
+	_stickArc.shadowOpacity = 0.8;
 	_stickThumb = shape(_controls);
-	_stickThumb.fillColor = [UIColor colorWithWhite:0.78 alpha:0.78].CGColor;
-	_stickThumb.strokeColor = [UIColor colorWithWhite:1 alpha:0.9].CGColor;
-	_stickThumb.lineWidth = 2;
+	_stickThumb.strokeColor = [UIColor colorWithWhite:1 alpha:0.55].CGColor;
+	_stickThumb.lineWidth = 1.5;
 	_stickThumb.shadowColor = UIColor.blackColor.CGColor;
-	_stickThumb.shadowOpacity = 0.35;
-	_stickThumb.shadowRadius = 4;
-	_stickThumb.shadowOffset = CGSizeMake(0, 2);
+	_stickThumb.shadowOpacity = 0.45;
+	_stickThumb.shadowRadius = 6;
+	_stickThumb.shadowOffset = CGSizeMake(0, 3);
+	_stickDish = shape(_stickThumb);
+	_stickDish.fillColor = [UIColor colorWithWhite:0 alpha:0.05].CGColor;
+	_stickDish.strokeColor = [UIColor colorWithWhite:0 alpha:0.14].CGColor;
+	_stickDish.lineWidth = 1.5;
 
 	_dpadShape = shape(_controls);
-	_dpadShape.fillColor = [UIColor colorWithWhite:0.08 alpha:0.55].CGColor;
-	_dpadShape.strokeColor = [UIColor colorWithWhite:1 alpha:0.55].CGColor;
-	_dpadShape.lineWidth = 2.5;
-	for (int i = 0; i < 4; i++) {
-		_dpadArms[i] = shape(_controls);
-		_dpadArms[i].fillColor = [kAccent() colorWithAlphaComponent:0.75].CGColor;
-		_dpadArms[i].hidden = YES;
-	}
+	surface(_dpadShape);
+	_dpadPressed = shape(_controls);
+	_dpadPressed.fillColor = [kAccent() colorWithAlphaComponent:0.85].CGColor;
+	_dpadMask = [CAShapeLayer layer];
+	_dpadPressed.mask = _dpadMask;
+	_dpadCenter = shape(_controls);
+	_dpadCenter.fillColor = [UIColor colorWithWhite:0 alpha:0.18].CGColor;
+	_dpadCenter.strokeColor = [UIColor colorWithWhite:1 alpha:0.14].CGColor;
+	_dpadCenter.lineWidth = 1;
 	_dpadArrows = shape(_controls);
-	_dpadArrows.fillColor = [UIColor colorWithWhite:1 alpha:0.85].CGColor;
+	_dpadArrows.fillColor = kGlyph().CGColor;
 
 	for (int i = 0; i < 4; i++) {
 		const FaceStyle st = FaceStyles(i);
 		_face[i] = [CALayer layer];
 		[_controls addSublayer:_face[i]];
 		_faceCircle[i] = shape(_face[i]);
-		_faceCircle[i].fillColor = [st.fill colorWithAlphaComponent:0.82].CGColor;
-		_faceCircle[i].strokeColor = [UIColor colorWithWhite:1 alpha:0.7].CGColor;
+		_faceCircle[i].fillColor = kSurface().CGColor;
+		_faceCircle[i].strokeColor = st.glyph.CGColor;
 		_faceCircle[i].lineWidth = 2.5;
-		_faceCircle[i].shadowColor = st.fill.CGColor;
-		_faceCircle[i].shadowRadius = 10;
-		_faceCircle[i].shadowOffset = CGSizeZero;
-		_faceCircle[i].shadowOpacity = 0;
-		_faceText[i] = TextLayer(st.name, 30, st.text, scale);
+		glow(_faceCircle[i], st.fill);
+		_faceText[i] = TextLayer(st.name, 30, st.glyph, scale);
 		[_face[i] addSublayer:_faceText[i]];
 	}
 
 	for (int i = 0; i < 2; i++) {
 		_trigShape[i] = shape(_controls);
-		_trigShape[i].fillColor = [UIColor colorWithWhite:0.08 alpha:0.55].CGColor;
-		_trigShape[i].strokeColor = [UIColor colorWithWhite:1 alpha:0.55].CGColor;
-		_trigShape[i].lineWidth = 2.5;
+		surface(_trigShape[i]);
 		_trigFill[i] = shape(_controls);
-		_trigFill[i].fillColor = [kAccent() colorWithAlphaComponent:0.70].CGColor;
-		_trigText[i] = TextLayer(i == 0 ? @"L" : @"R", 22, UIColor.whiteColor, scale);
+		_trigMask[i] = [CAShapeLayer layer];
+		_trigFill[i].mask = _trigMask[i];
+		_trigDetent[i] = shape(_controls);
+		_trigDetent[i].strokeColor = [UIColor colorWithWhite:1 alpha:0.30].CGColor;
+		_trigDetent[i].lineWidth = 1.5;
+		_trigDetent[i].lineCap = kCALineCapRound;
+		_trigText[i] = TextLayer(i == 0 ? @"L" : @"R", 22, kGlyph(), scale);
 		[_controls addSublayer:_trigText[i]];
 	}
 
 	_startShape = shape(_controls);
-	_startShape.fillColor = [UIColor colorWithWhite:0.08 alpha:0.55].CGColor;
-	_startShape.strokeColor = [UIColor colorWithWhite:1 alpha:0.55].CGColor;
-	_startShape.lineWidth = 2;
-	_startText = TextLayer(@"START", 14, UIColor.whiteColor, scale);
+	surface(_startShape);
+	_startText = TextLayer(@"START", 14, kGlyph(), scale);
+	_startText.font = (__bridge CFTypeRef)[UIFont systemFontOfSize:14 weight:UIFontWeightBold];
 	[_controls addSublayer:_startText];
 
 	_editOutlines = shape(self.layer);
@@ -325,6 +378,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_editSelected.strokeColor = RGBA(0.22, 0.75, 1.0, 1).CGColor;
 	_editSelected.lineWidth = 3.5;
 }
+
 
 #pragma mark Menu
 
@@ -339,10 +393,10 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	config.imageColorTransformer = ^UIColor *(UIColor *) { return UIColor.whiteColor; };
 	config.contentInsets = NSDirectionalEdgeInsetsZero;
 	UIBackgroundConfiguration *background = [UIBackgroundConfiguration clearConfiguration];
-	background.backgroundColor = [UIColor colorWithWhite:0.06 alpha:0.72];
+	background.backgroundColor = kSurface();
 	background.cornerRadius = 22;
-	background.strokeColor = [UIColor colorWithWhite:1 alpha:0.30];
-	background.strokeWidth = 1;
+	background.strokeColor = kRim();
+	background.strokeWidth = 1.5;
 	config.background = background;
 	_menuButton.automaticallyUpdatesConfiguration = NO;
 	_menuButton.configuration = config;
@@ -425,7 +479,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 {
 	UIButtonConfiguration *config = [UIButtonConfiguration filledButtonConfiguration];
 	config.title = title;
-	config.baseBackgroundColor = destructive ? [UIColor colorWithWhite:0.22 alpha:1] : RGBA(0.13, 0.47, 0.84, 1);
+	config.baseBackgroundColor = destructive ? [UIColor colorWithWhite:0.22 alpha:1] : kAccent();
 	config.baseForegroundColor = destructive ? RGBA(1, 0.55, 0.5, 1) : UIColor.whiteColor;
 	config.cornerStyle = UIButtonConfigurationCornerStyleMedium;
 	UIButton *button = [UIButton buttonWithConfiguration:config primaryAction:nil];
@@ -468,6 +522,11 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_sizeSlider.maximumValue = 1.4;
 	_sizeSlider.accessibilityIdentifier = @"dcpad.settings.size";
 	[_sizeSlider addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
+	_travelSlider = [UISlider new];
+	_travelSlider.minimumValue = 0.5;
+	_travelSlider.maximumValue = 1.0;
+	_travelSlider.accessibilityIdentifier = @"dcpad.settings.stickTravel";
+	[_travelSlider addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
 	_floatingSwitch = [UISwitch new];
 	_floatingSwitch.accessibilityIdentifier = @"dcpad.settings.floating";
 	[_floatingSwitch addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
@@ -477,6 +536,10 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_hideSwitch = [UISwitch new];
 	_hideSwitch.accessibilityIdentifier = @"dcpad.settings.hideWithController";
 	[_hideSwitch addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
+	for (UISlider *slider in @[_opacitySlider, _sizeSlider, _travelSlider])
+		slider.minimumTrackTintColor = kAccent();
+	for (UISwitch *toggle in @[_floatingSwitch, _hapticsSwitch, _hideSwitch])
+		toggle.onTintColor = kAccent();
 
 	UIButton *move = [self panelButton:@"Move Controls" identifier:@"dcpad.settings.move" action:@selector(beginLayoutEditing) destructive:NO];
 	UIButton *reset = [self panelButton:@"Reset Layout" identifier:@"dcpad.settings.reset" action:@selector(confirmReset) destructive:YES];
@@ -487,12 +550,14 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[header,
 		[self rowWithTitle:@"Opacity" control:_opacitySlider],
 		[self rowWithTitle:@"Size" control:_sizeSlider],
+		[self rowWithTitle:@"Stick travel" control:_travelSlider],
 		[self rowWithTitle:@"Floating stick" control:_floatingSwitch],
 		[self rowWithTitle:@"Haptics" control:_hapticsSwitch],
 		[self rowWithTitle:@"Hide with controller" control:_hideSwitch],
 		buttons]];
 	stack.axis = UILayoutConstraintAxisVertical;
-	stack.spacing = 10;
+	// Compact on a landscape phone so every row and both buttons fit unscrolled.
+	stack.spacing = _phone ? 3 : 10;
 	stack.translatesAutoresizingMaskIntoConstraints = NO;
 	_panelStack = stack;
 	UIScrollView *scroll = [UIScrollView new];
@@ -511,7 +576,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[stack.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-36],
 		[close.widthAnchor constraintEqualToConstant:34],
 		[close.heightAnchor constraintEqualToConstant:34],
-		[buttons.heightAnchor constraintEqualToConstant:42],
+		[buttons.heightAnchor constraintEqualToConstant:_phone ? 36 : 42],
 	]];
 	[self addSubview:_panel];
 }
@@ -534,9 +599,11 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_editorSize.minimumValue = 0.6;
 	_editorSize.maximumValue = 1.75;
 	_editorSize.accessibilityIdentifier = @"dcpad.edit.size";
+	_editorSize.minimumTrackTintColor = kAccent();
 	[_editorSize addTarget:self action:@selector(editorSizeChanged:) forControlEvents:UIControlEventValueChanged];
 	UIButtonConfiguration *doneConfig = [UIButtonConfiguration filledButtonConfiguration];
 	doneConfig.title = @"Done";
+	doneConfig.baseBackgroundColor = kAccent();
 	doneConfig.cornerStyle = UIButtonConfigurationCornerStyleMedium;
 	UIButton *done = [UIButton buttonWithConfiguration:doneConfig primaryAction:nil];
 	done.accessibilityIdentifier = @"dcpad.edit.done";
@@ -591,21 +658,26 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	[CATransaction begin];
 	[CATransaction setDisableActions:YES];
 	_controls.frame = self.bounds;
+	auto circle = [](CGFloat r) { return [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-r, -r, 2 * r, 2 * r)].CGPath; };
 	const CGFloat r = _layout.stick_radius;
-	_stickBase.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-r, -r, 2 * r, 2 * r)].CGPath;
-	const CGFloat ring = r * 0.62;
-	_stickRing.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-ring, -ring, 2 * ring, 2 * ring)].CGPath;
-	const CGFloat t = r * 0.44;
-	_stickThumb.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(-t, -t, 2 * t, 2 * t)].CGPath;
+	_stickBase.path = circle(r);
+	_stickBase.shadowPath = _stickBase.path;
+	_stickGate.path = circle(r * std::clamp(_settings.stick_travel, 0.5f, 1.0f));
+	const CGFloat t = r * kThumbFraction;
+	_stickThumb.path = circle(t);
+	_stickThumb.shadowPath = _stickThumb.path;
+	_stickDish.path = circle(t * 0.62);
 
 	const CGRect dpad = CG(_layout.frame(Control::DPad));
-	_dpadShape.path = CrossPath(dpad).CGPath;
+	UIBezierPath *cross = CrossPath(dpad);
+	_dpadShape.path = cross.CGPath;
+	_dpadShape.shadowPath = cross.CGPath;
+	_dpadMask.path = cross.CGPath;
+	const CGFloat hub = dpad.size.width * kArmFraction * 0.26;
+	_dpadCenter.path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(CGRectGetMidX(dpad) - hub, CGRectGetMidY(dpad) - hub, 2 * hub, 2 * hub)].CGPath;
 	UIBezierPath *arrows = [UIBezierPath bezierPath];
-	for (int i = 0; i < 4; i++) {
-		const CGRect arm = ArmRect(dpad, kDirs[i]);
-		_dpadArms[i].path = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(arm, 3, 3) cornerRadius:arm.size.width * 0.12].CGPath;
-		[arrows appendPath:ArrowPath(arm, kDirs[i])];
-	}
+	for (int i = 0; i < 4; i++)
+		[arrows appendPath:ArrowPath(ArmRect(dpad, kDirs[i]), kDirs[i])];
 	_dpadArrows.path = arrows.CGPath;
 
 	const CGFloat fr = _layout.face_radius;
@@ -616,18 +688,34 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		_face[i].bounds = CGRectMake(0, 0, 2 * fr, 2 * fr);
 		_face[i].position = CGPointMake(cx, cy);
 		_faceCircle[i].path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(1.25, 1.25, 2 * fr - 2.5, 2 * fr - 2.5)].CGPath;
-		CenterText(_faceText[i], _face[i].bounds, fr * 0.95);
+		_faceCircle[i].shadowPath = _faceCircle[i].path;
+		CenterText(_faceText[i], _face[i].bounds, fr * 0.92);
 	}
 
 	const Control trig[2] = {Control::LTrigger, Control::RTrigger};
 	for (int i = 0; i < 2; i++) {
 		const CGRect f = CG(_layout.frame(trig[i]));
-		_trigShape[i].path = [UIBezierPath bezierPathWithRoundedRect:f cornerRadius:f.size.height / 2].CGPath;
-		CenterText(_trigText[i], f, f.size.height * 0.45);
+		UIBezierPath *pill = [UIBezierPath bezierPathWithRoundedRect:f cornerRadius:f.size.height / 2];
+		_trigShape[i].path = pill.CGPath;
+		_trigShape[i].shadowPath = pill.CGPath;
+		_trigMask[i].path = pill.CGPath;
+		// Full-press point; both sliders grow toward the screen edge.
+		const CGFloat x = i == 0 ? CGRectGetMaxX(f) - f.size.width * dcpad::kTriggerFullAt : f.origin.x + f.size.width * dcpad::kTriggerFullAt;
+		UIBezierPath *tick = [UIBezierPath bezierPath];
+		[tick moveToPoint:CGPointMake(x, f.origin.y + f.size.height * 0.28)];
+		[tick addLineToPoint:CGPointMake(x, CGRectGetMaxY(f) - f.size.height * 0.28)];
+		_trigDetent[i].path = tick.CGPath;
+		// The label sits on the inner, light-press end so the fill never hides it.
+		const CGFloat labelW = f.size.height;
+		const CGRect label = i == 0 ? CGRectMake(CGRectGetMaxX(f) - labelW - f.size.height * 0.1, f.origin.y, labelW, f.size.height)
+		                             : CGRectMake(f.origin.x + f.size.height * 0.1, f.origin.y, labelW, f.size.height);
+		CenterText(_trigText[i], label, f.size.height * 0.42);
 	}
 	const CGRect start = CG(_layout.frame(Control::Start));
-	_startShape.path = [UIBezierPath bezierPathWithRoundedRect:start cornerRadius:start.size.height / 2].CGPath;
-	CenterText(_startText, start, start.size.height * 0.36);
+	UIBezierPath *startPill = [UIBezierPath bezierPathWithRoundedRect:start cornerRadius:start.size.height / 2];
+	_startShape.path = startPill.CGPath;
+	_startShape.shadowPath = startPill.CGPath;
+	CenterText(_startText, start, start.size.height * 0.34);
 	[CATransaction commit];
 }
 
@@ -643,28 +731,60 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	[CATransaction setDisableActions:YES];
 	_controls.opacity = [self controlsHidden] ? 0 : (_editing ? 1.0 : _settings.opacity);
 
+	// Stick: base, travel guide, a direction arc on the rim and the thumb.
 	const CGPoint base = _previewing ? CGPointMake(_layout.frame(Control::Stick).midX(), _layout.frame(Control::Stick).midY())
 	                                 : CGPointMake(v.stick_base_x, v.stick_base_y);
+	const CGFloat r = _layout.stick_radius;
 	_stickBase.position = base;
-	_stickRing.position = base;
-	const CGFloat travel = _layout.stick_radius * (1 - 0.44) - 2;
-	_stickThumb.position = CGPointMake(base.x + v.stick_x * travel, base.y + v.stick_y * travel);
-	const CGFloat idle = _settings.floating_stick && !v.stick_active ? 0.75 : 1.0;
+	_stickGate.position = base;
+	_stickArc.position = base;
+	const CGFloat travel = r * (1 - kThumbFraction) - 2;
+	const CGPoint thumb = CGPointMake(base.x + v.stick_x * travel, base.y + v.stick_y * travel);
+	if (_stickWasActive && !v.stick_active) {
+		// Spring the thumb home on release instead of snapping.
+		[CATransaction begin];
+		[CATransaction setDisableActions:NO];
+		[CATransaction setAnimationDuration:0.14];
+		[CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut]];
+		_stickThumb.position = thumb;
+		[CATransaction commit];
+	} else {
+		_stickThumb.position = thumb;
+	}
+	_stickWasActive = v.stick_active;
+	const CGFloat idle = _settings.floating_stick && !v.stick_active ? 0.6 : 1.0;
 	_stickBase.opacity = idle;
-	_stickRing.opacity = idle;
-	_stickThumb.fillColor = (v.stick_active ? [UIColor colorWithWhite:0.92 alpha:0.92] : [UIColor colorWithWhite:0.78 alpha:0.78]).CGColor;
+	_stickGate.opacity = v.stick_active ? 1.0 : 0.0;
+	_stickBase.strokeColor = (v.stick_active ? [kAccent() colorWithAlphaComponent:0.75] : kRim()).CGColor;
+	_stickBase.fillColor = (v.stick_active ? kSurfacePressed() : kSurface()).CGColor;
+	_stickThumb.fillColor = [UIColor colorWithWhite:v.stick_active ? 0.96 : 0.80 alpha:v.stick_active ? 0.96 : 0.85].CGColor;
+	const CGFloat magnitude = std::min(1.0f, std::hypot(v.stick_x, v.stick_y));
+	if (v.stick_active && magnitude > 0.08) {
+		const CGFloat angle = std::atan2(v.stick_y, v.stick_x), span = 0.22 + 0.30 * magnitude;
+		_stickArc.path = [UIBezierPath bezierPathWithArcCenter:CGPointZero radius:r - 1 startAngle:angle - span endAngle:angle + span clockwise:YES].CGPath;
+		_stickArc.opacity = 0.35 + 0.65 * magnitude;
+	} else {
+		_stickArc.opacity = 0;
+	}
 
+	// D-pad: the pressed arms light up inside the cross (two for a diagonal).
+	const CGRect dpad = CG(_layout.frame(Control::DPad));
+	UIBezierPath *pressed = [UIBezierPath bezierPath];
 	for (int i = 0; i < 4; i++)
-		_dpadArms[i].hidden = (v.dpad & kDirs[i]) == 0;
+		if (v.dpad & kDirs[i])
+			[pressed appendPath:[UIBezierPath bezierPathWithRect:HalfRect(dpad, kDirs[i])]];
+	_dpadPressed.path = pressed.CGPath;
+	_dpadShape.fillColor = (v.dpad ? kSurfacePressed() : kSurface()).CGColor;
 
 	const uint8_t faceBits[4] = {dcpad::FaceA, dcpad::FaceB, dcpad::FaceX, dcpad::FaceY};
 	for (int i = 0; i < 4; i++) {
 		const BOOL down = (v.face & faceBits[i]) != 0;
 		const FaceStyle st = FaceStyles(i);
-		_face[i].transform = down ? CATransform3DMakeScale(0.9, 0.9, 1) : CATransform3DIdentity;
-		_faceCircle[i].fillColor = [st.fill colorWithAlphaComponent:down ? 1.0 : 0.82].CGColor;
-		_faceCircle[i].strokeColor = [UIColor colorWithWhite:1 alpha:down ? 1.0 : 0.7].CGColor;
+		_face[i].transform = down ? CATransform3DMakeScale(0.92, 0.92, 1) : CATransform3DIdentity;
+		_faceCircle[i].fillColor = (down ? st.fill : kSurface()).CGColor;
+		_faceCircle[i].strokeColor = (down ? [UIColor colorWithWhite:1 alpha:0.9] : st.glyph).CGColor;
 		_faceCircle[i].shadowOpacity = down ? 0.9 : 0;
+		_faceText[i].foregroundColor = (down ? st.pressedText : st.glyph).CGColor;
 	}
 
 	const Control trig[2] = {Control::LTrigger, Control::RTrigger};
@@ -672,23 +792,22 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	const bool fulls[2] = {v.l_full, v.r_full};
 	for (int i = 0; i < 2; i++) {
 		const CGRect f = CG(_layout.frame(trig[i]));
-		const CGFloat frac = values[i] / 255.0;
 		CGRect fill = f;
-		fill.size.width = f.size.width * frac;
+		fill.size.width = f.size.width * (values[i] / 255.0);
 		if (i == 0)
 			fill.origin.x = CGRectGetMaxX(f) - fill.size.width;   /* L fills toward the left edge */
-		UIBezierPath *clip = [UIBezierPath bezierPathWithRoundedRect:f cornerRadius:f.size.height / 2];
-		UIBezierPath *path = [UIBezierPath bezierPathWithRect:fill];
-		CAShapeLayer *mask = [CAShapeLayer layer];
-		mask.path = clip.CGPath;
-		_trigFill[i].path = path.CGPath;
-		_trigFill[i].mask = mask;
-		_trigFill[i].fillColor = [kAccent() colorWithAlphaComponent:fulls[i] ? 0.95 : 0.6].CGColor;
-		_trigShape[i].strokeColor = (fulls[i] ? kAccent() : [UIColor colorWithWhite:1 alpha:0.55]).CGColor;
-		_trigShape[i].lineWidth = fulls[i] ? 3.5 : 2.5;
+		_trigFill[i].path = [UIBezierPath bezierPathWithRect:fill].CGPath;
+		_trigFill[i].fillColor = [kAccent() colorWithAlphaComponent:fulls[i] ? 0.92 : 0.55].CGColor;
+		_trigShape[i].strokeColor = (fulls[i] ? kAccent() : kRim()).CGColor;
+		_trigShape[i].lineWidth = fulls[i] ? 2.5 : 1.5;
+		_trigShape[i].shadowColor = (fulls[i] ? kAccent() : UIColor.blackColor).CGColor;
+		_trigShape[i].shadowOpacity = fulls[i] ? 0.8 : 0.28;
+		_trigShape[i].shadowOffset = fulls[i] ? CGSizeZero : CGSizeMake(0, 2);
+		_trigDetent[i].strokeColor = [UIColor colorWithWhite:1 alpha:values[i] > 0 ? 0.75 : 0.30].CGColor;
+		_trigText[i].foregroundColor = (values[i] > 0 ? UIColor.whiteColor : kGlyph()).CGColor;
 	}
-	_startShape.fillColor = (v.start ? [UIColor colorWithWhite:0.95 alpha:0.95] : [UIColor colorWithWhite:0.08 alpha:0.55]).CGColor;
-	_startText.foregroundColor = (v.start ? UIColor.blackColor : UIColor.whiteColor).CGColor;
+	_startShape.fillColor = (v.start ? [UIColor colorWithWhite:0.95 alpha:0.95] : kSurface()).CGColor;
+	_startText.foregroundColor = (v.start ? UIColor.blackColor : kGlyph()).CGColor;
 
 	if (_editing) {
 		UIBezierPath *all = [UIBezierPath bezierPath], *sel = [UIBezierPath bezierPath];
@@ -705,6 +824,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_editSelected.hidden = !_editing;
 	[CATransaction commit];
 }
+
 
 - (void)updateAccessibility
 {
@@ -863,6 +983,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[self endLayoutEditing];
 	_opacitySlider.value = _settings.opacity;
 	_sizeSlider.value = _settings.size;
+	_travelSlider.value = _settings.stick_travel;
 	_floatingSwitch.on = _settings.floating_stick;
 	_hapticsSwitch.on = _settings.haptics;
 	_hideSwitch.on = _settings.hide_with_controller;
@@ -881,6 +1002,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 {
 	_settings.opacity = _opacitySlider.value;
 	_settings.size = _sizeSlider.value;
+	_settings.stick_travel = _travelSlider.value;
 	_settings.floating_stick = _floatingSwitch.on;
 	_settings.haptics = _hapticsSwitch.on;
 	_settings.hide_with_controller = _hideSwitch.on;
@@ -930,6 +1052,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_selected = Control::None;
 	_editorBar.hidden = NO;
 	_editorSize.enabled = NO;
+	_editorSize.hidden = YES;   // appears once a control is selected
 	_editorLabel.text = @"Drag a control,\nthen size it here";
 	[self bringSubviewToFront:_editorBar];
 	[self modalChanged];
@@ -990,6 +1113,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	if (_dragging != Control::None) {
 		_selected = _dragging;
 		_editorSize.enabled = YES;
+		_editorSize.hidden = NO;
 		_editorSize.value = _settings.over(_selected).scale;
 		_editorLabel.text = [NSString stringWithFormat:@"%@ size", [self nameForControl:_selected]];
 		[_store saveSettings:_settings phone:_phone];

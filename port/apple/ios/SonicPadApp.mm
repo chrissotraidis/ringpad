@@ -507,6 +507,13 @@ static void hideFlycastGamepad(Event, void *)
 	return YES;
 }
 
+// Thumbs live on the screen edges; a swipe that starts there should reach the
+// game first instead of opening Control Center or going home.
+- (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
+{
+	return UIRectEdgeAll;
+}
+
 @end
 
 @interface SPSceneDelegate : UIResponder <UIWindowSceneDelegate>

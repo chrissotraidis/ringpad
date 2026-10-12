@@ -160,7 +160,7 @@ uint8_t trigger_value(const Layout& l, Control trigger, float x, bool was_full, 
     const Rect& f = l.frame(trigger);
     float pos = f.w > 0 ? clampf((x - f.x) / f.w, 0, 1) : 0;
     if (trigger == Control::LTrigger) pos = 1.0f - pos;   /* both grow toward the screen edge */
-    constexpr float kEnter = 0.72f, kExit = 0.66f, kMin = 0.45f, kMax = 0.89f;
+    constexpr float kEnter = kTriggerFullAt, kExit = kTriggerFullAt - 0.06f, kMin = 0.45f, kMax = 0.89f;
     const bool is_full = was_full ? pos >= kExit : pos >= kEnter;
     if (full) *full = is_full;
     const float v = is_full ? 1.0f : std::min(kMax, kMin + (pos / kEnter) * (kMax - kMin));
@@ -186,7 +186,8 @@ void TouchEngine::update(Touch& t, float x, float y, const Layout& l) {
             dx = x - t.base_x;
             dy = y - t.base_y;
         }
-        float vx = dx / (r * kStickFullTilt), vy = dy / (r * kStickFullTilt);
+        const float reach = r * clampf(t.travel, 0.5f, 1.0f);
+        float vx = dx / reach, vy = dy / reach;
         const float m = std::hypot(vx, vy);
         if (m > 1.0f) { vx /= m; vy /= m; }
         t.x = vx;
@@ -230,6 +231,7 @@ void TouchEngine::begin(int id, float x, float y, const Layout& l, const Setting
     if (t.control == Control::Stick) {
         const Rect& home = l.frame(Control::Stick);
         t.floating = s.floating_stick;
+        t.travel = s.stick_travel;
         if (s.floating_stick && !in_circle(home, x, y, 1.0f)) {
             /* Keep the whole base on screen. */
             t.base_x = clampf(x, l.safe.x + l.stick_radius, l.safe.x + l.safe.w - l.stick_radius);

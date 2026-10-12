@@ -32,6 +32,7 @@ static NSString *const kControlKeys[] = {@"stick", @"dpad", @"face", @"l", @"r",
 	if (NSNumber *v = d[@"floating"]) s.floating_stick = v.boolValue;
 	if (NSNumber *v = d[@"haptics"]) s.haptics = v.boolValue;
 	if (NSNumber *v = d[@"hideWithController"]) s.hide_with_controller = v.boolValue;
+	if (NSNumber *v = d[@"dimWhenIdle"]) s.dim_when_idle = v.boolValue;
 	NSDictionary *overrides = d[@"controls"];
 	for (int i = 0; i < dcpad::kControlCount; i++) {
 		NSDictionary *o = overrides[kControlKeys[i]];
@@ -71,6 +72,7 @@ static NSString *const kControlKeys[] = {@"stick", @"dpad", @"face", @"l", @"r",
 		@"floating": @(s.floating_stick),
 		@"haptics": @(s.haptics),
 		@"hideWithController": @(s.hide_with_controller),
+		@"dimWhenIdle": @(s.dim_when_idle),
 		@"controls": controls,
 	};
 	[NSUserDefaults.standardUserDefaults setObject:d forKey:[self keyForPhone:phone]];

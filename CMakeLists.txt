@@ -90,6 +90,7 @@ if(IOS)
 	target_link_libraries(flycast PRIVATE dcpad)
 	target_sources(flycast PRIVATE ${_sp_ios_shell}
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPFrameCapture.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)

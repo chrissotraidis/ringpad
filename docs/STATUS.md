@@ -125,6 +125,14 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
   - Widescreen was tried and dropped: Flycast's widescreen mode shrinks the picture in SonicPad's host, and Sonic Adventure has no native widescreen.
 - **Tests:** 377 DCPad host checks pass. The UI suite adds save/load state and live resolution change tests.
 
+### Fourth pass (12 October 2026)
+
+- **Save-state thumbnails:** each save stores a 320-pixel frame, and the Save State and Load State lists show it next to the slot's date. Empty slots show a dashed placeholder.
+- **Dim when idle:** after four seconds with no finger down, the controls fade to under half their opacity so cutscenes and scenery read clearly. The next touch restores them at once. It is a setting, on by default, and never dims while a menu or the editor is open.
+- **Look and reach:** L and R mark the full-press point with two rim notches instead of a line that looked like a text cursor. The tablet face diamond sits 15 pt further from the edge, so B is clear of the palm; reach stays 24–54 mm on all six device sizes.
+- **First play:** a one-time tip, "Tap ••• for save states and settings".
+- **Tests:** 377 DCPad host checks and all 12 UI tests pass on the iPad and iPhone Simulators.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.

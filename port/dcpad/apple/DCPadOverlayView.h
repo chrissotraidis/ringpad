@@ -45,6 +45,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)beginLayoutEditing;
 /* A short confirmation ("Saved to Slot 1") that fades out over the game. */
 - (void)showMessage:(NSString *)message;
+- (void)showMessage:(NSString *)message duration:(NSTimeInterval)duration;
 
 @end
 

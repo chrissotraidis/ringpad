@@ -65,6 +65,8 @@ void CenterText(CATextLayer *t, CGRect frame, CGFloat size)
 
 constexpr CGFloat kArmFraction = 0.36;    /* D-pad arm width / cross size */
 constexpr CGFloat kThumbFraction = 0.42;  /* stick thumb radius / base radius */
+constexpr double kIdleDimDelay = 4.0;     /* seconds untouched before the controls fade back */
+constexpr float kIdleDimFactor = 0.45f;   /* share of the normal opacity while dimmed */
 
 UIBezierPath *CrossPath(CGRect f)
 {
@@ -195,7 +197,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	DCPadMenuButton *_menuButton;
 	UIView *_panel;
 	UISlider *_opacitySlider, *_sizeSlider, *_travelSlider;
-	UISwitch *_floatingSwitch, *_hapticsSwitch, *_hideSwitch;
+	UISwitch *_floatingSwitch, *_hapticsSwitch, *_hideSwitch, *_dimSwitch;
 	UIView *_editorBar;
 	UILabel *_editorLabel;
 	UISlider *_editorSize;
@@ -207,6 +209,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	UILabel *_message;
 	NSUInteger _messageToken;
 	BOOL _messageVisible;
+	BOOL _dimmed;
+	NSUInteger _dimToken;
 }
 
 - (UIButton *)menuButton
@@ -232,6 +236,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	[self buildEditorBar];
 	[self buildMessage];
 	[self loadPreview];
+	[self scheduleIdleDim];
 	return self;
 }
 
@@ -253,6 +258,11 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 
 - (void)showMessage:(NSString *)message
 {
+	[self showMessage:message duration:1.8];
+}
+
+- (void)showMessage:(NSString *)message duration:(NSTimeInterval)duration
+{
 	_message.text = message;
 	const CGRect safe = [self safeRect];
 	const CGFloat w = MIN(safe.size.width - 120, [_message sizeThatFits:CGSizeMake(CGFLOAT_MAX, 36)].width + 36);
@@ -263,7 +273,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	[self updateAccessibility];
 	[UIView animateWithDuration:0.15 animations:^{ self->_message.alpha = 1; }];
 	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, message);
-	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 		if (token != self->_messageToken)
 			return;
 		[UIView animateWithDuration:0.35 animations:^{ self->_message.alpha = 0; } completion:^(BOOL) {
@@ -608,9 +618,12 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_hideSwitch = [UISwitch new];
 	_hideSwitch.accessibilityIdentifier = @"dcpad.settings.hideWithController";
 	[_hideSwitch addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
+	_dimSwitch = [UISwitch new];
+	_dimSwitch.accessibilityIdentifier = @"dcpad.settings.dimWhenIdle";
+	[_dimSwitch addTarget:self action:@selector(settingsChanged:) forControlEvents:UIControlEventValueChanged];
 	for (UISlider *slider in @[_opacitySlider, _sizeSlider, _travelSlider])
 		slider.minimumTrackTintColor = kAccent();
-	for (UISwitch *toggle in @[_floatingSwitch, _hapticsSwitch, _hideSwitch])
+	for (UISwitch *toggle in @[_floatingSwitch, _hapticsSwitch, _hideSwitch, _dimSwitch])
 		toggle.onTintColor = kAccent();
 
 	UIButton *move = [self panelButton:@"Move Controls" identifier:@"dcpad.settings.move" action:@selector(beginLayoutEditing) destructive:NO];
@@ -624,6 +637,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[self rowWithTitle:@"Size" control:_sizeSlider],
 		[self rowWithTitle:@"Stick travel" control:_travelSlider],
 		[self rowWithTitle:@"Floating stick" control:_floatingSwitch],
+		[self rowWithTitle:@"Dim when idle" control:_dimSwitch],
 		[self rowWithTitle:@"Haptics" control:_hapticsSwitch],
 		[self rowWithTitle:@"Hide with controller" control:_hideSwitch],
 		buttons]];
@@ -643,8 +657,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[scroll.bottomAnchor constraintEqualToAnchor:_panel.bottomAnchor],
 		[stack.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:18],
 		[stack.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-18],
-		[stack.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor constant:14],
-		[stack.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-16],
+		[stack.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor constant:_phone ? 8 : 14],
+		[stack.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:_phone ? -8 : -16],
 		[stack.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-36],
 		[close.widthAnchor constraintEqualToConstant:34],
 		[close.heightAnchor constraintEqualToConstant:34],
@@ -712,9 +726,9 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_layout = dcpad::resolve_layout({float(safe.origin.x), float(safe.origin.y), float(safe.size.width), float(safe.size.height)}, _phone, _settings);
 	_menuButton.frame = CGRectMake(CGRectGetMaxX(safe) - 44 - 10, CGRectGetMinY(safe) + 10, 44, 44);
 	_panelContentHeight = [_panelStack systemLayoutSizeFittingSize:CGSizeMake(MIN(380, safe.size.width - 32) - 36, 0)
-			withHorizontalFittingPriority:UILayoutPriorityRequired verticalFittingPriority:UILayoutPriorityFittingSizeLevel].height + 30;
+			withHorizontalFittingPriority:UILayoutPriorityRequired verticalFittingPriority:UILayoutPriorityFittingSizeLevel].height + (_phone ? 16 : 30);
 	const CGFloat panelW = MIN(380, safe.size.width - 32);
-	const CGFloat panelH = MIN(_panelContentHeight > 0 ? _panelContentHeight : 360, safe.size.height - 40);
+	const CGFloat panelH = MIN(_panelContentHeight > 0 ? _panelContentHeight : 360, safe.size.height - (_phone ? 16 : 40));
 	_panel.frame = CGRectMake(CGRectGetMidX(safe) - panelW / 2, CGRectGetMidY(safe) - panelH / 2, panelW, panelH);
 	// The middle band is the one area no default control uses, so the editor
 	// bar never covers a control the player wants to drag.
@@ -779,8 +793,11 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		// Full-press point; both sliders grow toward the screen edge.
 		const CGFloat x = i == 0 ? CGRectGetMaxX(f) - f.size.width * dcpad::kTriggerFullAt : f.origin.x + f.size.width * dcpad::kTriggerFullAt;
 		UIBezierPath *tick = [UIBezierPath bezierPath];
-		[tick moveToPoint:CGPointMake(x, f.origin.y + f.size.height * 0.28)];
-		[tick addLineToPoint:CGPointMake(x, CGRectGetMaxY(f) - f.size.height * 0.28)];
+		// Two notches on the rim mark the full-press point without crossing the label area.
+		[tick moveToPoint:CGPointMake(x, f.origin.y + 1)];
+		[tick addLineToPoint:CGPointMake(x, f.origin.y + f.size.height * 0.24)];
+		[tick moveToPoint:CGPointMake(x, CGRectGetMaxY(f) - f.size.height * 0.24)];
+		[tick addLineToPoint:CGPointMake(x, CGRectGetMaxY(f) - 1)];
 		_trigDetent[i].path = tick.CGPath;
 		// The label sits on the inner, light-press end so the fill never hides it.
 		const CGFloat labelW = f.size.height;
@@ -806,7 +823,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	const dcpad::Visual v = _previewing ? _preview : _engine.visual(_layout);
 	[CATransaction begin];
 	[CATransaction setDisableActions:YES];
-	_controls.opacity = [self controlsHidden] ? 0 : (_editing ? 1.0 : _settings.opacity);
+	const float resting = _settings.opacity * (_dimmed ? kIdleDimFactor : 1.0f);
+	_controls.opacity = [self controlsHidden] ? 0 : (_editing ? 1.0 : resting);
 
 	// Stick: base, travel guide, a direction arc on the rim and the thumb.
 	const CGPoint base = _previewing ? CGPointMake(_layout.frame(Control::Stick).midX(), _layout.frame(Control::Stick).midY())
@@ -960,7 +978,29 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[_haptic impactOccurred];
 	else
 		_engine.take_press_events();
+	if (_engine.active_count() > 0)
+		_dimmed = NO;
+	else
+		[self scheduleIdleDim];
 	[self render];
+}
+
+// After a few seconds with no finger down the controls fade back so cutscenes
+// and scenery read clearly; the next touch restores them at once.
+- (void)scheduleIdleDim
+{
+	const NSUInteger token = ++_dimToken;
+	if (!_settings.dim_when_idle)
+		return;
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kIdleDimDelay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		if (token != self->_dimToken || self->_engine.active_count() > 0 || self.isModal || self->_dimmed || self->_previewing)
+			return;
+		self->_dimmed = YES;
+		[CATransaction begin];
+		[CATransaction setAnimationDuration:0.6];
+		self->_controls.opacity = [self controlsHidden] ? 0 : self->_settings.opacity * kIdleDimFactor;
+		[CATransaction commit];
+	});
 }
 
 - (BOOL)inputBlocked
@@ -981,6 +1021,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	}
 	if ([self inputBlocked])
 		return;
+	_dimmed = NO;
 	[_haptic prepare];
 	for (UITouch *touch in touches) {
 		const CGPoint p = [touch locationInView:self];
@@ -1028,6 +1069,8 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_engine.clear();
 	_touchIds.clear();
 	sonicpad::DreamcastInputMixer::shared().clear(true);
+	_dimmed = NO;
+	[self scheduleIdleDim];
 	[self render];
 }
 
@@ -1067,6 +1110,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_floatingSwitch.on = _settings.floating_stick;
 	_hapticsSwitch.on = _settings.haptics;
 	_hideSwitch.on = _settings.hide_with_controller;
+	_dimSwitch.on = _settings.dim_when_idle;
 	_panel.hidden = NO;
 	[self bringSubviewToFront:_panel];
 	[self modalChanged];
@@ -1086,6 +1130,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_settings.floating_stick = _floatingSwitch.on;
 	_settings.haptics = _hapticsSwitch.on;
 	_settings.hide_with_controller = _hideSwitch.on;
+	_settings.dim_when_idle = _dimSwitch.on;
 	[_store saveSettings:_settings phone:_phone];
 	[self setNeedsLayout];
 }

@@ -7,8 +7,50 @@
 #include "oslib/oslib.h"
 
 #include <string>
+#include <vector>
+
+bool SPCaptureLastFrameRGB(std::vector<u8>& rgb, int& width, int& height);   // SPFrameCapture.cpp
 
 static constexpr int kSlots = 3;
+
+// PNG of the last presented frame, 320 pixels wide, stored in the state file
+// so the menu can show what each slot holds. Rendering runs on the main
+// thread, so reading the frame here is safe while the game is paused.
+static std::vector<u8> CaptureThumbnailPNG()
+{
+	std::vector<u8> rgb;
+	int w = 320, h = 0;
+	if (!SPCaptureLastFrameRGB(rgb, w, h))
+		return {};
+	CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+	CFDataRef data = CFDataCreate(nullptr, rgb.data(), CFIndex(size_t(w) * h * 3));
+	CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
+	CGImageRef image = CGImageCreate(w, h, 8, 24, size_t(w) * 3, space, kCGBitmapByteOrderDefault | kCGImageAlphaNone,
+			provider, nullptr, false, kCGRenderingIntentDefault);
+	NSData *png = image != nullptr ? UIImagePNGRepresentation([UIImage imageWithCGImage:image]) : nil;
+	CGImageRelease(image);
+	CGDataProviderRelease(provider);
+	CFRelease(data);
+	CGColorSpaceRelease(space);
+	const u8 *bytes = static_cast<const u8 *>(png.bytes);
+	return png != nil ? std::vector<u8>(bytes, bytes + png.length) : std::vector<u8>();
+}
+
+// Small rounded thumbnail for a menu row.
+static UIImage *SlotThumbnail(int slot)
+{
+	std::vector<u8> png;
+	dc_getStateScreenshot(slot, png);
+	UIImage *full = png.empty() ? nil : [UIImage imageWithData:[NSData dataWithBytes:png.data() length:png.size()]];
+	if (full == nil)
+		return nil;
+	const CGSize size = CGSizeMake(48, 36);
+	UIGraphicsImageRenderer *r = [[UIGraphicsImageRenderer alloc] initWithSize:size];
+	return [[r imageWithActions:^(UIGraphicsImageRendererContext *) {
+		[[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, size.width, size.height) cornerRadius:5] addClip];
+		[full drawInRect:CGRectMake(0, 0, size.width, size.height)];
+	}] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+}
 
 @implementation SPPortMenu
 {
@@ -38,10 +80,12 @@ static constexpr int kSlots = 3;
 	for (int slot = 1; slot <= kSlots; slot++) {
 		NSString *date = loaded ? [self dateForSlot:slot] : nil;
 		NSString *title = [NSString stringWithFormat:@"Slot %d", slot];
-		UIAction *save = [UIAction actionWithTitle:title image:nil identifier:nil
+		UIImage *thumb = date != nil ? SlotThumbnail(slot) : nil;
+		UIImage *empty = [UIImage systemImageNamed:@"square.dashed"];
+		UIAction *save = [UIAction actionWithTitle:title image:thumb ?: empty identifier:nil
 				handler:^(UIAction *) { [weakSelf saveSlot:slot]; }];
 		save.subtitle = date ?: @"Empty";
-		UIAction *load = [UIAction actionWithTitle:title image:nil identifier:nil
+		UIAction *load = [UIAction actionWithTitle:title image:thumb ?: empty identifier:nil
 				handler:^(UIAction *) { [weakSelf loadSlot:slot]; }];
 		load.subtitle = date ?: @"Empty";
 		if (!loaded)
@@ -63,7 +107,8 @@ static constexpr int kSlots = 3;
 {
 	UIViewController<SPPortMenuHost> *host = _host;
 	[host setPaused:YES reason:@"state"];
-	dc_savestate(slot);
+	const std::vector<u8> png = CaptureThumbnailPNG();
+	dc_savestate(slot, png.empty() ? nullptr : png.data(), u32(png.size()));
 	const BOOL ok = dc_getStateCreationDate(slot) != 0;
 	[host setPaused:NO reason:@"state"];
 	[host portMenuShowMessage:ok ? [NSString stringWithFormat:@"Saved to Slot %d", slot] : @"Couldn't save the state"];

@@ -269,6 +269,21 @@ static void hideFlycastGamepad(Event, void *)
 	self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(renderFrame)];
 	self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, 60, 60);
 	[self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
+	[self showMenuHintOnce];
+}
+
+// One tip on the first play: where save states and settings live.
+- (void)showMenuHintOnce
+{
+	static NSString *const kKey = @"SonicPad.menuHintShown";
+	if (settings.content.path.empty() || [NSUserDefaults.standardUserDefaults boolForKey:kKey])
+		return;
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		if (self.overlay.hidden || self.overlay.isModal || [NSUserDefaults.standardUserDefaults boolForKey:kKey])
+			return;
+		[NSUserDefaults.standardUserDefaults setBool:YES forKey:kKey];
+		[self.overlay showMessage:@"Tap ••• for save states and settings" duration:4.5];
+	});
 }
 
 - (BOOL)updateDrawableSize
@@ -501,6 +516,7 @@ static void hideFlycastGamepad(Event, void *)
 				[self.pauseReasons removeObject:@"import"];
 				self.stoppedByShell = NO;   // loading starts the emulator itself
 				[self startGame:gdiPath];
+				[self showMenuHintOnce];
 			}];
 }
 

@@ -54,6 +54,7 @@ struct Settings {
     bool floating_stick = true;   /* stick re-centres where the thumb lands */
     bool haptics = true;
     bool hide_with_controller = true;
+    bool dim_when_idle = true;    /* fade the controls back after a few seconds untouched */
     std::array<ControlOverride, kControlCount> overrides{};
 
     ControlOverride& over(Control c) { return overrides[int(c) - 1]; }

@@ -171,6 +171,35 @@ his **iPad Pro 12.9-inch (6th generation, M2), iPadOS 27.0.1**.
   submenu, and the updated test (which now also opens and closes the share sheet)
   passes. All 584 host checks pass.
 
+### Polish pass (22 October 2026, afternoon)
+
+From Chris's first session on the iPad:
+
+- **••• menu:** a SonicPad header over the quick row (Save State, Load State,
+  Reset), then Controls, Graphics and Sound, then Game Files and Help. Sound,
+  Resolution and Texture Upscaling show the current choice under their name.
+  DCPad hands its Controls submenu to the host through a new optional delegate
+  method, so a port can place it.
+- **Graphics:** Resolution now goes to 4× (1920p, about native on a 12.9-inch
+  iPad), and Texture Upscaling (xBRZ 2× or 4×) rebuilds the texture cache so it
+  shows at once. New installs start at 4× on iPad and 2× on iPhone. On the M2
+  iPad, 3× and then 4× with 2× xBRZ each held the game's 30 FPS at full speed,
+  with no frame over 50 ms after boot.
+- **Show FPS:** SonicPad's own counter in a glass pill at the top left;
+  Flycast's on-screen counter at the bottom is off.
+- **Pause after closing the menu:** on the iPad the game stayed paused after
+  the ••• menu closed until the next tap. DCPad reported the close from the
+  dismiss animator's completion, which on iPadOS 27 can wait for the next
+  touch; his log showed each resume seconds after the close. DCPad now reports
+  the close at once, and a touch on the controls while the menu is marked open
+  clears it. The Simulator never showed the delay (XCUITest keeps events
+  flowing); a new UI test still checks that frames and guest time advance
+  after eight closes, and the app logs a `stall` line if the game has not
+  moved 2 s after any resume. Confirmation on the device is Chris's next play.
+- **Logging:** a `render` line every 30 s of play (FPS, frames over 50 ms,
+  worst frame, graphics settings), plus menu, touch settings, layout, graphics,
+  sound and save-state events.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.

@@ -63,6 +63,8 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	NSScanner *scanner = [NSScanner scannerWithString:text];
 	unsigned kcode = 0, seen = 0;
 	int minX = 0, maxX = 0, minY = 0, maxY = 0, lt = 0, rt = 0, run = 0;
+	long long frames = 0;
+	double guest = 0;
 	const BOOL ok = [scanner scanString:@"kcode=" intoString:nil] && [scanner scanHexInt:&kcode]
 			&& [scanner scanString:@"seen=" intoString:nil] && [scanner scanHexInt:&seen]
 			&& [scanner scanString:@"x=" intoString:nil] && [scanner scanInt:&minX]
@@ -71,9 +73,11 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 			&& [scanner scanString:@".." intoString:nil] && [scanner scanInt:&maxY]
 			&& [scanner scanString:@"lt=" intoString:nil] && [scanner scanInt:&lt]
 			&& [scanner scanString:@"rt=" intoString:nil] && [scanner scanInt:&rt]
-			&& [scanner scanString:@"run=" intoString:nil] && [scanner scanInt:&run];
+			&& [scanner scanString:@"run=" intoString:nil] && [scanner scanInt:&run]
+			&& [scanner scanString:@"frames=" intoString:nil] && [scanner scanLongLong:&frames]
+			&& [scanner scanString:@"guest=" intoString:nil] && [scanner scanDouble:&guest];
 	XCTAssertTrue(ok, @"unparsed debug label: %@", text);
-	return @{ @"kcode": @(kcode), @"seen": @(seen), @"minX": @(minX), @"maxX": @(maxX), @"minY": @(minY),
+	return @{ @"guest": @(guest), @"frames": @(frames), @"kcode": @(kcode), @"seen": @(seen), @"minX": @(minX), @"maxX": @(maxX), @"minY": @(minY),
 			@"maxY": @(maxY), @"lt": @(lt), @"rt": @(rt), @"run": @(run) };
 }
 
@@ -242,8 +246,8 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
 	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
-	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Display", @"Sound", @"Game Files", @"Help"])
-		XCTAssertTrue(app.buttons[item].isHittable, @"top-level item %@ fits on screen", item);
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Game Files", @"Help"])
+		XCTAssertTrue([self menuItem:item in:app].isHittable, @"top-level item %@ fits on screen", item);
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
 	[self attachScreenshot:@"menu"];
@@ -320,19 +324,20 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game runs after loading");
 
 	[app.buttons[@"dcpad.menu"] tap];
-	[app.buttons[@"Display"] tap];
-	XCTAssertTrue([app.buttons[@"Resolution"] waitForExistenceWithTimeout:5]);
+	[[self menuItem:@"Graphics" in:app] tap];
+	XCTAssertTrue([[self menuItem:@"Resolution" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Texture Upscaling" in:app].exists);
 	XCTAssertTrue(app.buttons[@"Show FPS"].exists);
-	[self attachScreenshot:@"display-menu"];
+	[self attachScreenshot:@"graphics-menu"];
 	[self dismissMenu:app];
 }
 
-// Render resolution applies while the game runs, then returns to the default.
-- (void)testDisplayOptionsApply
+// Resolution, texture upscaling and the FPS counter apply while the game runs.
+- (void)testGraphicsOptionsApply
 {
 	XCUIApplication *app = [self launchGame];
 	[NSThread sleepForTimeInterval:8];
-	[self attachScreenshot:@"display-default"];
+	[self attachScreenshot:@"graphics-default"];
 	void (^choose)(NSArray<NSString *> *) = ^(NSArray<NSString *> *path) {
 		[app.buttons[@"dcpad.menu"] tap];
 		for (NSString *item in path) {
@@ -342,10 +347,46 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 		}
 		[NSThread sleepForTimeInterval:2];
 	};
-	choose(@[@"Display", @"Resolution", @"2×"]);
-	[self attachScreenshot:@"display-2x"];
-	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at 2x");
-	choose(@[@"Display", @"Resolution", @"Original"]);
+	choose(@[@"Graphics", @"Resolution", @"4×"]);
+	[self attachScreenshot:@"graphics-4x"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at 4x");
+	choose(@[@"Graphics", @"Texture Upscaling", @"2×"]);
+	[self attachScreenshot:@"graphics-xbrz"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running with xBRZ");
+	choose(@[@"Graphics", @"Show FPS"]);
+	XCUIElement *fps = app.staticTexts[@"sp.fps"];
+	XCTAssertTrue([fps waitForExistenceWithTimeout:3]);
+	XCTAssertTrue([fps.label hasSuffix:@"FPS"]);
+	XCTAssertLessThan(fps.frame.origin.x, app.frame.size.width * 0.2, @"FPS sits at the left");
+	XCTAssertLessThan(fps.frame.origin.y, app.frame.size.height * 0.2, @"FPS sits at the top");
+	[self attachScreenshot:@"graphics-fps"];
+	choose(@[@"Graphics", @"Show FPS"]);
+	XCTAssertFalse(app.staticTexts[@"sp.fps"].exists, @"Show FPS toggles off");
+	choose(@[@"Graphics", @"Texture Upscaling", @"Off"]);
+	choose(@[@"Graphics", @"Resolution", @"3×"]);
+}
+
+// Closing the menu must leave the game moving, every time.
+- (void)testGameKeepsMovingAfterMenu
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:8];
+	for (int i = 0; i < 8; i++) {
+		[app.buttons[@"dcpad.menu"] tap];
+		XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:5]);
+		[NSThread sleepForTimeInterval:0.3 * (i % 3)];
+		[self dismissMenu:app];
+		const long long before = [[self inputState:app][@"frames"] longLongValue];
+		const double guestBefore = [[self inputState:app][@"guest"] doubleValue];
+		[NSThread sleepForTimeInterval:1.0];
+		NSDictionary *after = [self inputState:app];
+		XCTAssertEqual([after[@"run"] intValue], 1, @"running after close %d", i);
+		XCTAssertGreaterThan([after[@"frames"] longLongValue], before + 20, @"frames advance after close %d", i);
+		XCTAssertGreaterThan([after[@"guest"] doubleValue], guestBefore + 0.5, @"guest time advances after close %d", i);
+		XCTAssertFalse([self seen:app] & kStart, @"closing the menu never sends Start");
+		if (i == 0)
+			[self attachScreenshot:@"after-menu-close"];
+	}
 }
 
 - (void)testSettingsAndMoveControlsPersist

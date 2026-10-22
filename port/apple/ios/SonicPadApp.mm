@@ -108,9 +108,13 @@ static void hideFlycastGamepad(Event, void *)
 @property (nonatomic, strong) UIButton *importChoose;
 @property (nonatomic, strong) UIButton *importCancel;
 @property (nonatomic, strong) UILabel *inputDebug;
+@property (nonatomic, strong) UILabel *fpsLabel;
 @property (nonatomic) BOOL renderStarted;
 @property (nonatomic) BOOL scriptedInput;
 @end
+
+static NSString *const kShowFPSKey = @"SonicPad.showFPS";
+double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 
 @implementation SPGameViewController
 {
@@ -119,6 +123,20 @@ static void hideFlycastGamepad(Event, void *)
 	uint32_t _seenPressed;
 	int _minX, _maxX, _minY, _maxY;
 	unsigned _maxLT, _maxRT;
+	// Presented frames: the FPS counter, the log's render line and the
+	// check that the game moves again after a resume.
+	uint64_t _frames;
+	CFTimeInterval _lastFrame;
+	CFTimeInterval _fpsStart;
+	uint64_t _fpsFrames;
+	CFTimeInterval _windowStart;
+	uint64_t _windowFrames;
+	int _windowHitches;
+	double _windowWorst;
+	CFTimeInterval _resumedAt;
+	uint64_t _framesAtResume;
+	double _guestAtResume;
+	BOOL _stallLogged;
 }
 
 - (void)loadView
@@ -134,6 +152,7 @@ static void hideFlycastGamepad(Event, void *)
 	[view addSubview:self.overlay];
 	self.pauseReasons = [NSMutableSet set];
 	self.portMenu = [[SPPortMenu alloc] initWithHost:self];
+	[self buildFPSLabel];
 
 	if (std::getenv("SONICPAD_INPUT_DEBUG") != nullptr) {
 		self.inputDebug = [[UILabel alloc] init];
@@ -148,6 +167,43 @@ static void hideFlycastGamepad(Event, void *)
 		]];
 	}
 	[self buildImportView];
+}
+
+// Top-left counter in the controls' glass style.
+- (void)buildFPSLabel
+{
+	UILabel *label = [[UILabel alloc] init];
+	label.accessibilityIdentifier = @"sp.fps";
+	label.font = [UIFont monospacedDigitSystemFontOfSize:15 weight:UIFontWeightSemibold];
+	label.textColor = UIColor.whiteColor;
+	label.textAlignment = NSTextAlignmentCenter;
+	label.backgroundColor = [UIColor colorWithWhite:0.05 alpha:0.55];
+	label.layer.cornerRadius = 15;
+	label.layer.borderWidth = 1;
+	label.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.22].CGColor;
+	label.layer.masksToBounds = YES;
+	label.text = @"-- FPS";
+	label.hidden = ![NSUserDefaults.standardUserDefaults boolForKey:kShowFPSKey];
+	label.translatesAutoresizingMaskIntoConstraints = NO;
+	[self.view addSubview:label];
+	[NSLayoutConstraint activateConstraints:@[
+		[label.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:12],
+		[label.leadingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:12],
+		[label.heightAnchor constraintEqualToConstant:30],
+		[label.widthAnchor constraintEqualToConstant:84],
+	]];
+	self.fpsLabel = label;
+}
+
+- (BOOL)portMenuFPSVisible
+{
+	return !self.fpsLabel.hidden;
+}
+
+- (void)portMenuSetFPSVisible:(BOOL)visible
+{
+	[NSUserDefaults.standardUserDefaults setBool:visible forKey:kShowFPSKey];
+	self.fpsLabel.hidden = !visible;
 }
 
 - (void)buildImportView
@@ -227,6 +283,9 @@ static void hideFlycastGamepad(Event, void *)
 	os_InstallFaultHandler();
 	flycast_init(0, nullptr);
 	config::RendererType = RenderType::Vulkan;
+	// SonicPad draws its own FPS counter at the top left.
+	config::ShowFPS = false;
+	[self applyGraphicsDefaultsOnce];
 	vgamepad::hide();
 	EventManager::listen(Event::Resume, hideFlycastGamepad);
 	self.scriptedInput = std::getenv("SONICPAD_INPUT_SCRIPT") != nullptr;
@@ -326,8 +385,70 @@ static void hideFlycastGamepad(Event, void *)
 - (void)renderFrame
 {
 	[self updateInput];
-	if (mainui_rend_frame() && imguiDriver != nullptr)
-		imguiDriver->present();
+	if (mainui_rend_frame()) {
+		if (imguiDriver != nullptr)
+			imguiDriver->present();
+		[self countFrame];
+	}
+	[self updateFrameStats];
+}
+
+- (void)countFrame
+{
+	const CFTimeInterval now = CACurrentMediaTime();
+	if (_lastFrame > 0 && self.pauseReasons.count == 0) {
+		const double gap = (now - _lastFrame) * 1000;
+		if (gap > 50)
+			_windowHitches++;
+		_windowWorst = MAX(_windowWorst, gap);
+	}
+	_lastFrame = now;
+	_frames++;
+	_fpsFrames++;
+	_windowFrames++;
+}
+
+// Twice a second: the FPS counter. Every 30 s of play: one render line in
+// the log. After a resume: a log line if no frame arrives within 2 s.
+- (void)updateFrameStats
+{
+	const CFTimeInterval now = CACurrentMediaTime();
+	const BOOL running = self.pauseReasons.count == 0 && emu.running();
+	if (now - _fpsStart >= 0.5) {
+		if (running && !self.fpsLabel.hidden)
+			self.fpsLabel.text = [NSString stringWithFormat:@"%.0f FPS", _fpsFrames / (now - _fpsStart)];
+		_fpsStart = now;
+		_fpsFrames = 0;
+	}
+	if (!running) {
+		[self resetFrameWindow];
+		return;
+	}
+	if (now - _windowStart >= 30) {
+		SPLog(@"render fps=%.1f hitches_over_50ms=%d worst_frame_ms=%.0f resolution=%d texture_upscale=%d",
+				_windowFrames / (now - _windowStart), _windowHitches, _windowWorst,
+				(int)config::RenderResolution, (int)config::TextureUpscale);
+		[self resetFrameWindow];
+	}
+	// The game should have moved on within 2 s of a resume: new frames from
+	// the renderer and new guest time from the emulator thread.
+	if (_resumedAt > 0 && !_stallLogged && now - _resumedAt > 2) {
+		const double guest = SonicPad_GuestSeconds() - _guestAtResume;
+		const uint64_t frames = _frames - _framesAtResume;
+		if (guest < 0.5 || frames < 10)
+			SPLog(@"stall: %.1f s after resume, guest advanced %.2f s, %llu frames (emu running=%d)",
+					now - _resumedAt, guest, frames, emu.running() ? 1 : 0);
+		_stallLogged = YES;
+	}
+}
+
+- (void)resetFrameWindow
+{
+	_windowStart = CACurrentMediaTime();
+	_windowFrames = 0;
+	_windowHitches = 0;
+	_windowWorst = 0;
+	_lastFrame = 0;
 }
 
 - (void)updateInput
@@ -350,8 +471,9 @@ static void hideFlycastGamepad(Event, void *)
 		_maxY = MAX(_maxY, (int)pad.joyy);
 		_maxLT = MAX(_maxLT, (unsigned)pad.lt);
 		_maxRT = MAX(_maxRT, (unsigned)pad.rt);
-		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d",
-				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0];
+		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d frames=%llu guest=%.1f",
+				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0, _frames,
+				SonicPad_GuestSeconds()];
 	}
 }
 
@@ -381,6 +503,10 @@ static void hideFlycastGamepad(Event, void *)
 		SPLog(@"resume (%@)", reason);
 		self.stoppedByShell = NO;
 		emu.start();
+		_resumedAt = CACurrentMediaTime();
+		_framesAtResume = _frames;
+		_guestAtResume = SonicPad_GuestSeconds();
+		_stallLogged = NO;
 	}
 }
 
@@ -407,7 +533,9 @@ static void hideFlycastGamepad(Event, void *)
 	});
 }
 
-- (NSArray<UIMenuElement *> *)dcpadOverlayMenuElements:(DCPadOverlayView *)overlay
+// The ••• menu, top to bottom: the quick row (save, load, reset), then how
+// the game plays (Controls, Graphics, Sound), then files and help.
+- (NSArray<UIMenuElement *> *)dcpadOverlay:(DCPadOverlayView *)overlay menuElementsWithControls:(UIMenu *)controls
 {
 	__weak SPGameViewController *weakSelf = self;
 	const BOOL loaded = !settings.content.path.empty();
@@ -422,22 +550,38 @@ static void hideFlycastGamepad(Event, void *)
 	UIAction *diagnostics = [UIAction actionWithTitle:@"Share Diagnostic Log…" image:[UIImage systemImageNamed:@"doc.text.magnifyingglass"]
 			identifier:nil handler:^(UIAction *) { [weakSelf shareDiagnostics]; }];
 	diagnostics.subtitle = @"This session and the last one";
-	// Save, load and reset sit in one row of icons at the top: the things a
-	// player reaches for most. The rest stays one level down so the menu
-	// fits a landscape phone.
 	NSMutableArray *quick = [[self.portMenu saveStateElementsForGameLoaded:loaded] mutableCopy];
 	[quick addObject:reset];
-	UIMenu *quickRow = [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:quick];
+	const BOOL phone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
+	UIMenu *quickRow = [UIMenu menuWithTitle:phone ? @"" : @"SonicPad" image:nil identifier:nil
+			options:UIMenuOptionsDisplayInline children:quick];
 	quickRow.preferredElementSize = UIMenuElementSizeMedium;
 	UIMenu *files = [UIMenu menuWithTitle:@"Game Files" image:[UIImage systemImageNamed:@"folder"] identifier:nil options:0
 			children:@[importGame, [self.portMenu exportVMUActionForGameLoaded:loaded]]];
+	UIMenu *help = [UIMenu menuWithTitle:@"Help" image:[UIImage systemImageNamed:@"questionmark.circle"] identifier:nil options:0
+			children:@[about, diagnostics]];
 	return @[
 		quickRow,
 		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline
-				children:@[[self.portMenu displayMenu], [self.portMenu soundMenu], files,
-					[UIMenu menuWithTitle:@"Help" image:[UIImage systemImageNamed:@"questionmark.circle"] identifier:nil options:0
-							children:@[about, diagnostics]]]],
+				children:@[controls, [self.portMenu graphicsMenu], [self.portMenu soundMenu]]],
+		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[files, help]],
 	];
+}
+
+// First launch only: render above the Dreamcast's 480 lines. On an M2 iPad
+// Pro, 4× (1920 lines, about native on a 12.9-inch screen) held the game's
+// frame rate with no frame over 50 ms, even with 2× xBRZ textures. Phones get
+// 2×, close to their screen height. Players can change it under Graphics.
+- (void)applyGraphicsDefaultsOnce
+{
+	static NSString *const kKey = @"SonicPad.graphicsDefaults.v1";
+	if ([NSUserDefaults.standardUserDefaults boolForKey:kKey])
+		return;
+	[NSUserDefaults.standardUserDefaults setBool:YES forKey:kKey];
+	const BOOL phone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
+	config::RenderResolution = phone ? 960 : 1920;
+	SaveSettings();
+	SPLog(@"graphics defaults: resolution=%d", (int)config::RenderResolution);
 }
 
 - (void)shareDiagnostics

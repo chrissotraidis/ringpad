@@ -11,6 +11,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setPaused:(BOOL)paused reason:(NSString *)reason;
 /* Short confirmation shown over the game. */
 - (void)portMenuShowMessage:(NSString *)message;
+@optional
+/* The host draws its own FPS counter; Graphics ▸ Show FPS toggles it. */
+- (BOOL)portMenuFPSVisible;
+- (void)portMenuSetFPSVisible:(BOOL)visible;
 @end
 
 @interface SPPortMenu : NSObject
@@ -20,8 +24,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /* Save State ▸ and Load State ▸ with three slots and their dates. */
 - (NSArray<UIMenuElement *> *)saveStateElementsForGameLoaded:(BOOL)loaded;
-/* Display ▸: render resolution and Show FPS. */
-- (UIMenu *)displayMenu;
+/* Graphics ▸: render resolution, texture upscaling and Show FPS. */
+- (UIMenu *)graphicsMenu;
 /* Sound ▸: volume. */
 - (UIMenu *)soundMenu;
 /* Shares the game's VMU save file (A1) through the system share sheet. */

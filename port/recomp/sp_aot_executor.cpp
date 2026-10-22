@@ -26,6 +26,7 @@
 #include "stb_image_write.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <cmath>
@@ -45,6 +46,10 @@
 int UpdateSystem_INTC();
 
 namespace {
+
+// Guest time in timeslices, published every 8192 slices (about 18 ms) so the
+// iOS shell can tell whether the game is advancing after a resume.
+std::atomic<u64> gGuestSlices{0};
 
 constexpr int kMaxBlockOps = 64;
 constexpr int kInterpreterCpuRatio = 8; // Sh4Interpreter's non-STRICT_MODE underclock
@@ -724,6 +729,7 @@ private:
 
 	void housekeeping()
 	{
+		gGuestSlices.store(slices, std::memory_order_relaxed);
 		writeTrace();
 		liveReport();
 		report(false);
@@ -831,4 +837,10 @@ private:
 Sh4Executor *SonicPad_CreateSh4Executor()
 {
 	return new SonicPadExecutor();
+}
+
+// Guest seconds run so far.
+double SonicPad_GuestSeconds()
+{
+	return gGuestSlices.load(std::memory_order_relaxed) / kSlicesPerSecond;
 }

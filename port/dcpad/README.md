@@ -76,6 +76,8 @@ DCPadOverlayView *pad = [[DCPadOverlayView alloc] initWithFrame:view.bounds stor
 pad.menuTitle = @"MyPad";
 pad.delegate = self;                 // menu items, pause on modal, controller mapping
 [view addSubview:pad];
+// To place DCPad's Controls submenu among your own sections, implement
+// -dcpadOverlay:menuElementsWithControls: and return the whole menu.
 
 DCPadControllerInput *controllers = [[DCPadControllerInput alloc] initWithNamespace:@"MyGame"];
 controllers.connectionChanged = ^(BOOL connected) { [pad setControllerConnected:connected]; };

@@ -140,8 +140,12 @@ no extra space.
 
 The app keeps this session and the previous one in
 `Library/Application Support/SonicPad/Logs`: everything the runtime writes to
-stderr, app events, and a `SONICPAD_LIVE` line every 30 s with guest speed
-(1.00x is full speed), SH-4 CPU per guest second and recompiled coverage.
+stderr and app events (lifecycle, pauses with their reason, menu, settings,
+save states, import, controllers, memory and thermal). Every 30 s of play it
+adds two lines: `SONICPAD_LIVE` with guest speed (1.00x is full speed), SH-4
+CPU per guest second and recompiled coverage, and `render` with presented
+frames per second, frames slower than 50 ms, the worst frame and the graphics
+settings. A `stall` line appears if the game has not moved 2 s after a resume.
 Players share it from ••• ▸ Help ▸ Share Diagnostic Log;
 `scripts/ios/pull-device-log.sh <UDID>` copies it into `generated/device-logs/`.
 

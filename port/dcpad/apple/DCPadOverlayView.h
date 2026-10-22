@@ -15,6 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 @optional
 /* Game-specific menu items, shown above the standard Controls section. */
 - (NSArray<UIMenuElement *> *)dcpadOverlayMenuElements:(DCPadOverlayView *)overlay;
+/* The whole menu, with DCPad's Controls submenu handed over so the host can
+ * place it among its own sections. Takes precedence over the method above. */
+- (NSArray<UIMenuElement *> *)dcpadOverlay:(DCPadOverlayView *)overlay menuElementsWithControls:(UIMenu *)controls;
 /* YES while the menu, settings panel or layout editor is showing. Hosts
  * pause the game and the overlay has already released all touch input. */
 - (void)dcpadOverlay:(DCPadOverlayView *)overlay modalStateChanged:(BOOL)modal;

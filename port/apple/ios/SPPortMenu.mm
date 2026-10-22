@@ -1,5 +1,6 @@
 // See SPPortMenu.h.
 #import "SPPortMenu.h"
+#import "SPDiagnostics.h"
 
 #include "types.h"
 #include "emulator.h"
@@ -10,6 +11,7 @@
 #include <vector>
 
 bool SPCaptureLastFrameRGB(std::vector<u8>& rgb, int& width, int& height);   // SPFrameCapture.cpp
+void SPResetTextureCache();                                                   // SPFrameCapture.cpp
 
 static constexpr int kSlots = 3;
 
@@ -110,6 +112,7 @@ static UIImage *SlotThumbnail(int slot)
 	const std::vector<u8> png = CaptureThumbnailPNG();
 	dc_savestate(slot, png.empty() ? nullptr : png.data(), u32(png.size()));
 	const BOOL ok = dc_getStateCreationDate(slot) != 0;
+	SPLog(@"save state slot %d ok=%d", slot, ok);
 	[host setPaused:NO reason:@"state"];
 	[host portMenuShowMessage:ok ? [NSString stringWithFormat:@"Saved to Slot %d", slot] : @"Couldn't save the state"];
 }
@@ -118,35 +121,69 @@ static UIImage *SlotThumbnail(int slot)
 {
 	UIViewController<SPPortMenuHost> *host = _host;
 	[host setPaused:YES reason:@"state"];
+	SPLog(@"load state slot %d", slot);
 	dc_loadstate(slot);
 	[host setPaused:NO reason:@"state"];
 	[host portMenuShowMessage:[NSString stringWithFormat:@"Loaded Slot %d", slot]];
 }
 
-- (UIMenu *)displayMenu
+// One single-choice submenu whose subtitle shows the current choice.
+static UIMenu *ChoiceMenu(NSString *title, NSString *image, NSArray<NSString *> *names, const int *values, int count,
+		int current, void (^choose)(int value, NSString *name))
 {
-	UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
-			identifier:nil handler:^(UIAction *) {
-		config::ShowFPS = !config::ShowFPS;
-		SaveSettings();
-	}];
-	fps.state = config::ShowFPS ? UIMenuElementStateOn : UIMenuElementStateOff;
-	struct Res { int lines; NSString *title; };
-	const Res res[] = {{480, @"Original (480p)"}, {960, @"2× (960p)"}, {1440, @"3× (1440p)"}};
-	NSMutableArray *resolutions = [NSMutableArray array];
-	for (const Res& r : res) {
-		const int lines = r.lines;
-		UIAction *a = [UIAction actionWithTitle:r.title image:nil identifier:nil handler:^(UIAction *) {
-			config::RenderResolution = lines;
-			SaveSettings();
-		}];
-		a.state = config::RenderResolution == lines ? UIMenuElementStateOn : UIMenuElementStateOff;
-		[resolutions addObject:a];
+	NSMutableArray *items = [NSMutableArray array];
+	NSString *currentName = nil;
+	for (int i = 0; i < count; i++) {
+		const int value = values[i];
+		NSString *name = names[i];
+		UIAction *a = [UIAction actionWithTitle:name image:nil identifier:nil handler:^(UIAction *) { choose(value, name); }];
+		a.state = current == value ? UIMenuElementStateOn : UIMenuElementStateOff;
+		if (current == value)
+			currentName = name;
+		[items addObject:a];
 	}
-	UIMenu *resolution = [UIMenu menuWithTitle:@"Resolution" image:[UIImage systemImageNamed:@"square.resize.up"]
-			identifier:nil options:UIMenuOptionsSingleSelection children:resolutions];
-	return [UIMenu menuWithTitle:@"Display" image:[UIImage systemImageNamed:@"display"] identifier:nil options:0
-			children:@[resolution, fps]];
+	UIMenu *menu = [UIMenu menuWithTitle:title image:[UIImage systemImageNamed:image] identifier:nil
+			options:UIMenuOptionsSingleSelection children:items];
+	menu.subtitle = currentName;
+	return menu;
+}
+
+- (UIMenu *)graphicsMenu
+{
+	__weak UIViewController<SPPortMenuHost> *host = _host;
+	// Internal render height. 4× (1920 lines) is about native on a 12.9-inch iPad.
+	const int lines[] = {480, 960, 1440, 1920};
+	UIMenu *resolution = ChoiceMenu(@"Resolution", @"square.resize.up",
+			@[@"Original (480p)", @"2× (960p)", @"3× (1440p)", @"4× (1920p)"], lines, 4, config::RenderResolution,
+			^(int value, NSString *name) {
+		config::RenderResolution = value;
+		SaveSettings();
+		SPLog(@"setting resolution=%d", value);
+		[host portMenuShowMessage:[NSString stringWithFormat:@"Resolution: %@", name]];
+	});
+	// xBRZ redraws each texture at a higher resolution with smoothed edges.
+	const int factors[] = {1, 2, 4};
+	UIMenu *textures = ChoiceMenu(@"Texture Upscaling", @"wand.and.stars", @[@"Off", @"2× (xBRZ)", @"4× (xBRZ)"],
+			factors, 3, config::TextureUpscale, ^(int value, NSString *name) {
+		config::TextureUpscale = value;
+		SaveSettings();
+		SPResetTextureCache();
+		SPLog(@"setting texture_upscale=%d", value);
+		[host portMenuShowMessage:[NSString stringWithFormat:@"Texture Upscaling: %@", name]];
+	});
+	NSMutableArray *children = [NSMutableArray arrayWithObjects:resolution, textures, nil];
+	if ([host respondsToSelector:@selector(portMenuSetFPSVisible:)]) {
+		const BOOL visible = [host portMenuFPSVisible];
+		UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
+				identifier:nil handler:^(UIAction *) {
+			[host portMenuSetFPSVisible:!visible];
+			SPLog(@"setting show_fps=%d", !visible);
+		}];
+		fps.state = visible ? UIMenuElementStateOn : UIMenuElementStateOff;
+		[children addObject:fps];
+	}
+	return [UIMenu menuWithTitle:@"Graphics" image:[UIImage systemImageNamed:@"sparkles.tv"] identifier:nil options:0
+			children:children];
 }
 
 - (UIMenu *)soundMenu
@@ -154,18 +191,24 @@ static UIImage *SlotThumbnail(int slot)
 	struct Level { int volume; NSString *title; NSString *image; };
 	const Level levels[] = {{100, @"Full", @"speaker.wave.3"}, {50, @"Half", @"speaker.wave.1"}, {0, @"Off", @"speaker.slash"}};
 	NSMutableArray *items = [NSMutableArray array];
+	NSString *current = nil;
 	for (const Level& l : levels) {
 		const int volume = l.volume;
 		UIAction *a = [UIAction actionWithTitle:l.title image:[UIImage systemImageNamed:l.image] identifier:nil handler:^(UIAction *) {
 			config::AudioVolume.set(volume);
 			config::AudioVolume.calcDbPower();
 			SaveSettings();
+			SPLog(@"setting volume=%d", volume);
 		}];
 		a.state = config::AudioVolume == volume ? UIMenuElementStateOn : UIMenuElementStateOff;
+		if (config::AudioVolume == volume)
+			current = l.title;
 		[items addObject:a];
 	}
-	return [UIMenu menuWithTitle:@"Sound" image:[UIImage systemImageNamed:@"speaker.wave.2"] identifier:nil
+	UIMenu *sound = [UIMenu menuWithTitle:@"Sound" image:[UIImage systemImageNamed:@"speaker.wave.2"] identifier:nil
 			options:UIMenuOptionsSingleSelection children:items];
+	sound.subtitle = current;
+	return sound;
 }
 
 - (UIAction *)exportVMUActionForGameLoaded:(BOOL)loaded

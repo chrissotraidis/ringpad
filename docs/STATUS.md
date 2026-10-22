@@ -213,10 +213,18 @@ From Chris's first session on the iPad:
   clear on File 1.
 - **Widescreen:** on by default on iPhone, using Flycast's patch for this disc;
   checked on an iPhone 17 Pro Simulator in the Chaos 0 fight. Not offered on iPad.
+- **Emerald Coast recompiled:** with the 130-emblem save on the card, Trial ▸
+  Action Stage reaches Emerald Coast directly. A new acceptance script
+  (`tests/acceptance/trial-emerald-coast.txt`) runs and jumps through the
+  opening of the stage. Traced once, it went from 93.6% to 99.8% recompiled
+  (manifest `44c8a6d568863459`, 35,095 blocks, self-test 209,624 trials
+  passed). The Chaos 0 route lands on exactly the same frame as before and is
+  99.999% recompiled. The iPad build with this code is signed and waiting to
+  be installed.
 
 ## Not yet verified
 
-- Audio quality, Emerald Coast, reload, and anything after Chaos 0 on a new file.
+- Audio quality, reload, device speed in Emerald Coast, and stages past its opening.
 - The new stick, cheats and save import on the physical iPad: they were checked in
   the Simulator and in scripted runs; the iPad build is installed for Chris to try.
 - Hands-on touch play on the physical iPad. The controls were only tested

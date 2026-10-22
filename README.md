@@ -11,7 +11,8 @@ throughput on an M1. The same build reaches the fight in the iPad Simulator,
 rendering through MoltenVK. The iOS app is landscape and uses DCPad, a reusable
 Dreamcast touch control kit (`port/dcpad`), and imports the disc with a hash check.
 On a 12.9-inch iPad Pro (M2) it runs at full speed with more than half a CPU core
-spare, and keeps a shareable diagnostic log. See [STATUS.md](docs/STATUS.md).
+spare, and keeps a shareable diagnostic log. With a 130-emblem save, Trial mode
+reaches Emerald Coast, whose opening runs 99.8% recompiled. See [STATUS.md](docs/STATUS.md).
 
 - [PRD](docs/prd.md): goal, foundation decision, definition of done
 - [Plan](docs/PLAN.md): gates and work loop

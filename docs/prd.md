@@ -55,4 +55,5 @@ derived from the game and stay ignored and private, like the disc itself.
 | D8 | Publication is a separate decision. Flycast is GPL-2.0-or-later and SunPad is GPL-3.0-or-later, so released source would be GPL-3.0; game-derived files are never published. |
 
 Non-goals: SADX content, other disc revisions, online features, mods, a general
-Dreamcast emulator front end, and App Store distribution.
+Dreamcast emulator front end, App Store distribution, and a native renderer
+replacing Flycast's graphics (decided 22 October; see [PLAN.md](PLAN.md)).

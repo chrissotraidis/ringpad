@@ -122,7 +122,7 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
   - Game Files: Import Game and Export VMU Save, which backs up the in-game save through the share sheet.
   - About This Build, then DCPad's Controls.
   - DCPad shows a short confirmation such as "Saved to Slot 1".
-  - Widescreen was tried and dropped: Flycast's widescreen mode shrinks the picture in SonicPad's host, and Sonic Adventure has no native widescreen.
+  - Widescreen was dropped at this point because Flycast's widescreen option shrank the picture inside SonicPad's view. It came back on iPhone on 22 October using Flycast's patch for this disc (see below).
 - **Tests:** 377 DCPad host checks pass. The UI suite adds save/load state and live resolution change tests.
 
 ### Fourth pass (12 October 2026)
@@ -219,14 +219,24 @@ From Chris's first session on the iPad:
   opening of the stage. Traced once, it went from 93.6% to 99.8% recompiled
   (manifest `44c8a6d568863459`, 35,095 blocks, self-test 209,624 trials
   passed). The Chaos 0 route lands on exactly the same frame as before and is
-  99.999% recompiled. The iPad build with this code is signed and waiting to
-  be installed.
+  99.999% recompiled. An iPad build with this code was signed at 14:22.
+
+### Graphics direction (22 October 2026)
+
+Flycast stays the Dreamcast hardware layer. Replacing its graphics with a
+native Metal renderer was scoped and set aside: it would mean hooking the
+game's Ninja library calls in the executor and rewriting the PowerVR2 look
+(transparency sorting, fog, effects), months of work. It would not give
+widescreen by itself either, because the game culls and places the HUD for
+4:3 before anything is drawn. Visual improvements come from settings and
+game patches on top of Flycast. See [PLAN.md](PLAN.md).
 
 ## Not yet verified
 
 - Audio quality, reload, device speed in Emerald Coast, and stages past its opening.
 - The new stick, cheats and save import on the physical iPad: they were checked in
-  the Simulator and in scripted runs; the iPad build is installed for Chris to try.
+  the Simulator and in scripted runs. SonicPad is on the iPad, but every build
+  reports version 0.1 (1), so whether it is the 14:22 build is not recorded.
 - Hands-on touch play on the physical iPad. The controls were only tested
   with UI tests in the Simulator; the device runs above were the intro and
   attract demo without touches.
@@ -241,6 +251,11 @@ From Chris's first session on the iPad:
   interpreter (correct, slower).
 - Flycast runs create `~/Library/Application Support/Flycast/` for settings
   and VMU data.
+- Widescreen is Flycast's two-value patch for this disc plus a 4:3 to 16:9
+  stretch. Players of the same patch report objects popping in at the right
+  edge and a stretched HUD; not yet checked in SonicPad. No PAL v1.003 culling
+  or HUD fix has been found; Dreamcast Image Builder's culling fix targets USA
+  v1.005.
 
 ## Next
 

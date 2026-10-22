@@ -110,6 +110,11 @@ run_suite test_game_import -I port/game \
 rc=$?
 [ "$rc" -eq 0 ] || exit "$rc"
 
+run_suite test_vmu_image -I port/game \
+    port/game/VMUImage.cpp tests/host/test_vmu_image.cpp
+rc=$?
+[ "$rc" -eq 0 ] || exit "$rc"
+
 # The app's built-in disc identity must match config/game-identity.json.
 python3 - <<'EOF' | tee -a "$log"
 import json, re, sys

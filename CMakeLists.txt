@@ -94,7 +94,8 @@ if(IOS)
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPFrameCapture.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/game/VMUImage.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
@@ -154,7 +155,9 @@ endif()
 list(LENGTH _sp_generated _sp_generated_count)
 message(STATUS "SonicPad AOT sources: ${_sp_generated_count}")
 
-target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp ${_sp_generated})
-target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp)
+target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/port/game/SonicCheats.cpp ${_sp_generated})
+target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp
+	${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 target_compile_definitions(flycast PRIVATE TARGET_NO_REC)
 set_source_files_properties(${_sp_generated} PROPERTIES COMPILE_OPTIONS "-O2;-Wno-unused-function")

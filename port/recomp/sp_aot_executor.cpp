@@ -8,9 +8,12 @@
 // 90 = right). Duration-0 actions: SHOT:<name> writes a PNG of the last frame to
 // SONICPAD_SHOT_DIR (default generated/shots); STATE:<file> writes a development
 // save state. SONICPAD_STATE_LOAD=<file> resumes from such a state at boot.
+// DUMP:<file> writes the 16 MB of main RAM, for finding game variables.
+// SONICPAD_CHEATS=<id,id> turns on cheats from port/game/SonicCheats at boot.
 // SONICPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
 // SONICPAD_EXIT_AT=<guest seconds> prints a SONICPAD_PERF line and exits.
 #include "sp_block_api.h"
+#include "SonicCheats.h"
 #include "emulator.h"
 #include "serialize.h"
 #include "hw/pvr/Renderer_if.h"
@@ -156,6 +159,9 @@ public:
 		if (!selfTestDone)
 		{
 			selfTestDone = true;
+			sonicpad::install_cheats();
+			if (const char *cheats = std::getenv("SONICPAD_CHEATS"))
+				sonicpad::enable_cheats_from_list(cheats);
 			if (aotEnabled && std::getenv("SONICPAD_SKIP_SELFTEST") == nullptr && !runSelfTest())
 			{
 				aotEnabled = false;
@@ -310,7 +316,7 @@ private:
 
 	struct ScriptEvent
 	{
-		enum Kind : u8 { Input, Shot, State };
+		enum Kind : u8 { Input, Shot, State, Dump };
 		u64 start;
 		u64 end;
 		u32 buttons = 0;
@@ -374,6 +380,11 @@ private:
 				event.kind = ScriptEvent::State;
 				event.arg = what.substr(6);
 			}
+			else if (what.rfind("DUMP:", 0) == 0)
+			{
+				event.kind = ScriptEvent::Dump;
+				event.arg = what.substr(5);
+			}
 			for (const auto& name : names)
 				if (what == name.first)
 					event.buttons = name.second;
@@ -400,6 +411,8 @@ private:
 					event.announced = true;
 					if (event.kind == ScriptEvent::Shot)
 						takeShot(event.arg);
+					else if (event.kind == ScriptEvent::Dump)
+						dumpRam(event.arg);
 					else
 						saveState(event.arg);
 				}
@@ -430,6 +443,19 @@ private:
 	}
 
 	// Development aid: PNG of the last presented frame, written on the UI thread.
+	// Development aid: main RAM (0x0C000000, 16 MB) as raw little-endian bytes.
+	void dumpRam(const std::string& file)
+	{
+		std::vector<u32> ram(RAM_SIZE / 4);
+		for (u32 i = 0; i < ram.size(); i++)
+			ram[i] = ReadMem32_nommu(0x8C000000 + i * 4);
+		FILE *f = std::fopen(file.c_str(), "wb");
+		const bool ok = f != nullptr && std::fwrite(ram.data(), 4, ram.size(), f) == ram.size();
+		if (f != nullptr)
+			std::fclose(f);
+		std::fprintf(stderr, "SONICPAD_DUMP t=%.2f %s ok=%d\n", slices / kSlicesPerSecond, file.c_str(), ok ? 1 : 0);
+	}
+
 	void takeShot(const std::string& name)
 	{
 		const char *dir = std::getenv("SONICPAD_SHOT_DIR");

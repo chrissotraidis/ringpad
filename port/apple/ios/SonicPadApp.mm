@@ -14,6 +14,7 @@
 #import "DCPadControllerInput.h"
 #import "DCPadOverlayView.h"
 
+#include "SonicCheats.h"
 #include "types.h"
 #include "emulator.h"
 #include "stdclass.h"
@@ -286,6 +287,8 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	// SonicPad draws its own FPS counter at the top left.
 	config::ShowFPS = false;
 	[self applyGraphicsDefaultsOnce];
+	[SPPortMenu applyWidescreenPreference];
+	[self restoreCheats];
 	vgamepad::hide();
 	EventManager::listen(Event::Resume, hideFlycastGamepad);
 	self.scriptedInput = std::getenv("SONICPAD_INPUT_SCRIPT") != nullptr;
@@ -345,6 +348,17 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, 60, 60);
 	[self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 	[self showMenuHintOnce];
+	// Development and device testing: SONICPAD_IMPORT_VMU=<file>[,<file>] imports
+	// a save (paths relative to Documents) once the game has started.
+	if (const char *vmu = std::getenv("SONICPAD_IMPORT_VMU")) {
+		NSMutableArray<NSURL *> *urls = [NSMutableArray array];
+		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+		for (NSString *part in [@(vmu) componentsSeparatedByString:@","])
+			[urls addObject:[NSURL fileURLWithPath:part.isAbsolutePath ? part : [documents stringByAppendingPathComponent:part]]];
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+			[self.portMenu importVMUFromURLs:urls];
+		});
+	}
 }
 
 // One tip on the first play: where save states and settings live.
@@ -557,15 +571,75 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 			options:UIMenuOptionsDisplayInline children:quick];
 	quickRow.preferredElementSize = UIMenuElementSizeMedium;
 	UIMenu *files = [UIMenu menuWithTitle:@"Game Files" image:[UIImage systemImageNamed:@"folder"] identifier:nil options:0
-			children:@[importGame, [self.portMenu exportVMUActionForGameLoaded:loaded]]];
+			children:@[importGame, [self.portMenu importVMUActionForGameLoaded:loaded],
+				[self.portMenu exportVMUActionForGameLoaded:loaded]]];
 	UIMenu *help = [UIMenu menuWithTitle:@"Help" image:[UIImage systemImageNamed:@"questionmark.circle"] identifier:nil options:0
 			children:@[about, diagnostics]];
 	return @[
 		quickRow,
 		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline
-				children:@[controls, [self.portMenu graphicsMenu], [self.portMenu soundMenu]]],
+				children:@[controls, [self.portMenu graphicsMenu], [self.portMenu soundMenu], [self cheatsMenu]]],
 		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[files, help]],
 	];
+}
+
+#pragma mark Cheats
+
+static NSString *const kCheatsKey = @"SonicPad.cheats";
+
+// Cheats ▸: each one is a toggle that stays on across launches.
+- (UIMenu *)cheatsMenu
+{
+	NSMutableArray *items = [NSMutableArray array];
+	int on = 0;
+	for (size_t i = 0; i < sonicpad::cheat_count(); i++) {
+		const sonicpad::CheatInfo& info = sonicpad::cheat_info(i);
+		const BOOL enabled = sonicpad::cheat_enabled(i);
+		on += enabled ? 1 : 0;
+		NSString *title = @(info.title);
+		UIAction *a = [UIAction actionWithTitle:title image:nil identifier:nil handler:^(UIAction *) {
+			sonicpad::set_cheat_enabled(i, !enabled);
+			[self saveCheats];
+			SPLog(@"cheat %s=%d", sonicpad::cheat_info(i).id, !enabled);
+			[self.overlay showMessage:[NSString stringWithFormat:@"%@ %@", title, enabled ? @"off" : @"on"]];
+		}];
+		a.subtitle = @(info.subtitle);
+		a.state = enabled ? UIMenuElementStateOn : UIMenuElementStateOff;
+		[items addObject:a];
+	}
+	UIMenu *menu = [UIMenu menuWithTitle:@"Cheats" image:[UIImage systemImageNamed:@"wand.and.rays"] identifier:nil
+			options:0 children:items];
+	menu.subtitle = on > 0 ? [NSString stringWithFormat:@"%d on", on] : nil;
+	return menu;
+}
+
+- (void)saveCheats
+{
+	NSMutableArray *ids = [NSMutableArray array];
+	for (size_t i = 0; i < sonicpad::cheat_count(); i++)
+		if (sonicpad::cheat_enabled(i))
+			[ids addObject:@(sonicpad::cheat_info(i).id)];
+	[NSUserDefaults.standardUserDefaults setObject:ids forKey:kCheatsKey];
+}
+
+- (void)restoreCheats
+{
+	sonicpad::install_cheats();
+	NSArray *ids = [NSUserDefaults.standardUserDefaults arrayForKey:kCheatsKey];
+	if (ids.count > 0)
+		sonicpad::enable_cheats_from_list([ids componentsJoinedByString:@","].UTF8String);
+	SPLog(@"cheats on: %@", ids.count > 0 ? [ids componentsJoinedByString:@","] : @"none");
+}
+
+// Restart the loaded game (Reset, memory card import, widescreen off).
+- (void)portMenuRestartGame
+{
+	if (settings.content.path.empty())
+		return;
+	SPLog(@"restart game");
+	[self.pauseReasons minusSet:[NSSet setWithArray:@[@"reset", @"vmu-import", @"widescreen"]]];
+	self.stoppedByShell = NO;   // reloading starts the emulator itself
+	gui_start_game(settings.content.path);
 }
 
 // First launch only: render above the Dreamcast's 480 lines. On an M2 iPad
@@ -617,11 +691,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 		[self setPaused:NO reason:@"reset"];
 	}]];
 	[alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
-		SPLog(@"reset");
-		[self.pauseReasons removeObject:@"reset"];
-		self.stoppedByShell = NO;   // reloading starts the emulator itself
-		if (!settings.content.path.empty())
-			gui_start_game(settings.content.path);
+		[self portMenuRestartGame];
 	}]];
 	[self presentViewController:alert animated:YES completion:nil];
 }

@@ -200,9 +200,25 @@ From Chris's first session on the iPad:
   worst frame, graphics settings), plus menu, touch settings, layout, graphics,
   sound and save-state events.
 
+### Cheats, saves, widescreen and the stick (22 October 2026, evening)
+
+- **Analog stick:** a floating stick now stays where the thumb landed. Past
+  the rim the knob stops at the edge and holds full tilt; before, the base
+  followed the thumb with no limit and could slide across the screen.
+- **Cheats:** Max Rings, Infinite Lives and Unlock All Characters, found and
+  verified on this disc (the published PAL addresses are 0xC0 off). See
+  [CHEATS.md](CHEATS.md).
+- **Import VMU Save:** a `.VMS` save with its `.VMI`, or a whole card. A
+  130-emblem save imported through the app showed every character and 100%
+  clear on File 1.
+- **Widescreen:** on by default on iPhone, using Flycast's patch for this disc;
+  checked on an iPhone 17 Pro Simulator in the Chaos 0 fight. Not offered on iPad.
+
 ## Not yet verified
 
-- Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.
+- Audio quality, Emerald Coast, reload, and anything after Chaos 0 on a new file.
+- The new stick, cheats and save import on the physical iPad: they were checked in
+  the Simulator and in scripted runs; the iPad build is installed for Chris to try.
 - Hands-on touch play on the physical iPad. The controls were only tested
   with UI tests in the Simulator; the device runs above were the intro and
   attract demo without touches.
@@ -224,4 +240,5 @@ Chris plays on the iPad and reports how the controls feel, sharing the
 diagnostic log after anything odd. Then: device speed in Emerald Coast, an
 iPhone pass, and Bluetooth controller acceptance. S2: extend the acceptance
 script through Station Square into Emerald Coast and trace it, so later stages
-run as recompiled code.
+run as recompiled code. With a 130-emblem save, later stages can be reached
+quickly; each new stage needs one trace pass before it runs as recompiled code.

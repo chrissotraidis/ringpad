@@ -54,6 +54,7 @@ and rewrites `generated/recomp/`. Both are game-derived and stay ignored.
 | `SONICPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
 | `SONICPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
 | `SONICPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
+| `SONICPAD_CHEATS=<id,id>` | Turn on cheats at boot (`rings`, `lives`, `characters`). |
 
 Input script commands:
 
@@ -65,6 +66,7 @@ Input script commands:
 | `ANGLE:deg[,pct]` | Stick by angle (0 = up, 90 = right) at a percentage of full tilt (default 100). |
 | `SHOT:<name>` | With duration 0: save a PNG of the last frame as `<name>.png`. |
 | `STATE:<file>` | With duration 0: write a development save state, for iterating a long route one segment at a time. |
+| `DUMP:<file>` | With duration 0: write the 16 MB of main RAM, for finding game variables. |
 
 Development states are for building routes only. Acceptance runs replay the
 whole route from boot without loading one.
@@ -108,6 +110,8 @@ On iOS, `SONICPAD_IMPORT=<folder>` runs the import flow on launch (a relative
 path is inside the app's Documents),
 `SONICPAD_IGNORE_INSTALLED=1` shows the import screen, and
 `SONICPAD_INPUT_DEBUG=1` shows the port-A values the tests read.
+`SONICPAD_IMPORT_VMU=<file>[,<file>]` imports a save without the picker
+(paths relative to Documents), as Game Files ▸ Import VMU Save does.
 
 ## iPad or iPhone
 

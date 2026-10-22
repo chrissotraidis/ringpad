@@ -246,7 +246,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
 	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
-	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Game Files", @"Help"])
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Cheats", @"Game Files", @"Help"])
 		XCTAssertTrue([self menuItem:item in:app].isHittable, @"top-level item %@ fits on screen", item);
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
@@ -264,6 +264,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[app.buttons[@"Game Files"] tap];
 	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
 	XCTAssertTrue([self menuItem:@"Export VMU Save…" in:app].exists);
+	XCTAssertTrue([self menuItem:@"Import VMU Save…" in:app].exists);
 	[self dismissMenu:app];
 
 	[app.buttons[@"dcpad.menu"] tap];
@@ -367,6 +368,28 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 }
 
 // Closing the menu must leave the game moving, every time.
+// Cheats ▸ toggles a cheat, the menu shows it as on, and the game keeps running.
+- (void)testCheatsToggle
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:6];
+	[app.buttons[@"dcpad.menu"] tap];
+	[[self menuItem:@"Cheats" in:app] tap];
+	for (NSString *item in @[@"Max Rings", @"Infinite Lives", @"Unlock All Characters"])
+		XCTAssertTrue([[self menuItem:item in:app] waitForExistenceWithTimeout:5], @"%@", item);
+	[self attachScreenshot:@"cheats-menu"];
+	[[self menuItem:@"Max Rings" in:app] tap];
+	[NSThread sleepForTimeInterval:1.5];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game runs after turning a cheat on");
+	[app.buttons[@"dcpad.menu"] tap];
+	XCUIElement *cheats = [self menuItem:@"Cheats" in:app];
+	XCTAssertTrue([cheats waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([cheats.label containsString:@"1 on"], @"Cheats shows how many are on: %@", cheats.label);
+	[cheats tap];
+	[[self menuItem:@"Max Rings" in:app] tap];   // back off, so other tests start clean
+	[NSThread sleepForTimeInterval:1];
+}
+
 - (void)testGameKeepsMovingAfterMenu
 {
 	XCUIApplication *app = [self launchGame];

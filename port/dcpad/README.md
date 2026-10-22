@@ -27,7 +27,7 @@ DCPad adds what a Dreamcast pad needs:
 
 | Control | Behaviour |
 |---|---|
-| Analog stick | Floating by default: touch anywhere in the lower-left area and the stick centres under your thumb. The base follows the thumb past the rim, so changing direction is instant. Full tilt at 85% of the radius by default; **Stick travel** in settings sets it from 50% to 100%. A fixed mode is in settings. A direction arc on the rim shows where the stick points. |
+| Analog stick | Floating by default: touch anywhere in the lower-left area and the stick centres under your thumb. The base stays where the thumb landed; past the rim the knob stops at the edge and the stick holds full tilt in that direction. Full tilt at 85% of the radius by default; **Stick travel** in settings sets it from 50% to 100%. A fixed mode is in settings. A direction arc on the rim shows where the stick points. |
 | D-pad | One eight-way cross. Roll the thumb between directions without lifting; cardinals own 60° and diagonals 30°. Keeps tracking if the thumb drifts off the cross. Pressed arms light up inside the cross. |
 | A / B / X / Y | Dreamcast diamond and colours (A red bottom, B blue right, X yellow left, Y green top). Slide between buttons without lifting. Resting between two neighbours presses both, but opposite buttons never chord. |
 | L / R | Analog sliders. A light touch is already past the game's digital threshold; pressure grows toward the outer screen edge, and past the rim notches (72% of the length) is a full press with a haptic tap, a glow and hysteresis. |

@@ -196,17 +196,11 @@ void TouchEngine::count_new(uint8_t before, uint8_t after) {
 void TouchEngine::update(Touch& t, float x, float y, const Layout& l) {
     switch (t.control) {
     case Control::Stick: {
-        float dx = x - t.base_x, dy = y - t.base_y;
+        /* The base stays where the thumb landed. Past the rim the knob stops
+         * at the edge and the stick holds full tilt in the thumb's direction,
+         * so the stick never wanders across the screen with the thumb. */
+        const float dx = x - t.base_x, dy = y - t.base_y;
         const float r = std::max(1.0f, l.stick_radius);
-        const float len = std::hypot(dx, dy);
-        /* A floating base follows the thumb past the rim, so changing
-         * direction never needs the thumb to travel back first. */
-        if (t.floating && len > r) {
-            t.base_x = x - dx / len * r;
-            t.base_y = y - dy / len * r;
-            dx = x - t.base_x;
-            dy = y - t.base_y;
-        }
         const float reach = r * clampf(t.travel, 0.5f, 1.0f);
         float vx = dx / reach, vy = dy / reach;
         const float m = std::hypot(vx, vy);

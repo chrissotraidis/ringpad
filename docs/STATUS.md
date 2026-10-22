@@ -1,6 +1,6 @@
 # SonicPad status
 
-Updated **10 October 2026**. History before the static-recompilation decision
+Updated **22 October 2026**. History before the static-recompilation decision
 is archived in [archive/katana-route](../archive/katana-route/README.md).
 
 ## Verified
@@ -133,12 +133,52 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
 - **First play:** a one-time tip, "Tap ••• for save states and settings".
 - **Tests:** 377 DCPad host checks and all 12 UI tests pass on the iPad and iPhone Simulators.
 
+## S3 physical iPad (22 October 2026)
+
+SonicPad is signed with Chris's development team, installed and running on
+his **iPad Pro 12.9-inch (6th generation, M2), iPadOS 27.0.1**.
+
+- **Speed:** full speed from the first boot. Over eight minutes of title,
+  intro and attract demo, every 30-second window read 0.99–1.00x, with the
+  SH-4 thread using 0.38–0.44 s of CPU per guest second (more than half a
+  core spare). No faults, memory warnings or thermal changes were logged.
+- **Recompiled code:** manifest `4e3bc925e044b752` (29,889 blocks from two
+  traces of the Chaos 0 route). The startup self-test passed on the device
+  (201,376 trials). Coverage is 99.99% on the traced route; the attract demo
+  reaches untraced stages and drops to 96–98% while still running at full speed.
+- **Import:** the disc was copied into the app's Documents and imported with
+  the normal flow (`SONICPAD_IMPORT`, every track hashed on the device). The
+  copy is an APFS clone, so free space did not change. Reinstalls keep it.
+- **Icon:** a gold ring with speed streaks over sky and sea (generated; no
+  characters, logos or game artwork) in `port/apple/ios/Assets.xcassets`.
+- **Diagnostic log:** `SPDiagnostics` keeps this session and the previous one
+  in `Library/Application Support/SonicPad/Logs`, copying everything the
+  runtime writes to stderr with timestamps. It adds lifecycle, pause, import,
+  save-state, controller, memory and thermal events, a `SONICPAD_LIVE` speed
+  line every 30 s, and a crash line written directly from the fault handler.
+  ••• ▸ Help ▸ Share Diagnostic Log sends both sessions as one text file;
+  `scripts/ios/pull-device-log.sh` copies them to the Mac.
+- **Build fixes found on the way:**
+  - Flycast's own `Images.xcassets` replaced SonicPad's icon; it is now excluded.
+  - The catalog needed its `MACOSX_PACKAGE_LOCATION` set in Flycast's directory.
+  - CoreGraphics and OpenGLES are linked explicitly; they had only been pulled in
+    implicitly by Flycast's catalog.
+  - The iOS scripts re-run CMake each time, because the Xcode generator did not
+    pick up newly generated recompiled sources and silently built an
+    interpreter-only app.
+- **Simulator:** 11 of the 12 UI tests passed on a 12.9-inch iPad Pro Simulator in
+  the full run; the menu test failed only because About moved into the new Help
+  submenu, and the updated test (which now also opens and closes the share sheet)
+  passes. All 584 host checks pass.
+
 ## Not yet verified
 
 - Audio quality, VMU saves, Emerald Coast, reload, and anything after Chaos 0.
-- Performance on iOS. Floating-point opcodes still call Flycast's handlers.
-- Physical iPad and iPhone builds: they need a signing identity and Chris's
-  device; nothing has run on device hardware yet.
+- Hands-on touch play on the physical iPad. The controls were only tested
+  with UI tests in the Simulator; the device runs above were the intro and
+  attract demo without touches.
+- iPhone hardware, and device speed in Emerald Coast and later stages.
+- Render resolutions above 480p on the device.
 
 ## Known limits of the current runtime
 
@@ -151,7 +191,8 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
 
 ## Next
 
-S3 device: sign a device build and measure Emerald Coast on Chris's iPad.
-S4 follow-ups: a physical iPad and iPhone pass on the touch controls, and
-Bluetooth controller acceptance. S2: extend the acceptance script through Station Square into
-Emerald Coast.
+Chris plays on the iPad and reports how the controls feel, sharing the
+diagnostic log after anything odd. Then: device speed in Emerald Coast, an
+iPhone pass, and Bluetooth controller acceptance. S2: extend the acceptance
+script through Station Square into Emerald Coast and trace it, so later stages
+run as recompiled code.

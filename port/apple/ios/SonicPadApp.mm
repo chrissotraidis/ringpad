@@ -9,6 +9,7 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "SPGameLibrary.h"
+#import "SPDiagnostics.h"
 #import "SPPortMenu.h"
 #import "DCPadControllerInput.h"
 #import "DCPadOverlayView.h"
@@ -46,7 +47,7 @@ static_assert(sonicpad::kFlycastLeft == DC_DPAD_LEFT && sonicpad::kFlycastRight 
 
 // Flycast's fault handler chains here for faults it does not own. Log where
 // the fault happened (symbol and image offset) before the process traps, so
-// crash reports name the faulting function.
+// crash reports and the diagnostic log name the faulting function.
 static void reportFault(int sig, siginfo_t *info, void *context)
 {
 	const ucontext_t *uc = static_cast<const ucontext_t *>(context);
@@ -55,9 +56,13 @@ static void reportFault(int sig, siginfo_t *info, void *context)
 	Dl_info where{}, caller{};
 	dladdr(reinterpret_cast<void *>(pc), &where);
 	dladdr(reinterpret_cast<void *>(lr), &caller);
-	NSLog(@"SONICPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx", sig, info->si_addr,
+	char line[512];
+	const int n = snprintf(line, sizeof line, "SONICPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx\n", sig, info->si_addr,
 			where.dli_sname ?: "?", (unsigned long)(pc - (uintptr_t)(where.dli_saddr ?: where.dli_fbase)),
 			caller.dli_sname ?: "?", (unsigned long)(lr - (uintptr_t)(caller.dli_saddr ?: caller.dli_fbase)));
+	// Straight to the log file: the stderr copier thread may not run again.
+	if (SPDiagnosticsFD() >= 0 && n > 0)
+		write(SPDiagnosticsFD(), line, (size_t)MIN(n, (int)sizeof line - 1));
 	signal(sig, SIG_DFL);
 	raise(sig);
 }
@@ -233,18 +238,27 @@ static void hideFlycastGamepad(Event, void *)
 	self.controllerInput = [[DCPadControllerInput alloc] initWithNamespace:@"SonicAdventure"];
 	__weak SPGameViewController *weakSelf = self;
 	self.controllerInput.connectionChanged = ^(BOOL connected) {
+		SPLog(@"controller %@", connected ? @"connected" : @"disconnected");
 		[weakSelf.overlay setControllerConnected:connected];
 	};
 	[self.controllerInput start];
 
 	if (const char *game = std::getenv("SONICPAD_GAME")) {
+		SPLog(@"game: from SONICPAD_GAME");
 		settings.content.path = game;
 	} else if (const char *folder = std::getenv("SONICPAD_IMPORT")) {
+		// A relative path is inside the app's Documents, where a device copy
+		// (devicectl, Finder file sharing) puts the disc folder.
+		NSString *path = [NSString stringWithUTF8String:folder];
+		if (!path.isAbsolutePath)
+			path = [@(home.c_str()) stringByAppendingPathComponent:path];
 		[self showImport:NO];
-		[self importFromURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:folder] isDirectory:YES]];
+		[self importFromURL:[NSURL fileURLWithPath:path isDirectory:YES]];
 	} else if (NSString *installed = std::getenv("SONICPAD_IGNORE_INSTALLED") ? nil : [SPGameLibrary installedGamePath]) {
+		SPLog(@"game: installed disc");
 		settings.content.path = installed.fileSystemRepresentation;
 	} else {
+		SPLog(@"game: none installed, showing import");
 		[self showImport:NO];
 	}
 }
@@ -262,6 +276,8 @@ static void hideFlycastGamepad(Event, void *)
 	[self updateDrawableSize];
 	CAMetalLayer *layer = (CAMetalLayer *)self.view.layer;
 	settings.display.dpi = 160.f * layer.contentsScale;
+	SPLog(@"render start: %.0fx%.0f px, resolution %d lines, volume %d", layer.drawableSize.width, layer.drawableSize.height,
+			(int)config::RenderResolution, (int)config::AudioVolume);
 	initRenderApi((__bridge void *)layer);
 	mainui_init();
 	self.renderStarted = YES;
@@ -358,9 +374,11 @@ static void hideFlycastGamepad(Event, void *)
 		[self.pauseReasons removeObject:reason];
 	const BOOL nowPaused = self.pauseReasons.count > 0;
 	if (nowPaused && !wasPaused && emu.running()) {
+		SPLog(@"pause (%@)", reason);
 		emu.stop();
 		self.stoppedByShell = YES;
 	} else if (!nowPaused && wasPaused && self.stoppedByShell) {
+		SPLog(@"resume (%@)", reason);
 		self.stoppedByShell = NO;
 		emu.start();
 	}
@@ -401,6 +419,9 @@ static void hideFlycastGamepad(Event, void *)
 	reset.attributes = loaded ? 0 : UIMenuElementAttributesDisabled;
 	UIAction *about = [UIAction actionWithTitle:@"About This Build" image:[UIImage systemImageNamed:@"info.circle"]
 			identifier:nil handler:^(UIAction *) { [weakSelf showAbout]; }];
+	UIAction *diagnostics = [UIAction actionWithTitle:@"Share Diagnostic Log…" image:[UIImage systemImageNamed:@"doc.text.magnifyingglass"]
+			identifier:nil handler:^(UIAction *) { [weakSelf shareDiagnostics]; }];
+	diagnostics.subtitle = @"This session and the last one";
 	// Save, load and reset sit in one row of icons at the top: the things a
 	// player reaches for most. The rest stays one level down so the menu
 	// fits a landscape phone.
@@ -413,12 +434,33 @@ static void hideFlycastGamepad(Event, void *)
 	return @[
 		quickRow,
 		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline
-				children:@[[self.portMenu displayMenu], [self.portMenu soundMenu], files, about]],
+				children:@[[self.portMenu displayMenu], [self.portMenu soundMenu], files,
+					[UIMenu menuWithTitle:@"Help" image:[UIImage systemImageNamed:@"questionmark.circle"] identifier:nil options:0
+							children:@[about, diagnostics]]]],
 	];
+}
+
+- (void)shareDiagnostics
+{
+	SPLog(@"diagnostic log shared");
+	NSURL *report = SPDiagnosticsReportURL();
+	if (report == nil) {
+		[self.overlay showMessage:@"Couldn't read the log"];
+		return;
+	}
+	[self setPaused:YES reason:@"diagnostics"];
+	UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:@[report] applicationActivities:nil];
+	share.popoverPresentationController.sourceView = self.view;
+	share.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMaxX(self.view.bounds) - 60, 40, 1, 1);
+	share.completionWithItemsHandler = ^(UIActivityType, BOOL, NSArray *, NSError *) {
+		[self setPaused:NO reason:@"diagnostics"];
+	};
+	[self presentViewController:share animated:YES completion:nil];
 }
 
 - (void)portMenuShowMessage:(NSString *)message
 {
+	SPLog(@"%@", message);
 	[self.overlay showMessage:message];
 }
 
@@ -431,6 +473,7 @@ static void hideFlycastGamepad(Event, void *)
 		[self setPaused:NO reason:@"reset"];
 	}]];
 	[alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
+		SPLog(@"reset");
 		[self.pauseReasons removeObject:@"reset"];
 		self.stoppedByShell = NO;   // reloading starts the emulator itself
 		if (!settings.content.path.empty())
@@ -497,7 +540,7 @@ static void hideFlycastGamepad(Event, void *)
 	self.importProgress.hidden = NO;
 	self.importProgress.progress = 0;
 	self.importStatus.text = @"Checking the disc…";
-	NSLog(@"SONICPAD_IMPORT start %@", folder.path);
+	SPLog(@"import start %@", folder.lastPathComponent);
 	[SPGameLibrary importFolder:folder
 			progress:^(double fraction) {
 				self.importProgress.progress = fraction;
@@ -507,11 +550,11 @@ static void hideFlycastGamepad(Event, void *)
 				self.importCancel.enabled = YES;
 				self.importProgress.hidden = YES;
 				if (gdiPath == nil) {
-					NSLog(@"SONICPAD_IMPORT failed %@", error);
+					SPLog(@"import failed: %@", error);
 					self.importStatus.text = error;
 					return;
 				}
-				NSLog(@"SONICPAD_IMPORT ok %@", gdiPath);
+				SPLog(@"import ok %@", gdiPath.lastPathComponent);
 				[self hideImport];
 				[self.pauseReasons removeObject:@"import"];
 				self.stoppedByShell = NO;   // loading starts the emulator itself
@@ -522,6 +565,7 @@ static void hideFlycastGamepad(Event, void *)
 
 - (void)startGame:(NSString *)gdiPath
 {
+	SPLog(@"start game");
 	settings.content.path = gdiPath.fileSystemRepresentation;
 	if (self.renderStarted)
 		gui_start_game(settings.content.path);
@@ -561,17 +605,19 @@ static void hideFlycastGamepad(Event, void *)
 	UIWindowSceneGeometryPreferencesIOS *landscape = [[UIWindowSceneGeometryPreferencesIOS alloc]
 			initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscape];
 	[windowScene requestGeometryUpdateWithPreferences:landscape errorHandler:^(NSError *error) {
-		NSLog(@"SonicPad landscape request failed: %@", error);
+		SPLog(@"landscape request failed: %@", error);
 	}];
 }
 
 - (void)sceneDidEnterBackground:(UIScene *)scene
 {
+	SPLog(@"background");
 	[(SPGameViewController *)self.window.rootViewController setPaused:YES reason:@"background"];
 }
 
 - (void)sceneWillEnterForeground:(UIScene *)scene
 {
+	SPLog(@"foreground");
 	[(SPGameViewController *)self.window.rootViewController setPaused:NO reason:@"background"];
 }
 
@@ -617,6 +663,10 @@ void setEditMode(bool)
 int main(int argc, char *argv[])
 {
 	@autoreleasepool {
+		// MoltenVK lists every Vulkan extension at info level; keep warnings
+		// and errors so the diagnostic log stays readable.
+		setenv("MVK_CONFIG_LOG_LEVEL", "2", 0);
+		SPDiagnosticsStart();
 		return UIApplicationMain(argc, argv, nil, NSStringFromClass([SPAppDelegate class]));
 	}
 }

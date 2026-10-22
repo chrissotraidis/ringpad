@@ -32,7 +32,7 @@ DCPad adds what a Dreamcast pad needs:
 | A / B / X / Y | Dreamcast diamond and colours (A red bottom, B blue right, X yellow left, Y green top). Slide between buttons without lifting. Resting between two neighbours presses both, but opposite buttons never chord. |
 | L / R | Analog sliders. A light touch is already past the game's digital threshold; pressure grows toward the outer screen edge, and past the rim notches (72% of the length) is a full press with a haptic tap, a glow and hysteresis. |
 | Start | Separate pill beside the right thumb, never part of the ••• menu. |
-| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); About. `showMessage:` confirms actions such as "Saved to Slot 1". |
+| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); Help (About, Share Diagnostic Log). `showMessage:` confirms actions such as "Saved to Slot 1". |
 
 Each finger owns one control from touch-down to lift, so lifting one thumb
 never releases another's input, and a second finger can't take over a stick,

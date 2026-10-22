@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <thread>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -146,6 +147,7 @@ public:
 			slicesAtWallStart = slices;
 		}
 		cpuBase = cpuAccumulated - cpuAtStart;
+		resetLiveWindow();
 		if (!selfTestDone)
 		{
 			selfTestDone = true;
@@ -295,6 +297,9 @@ private:
 		writeTrace();
 		report(true);
 		std::fflush(stderr);
+		// The iOS shell copies stderr into its diagnostic log on another
+		// thread; give it a moment to write these last lines.
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		std::_Exit(0);
 	}
 
@@ -720,7 +725,36 @@ private:
 	void housekeeping()
 	{
 		writeTrace();
+		liveReport();
 		report(false);
+	}
+
+	// One line every 30 s of play for the on-device log: guest speed (1.00x
+	// is full speed), SH-4 thread CPU per guest second (headroom) and the
+	// share of instructions that ran as recompiled code. The window restarts
+	// whenever the shell resumes the emulator, so pauses are not counted.
+	void resetLiveWindow()
+	{
+		liveStart = std::chrono::steady_clock::now();
+		liveSlices = slices;
+		liveAot = aotOps;
+		liveInterp = interpretedOps;
+		liveCpu = threadCpuSeconds();
+	}
+
+	void liveReport()
+	{
+		const auto now = std::chrono::steady_clock::now();
+		const double wall = std::chrono::duration<double>(now - liveStart).count();
+		if (wall < 30)
+			return;
+		const double guest = (slices - liveSlices) / kSlicesPerSecond;
+		const double cpu = threadCpuSeconds() - liveCpu;
+		const double aot = double(aotOps - liveAot), interp = double(interpretedOps - liveInterp);
+		std::fprintf(stderr, "SONICPAD_LIVE guest_s=%.1f wall_s=%.1f speed=%.2fx sh4_cpu_per_guest_s=%.3f aot_pct=%.2f aot=%d\n",
+				guest, wall, guest / wall, guest > 0 ? cpu / guest : 0.0, aot + interp > 0 ? 100.0 * aot / (aot + interp) : 0.0,
+				aotEnabled ? 1 : 0);
+		resetLiveWindow();
 	}
 
 	void report(bool final)
@@ -787,6 +821,9 @@ private:
 	double cpuAccumulated = 0;
 	std::chrono::steady_clock::time_point wallStart;
 	std::chrono::steady_clock::time_point lastReport;
+	std::chrono::steady_clock::time_point liveStart;
+	u64 liveSlices = 0, liveAot = 0, liveInterp = 0;
+	double liveCpu = 0;
 };
 
 } // namespace

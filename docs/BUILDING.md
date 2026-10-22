@@ -1,7 +1,8 @@
 # Building SonicPad
 
 Requires an Apple Silicon Mac, the Command Line Tools, CMake 3.24+, Ninja,
-Python 3, Git and Homebrew `libpng`. Run commands from the repository root.
+Python 3.11+ (for `verify-game.py`), Git and Homebrew `libpng`. Run commands
+from the repository root.
 
 ## One-time setup
 
@@ -103,8 +104,45 @@ scripts/ios/run-ui-tests.sh <udid>
 
 Set `SONICPAD_REAL_GDI=ref/<disc folder>` when running
 `scripts/run-host-tests.sh` to also verify the owner's disc on the host.
-On iOS, `SONICPAD_IMPORT=<folder>` runs the import flow on launch,
+On iOS, `SONICPAD_IMPORT=<folder>` runs the import flow on launch (a relative
+path is inside the app's Documents),
 `SONICPAD_IGNORE_INSTALLED=1` shows the import screen, and
 `SONICPAD_INPUT_DEBUG=1` shows the port-A values the tests read.
+
+## iPad or iPhone
+
+Generate the recompiled code first (trace, generate, rebuild above);
+without it the device runs everything on the interpreter, at about half speed.
+Then build, sign with your development team and install in place (the
+imported disc, saves and settings stay):
+
+```sh
+SONICPAD_TEAM=<team ID> scripts/ios/run-device.sh <device UDID> [--launch]
+```
+
+To put the disc on the device without the Files picker, copy the folder into
+the app's Documents and launch with the import variable:
+
+```sh
+for f in ref/<disc folder>/*; do
+  xcrun devicectl device copy to --device <UDID> --domain-type appDataContainer \
+    --domain-identifier com.chrissotraidis.sonicpad --source "$f" \
+    --destination "Documents/SonicAdventure/$(basename "$f")"
+done
+xcrun devicectl device process launch --device <UDID> --terminate-existing \
+  --environment-variables '{"SONICPAD_IMPORT":"SonicAdventure"}' com.chrissotraidis.sonicpad
+```
+
+The import hashes every track on the device and clones the files, so it uses
+no extra space.
+
+## Diagnostic log
+
+The app keeps this session and the previous one in
+`Library/Application Support/SonicPad/Logs`: everything the runtime writes to
+stderr, app events, and a `SONICPAD_LIVE` line every 30 s with guest speed
+(1.00x is full speed), SH-4 CPU per guest second and recompiled coverage.
+Players share it from ••• ▸ Help ▸ Share Diagnostic Log;
+`scripts/ios/pull-device-log.sh <UDID>` copies it into `generated/device-logs/`.
 
 Host input tests for the touch layer: `scripts/run-host-tests.sh`.

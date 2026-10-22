@@ -242,7 +242,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
 	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
-	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Display", @"Sound", @"Game Files", @"About This Build"])
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Display", @"Sound", @"Game Files", @"Help"])
 		XCTAssertTrue(app.buttons[item].isHittable, @"top-level item %@ fits on screen", item);
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
@@ -260,6 +260,24 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[app.buttons[@"Game Files"] tap];
 	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
 	XCTAssertTrue([self menuItem:@"Export VMU Save…" in:app].exists);
+	[self dismissMenu:app];
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Help"] tap];
+	XCTAssertTrue([[self menuItem:@"About This Build" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Share Diagnostic Log…" in:app].exists);
+	[self attachScreenshot:@"menu-help"];
+	[[self menuItem:@"Share Diagnostic Log…" in:app] tap];
+	[NSThread sleepForTimeInterval:2];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the share sheet pauses the game");
+	[self attachScreenshot:@"share-diagnostics"];
+	[self dismissMenu:app];
+	[NSThread sleepForTimeInterval:1];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"closing the share sheet resumes");
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Game Files"] tap];
+	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
 	[[self menuItem:@"Import Game…" in:app] tap];
 	XCUIElement *cancel = app.buttons[@"sp.import.cancel"];
 	XCTAssertTrue([cancel waitForExistenceWithTimeout:10]);

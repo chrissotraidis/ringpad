@@ -79,28 +79,37 @@ if(IOS)
 	# deprecated and unavailable in the Apple Silicon Simulator, so iOS renders
 	# with Flycast's Vulkan renderer on MoltenVK (Metal).
 	get_target_property(_sp_sources flycast SOURCES)
-	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|.*\\.storyboard|.*\\.xib)")
+	# Flycast's Images.xcassets goes too: its AppIcon would replace SonicPad's.
+	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|Images\\.xcassets|.*\\.storyboard|.*\\.xib)")
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
 	set(_sp_ios_shell
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPDiagnostics.mm
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPPortMenu.mm)
 	# The touch kit is its own library so other Dreamcast ports can reuse it.
 	add_subdirectory(port/dcpad)
 	target_link_libraries(flycast PRIVATE dcpad)
 	target_sources(flycast PRIVATE ${_sp_ios_shell}
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPFrameCapture.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+	# The flycast target lives in Flycast's directory, so the property must be
+	# set there for Xcode to compile the catalog into the app.
+	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets TARGET_DIRECTORY flycast PROPERTIES
+		MACOSX_PACKAGE_LOCATION "Resources")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"
 		MACOSX_BUNDLE_EXECUTABLE_NAME "SonicPad"
 		MACOSX_BUNDLE_GUI_IDENTIFIER "com.chrissotraidis.sonicpad"
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Info.plist.in
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad"
+		XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+		XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
 		# Xcode 27's Swift compiler rejects Flycast's "5.0" language version.
 		Swift_LANGUAGE_VERSION 5
 		XCODE_ATTRIBUTE_SWIFT_VERSION 5)
@@ -118,7 +127,8 @@ if(IOS)
 		message(FATAL_ERROR "MoltenVK xcframework missing at ${SONICPAD_MOLTENVK_XCFRAMEWORK}; see docs/BUILDING.md")
 	endif()
 	target_link_libraries(flycast PRIVATE ${SONICPAD_MOLTENVK_XCFRAMEWORK}
-		"-framework Metal" "-framework QuartzCore" "-framework IOSurface"
+		# Flycast's OpenGL renderer stays compiled in; SonicPad renders with Vulkan.
+		"-framework Metal" "-framework QuartzCore" "-framework IOSurface" "-framework CoreGraphics" "-framework OpenGLES"
 		# Flycast's controller rumble uses Core Haptics, which this SDK does not auto-link.
 		"-framework CoreHaptics" "-framework UniformTypeIdentifiers" "-framework GameController")
 	# UI tests: real UIKit touches against the shell in the Simulator.

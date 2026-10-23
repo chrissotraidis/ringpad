@@ -872,6 +872,12 @@ int main(int argc, char *argv[])
 		// MoltenVK lists every Vulkan extension at info level; keep warnings
 		// and errors so the diagnostic log stays readable.
 		setenv("MVK_CONFIG_LOG_LEVEL", "2", 0);
+		// Development runs on a device: relative script, screenshot and state
+		// paths are inside the app's Documents, where devicectl copies files.
+		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+		for (const char *name : {"SONICPAD_INPUT_SCRIPT", "SONICPAD_SHOT_DIR", "SONICPAD_STATE_LOAD"})
+			if (const char *value = std::getenv(name); value != nullptr && value[0] != '/')
+				setenv(name, [documents stringByAppendingPathComponent:@(value)].fileSystemRepresentation, 1);
 		SPDiagnosticsStart();
 		return UIApplicationMain(argc, argv, nil, NSStringFromClass([SPAppDelegate class]));
 	}

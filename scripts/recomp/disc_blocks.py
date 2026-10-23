@@ -186,15 +186,20 @@ def export(args):
 
     sources = sorted({r[3] for r in rows})
     index = {s: i for i, s in enumerate(sources)}
+    # Blocks found statically from the disc, seeded by these traced ones.
+    from discover_blocks import static_manifest
+    _, static_id, found, _ = static_manifest(disc, args.manifest)
     out = ['# sonicpad-blocks v2: pc nops cycles @source offset; sources are @index name sha256',
            '# No game data: each block is a byte range of a file on the player\'s disc,',
            '# rebuilt by scripts/recomp/disc_blocks.py import.',
-           '# manifest %s' % digest(manifest_text(blocks).encode())]
+           '# manifest %s' % digest(manifest_text(blocks).encode()),
+           '# static %s (scripts/recomp/discover_blocks.py run, seeded by this manifest)' % static_id]
     out += ['@%d %s %s' % (i, s, '-' if s == REIOS else digest(data(s))) for i, s in enumerate(sources)]
     out += ['%08X %d %d @%d %X' % (pc, n, c, index[s], o) for pc, n, c, s, o, code in rows]
     args.blocks.write_text('\n'.join(out) + '\n')
-    print('blocks=%d sources=%d from_disc=%d reios=%d -> %s' % (
-        len(rows), len(sources), sum(r[3] != REIOS for r in rows), sum(r[3] == REIOS for r in rows), args.blocks))
+    print('blocks=%d sources=%d from_disc=%d reios=%d static=%s (%d blocks) -> %s' % (
+        len(rows), len(sources), sum(r[3] != REIOS for r in rows), sum(r[3] == REIOS for r in rows),
+        static_id, len(found), args.blocks))
 
 
 def import_(args):

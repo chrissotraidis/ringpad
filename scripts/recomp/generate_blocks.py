@@ -18,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FLYCAST = ROOT / 'ref/flycast/core/hw/sh4'
 BLOCKS_PER_FILE = 1500
+STATIC_PER_FILE = 4000
 
 
 def evaluate(expr, names):
@@ -174,6 +175,10 @@ STORES = {'i0010_nnnn_mmmm_0010', 'i0010_nnnn_mmmm_0001', 'i0010_nnnn_mmmm_0000'
           'i1000_0000_mmmm_iiii', 'i1000_0001_mmmm_iiii', 'i0000_nnnn_mmmm_0110', 'i0000_nnnn_mmmm_0101',
           'i0000_nnnn_mmmm_0100'}
 SELFTEST_PC = 0x8CFF8000
+# Inline forms that build an address from the instruction's own location.
+# Relative (static) blocks call the handler instead, which reads ctx->pc.
+PC_FORMS = {'i1100_0111_iiii_iiii', 'i1101_nnnn_iiii_iiii', 'i1001_nnnn_iiii_iiii',
+            'i1000_1001_iiii_iiii', 'i1000_1011_iiii_iiii'}
 
 
 class Emitter:
@@ -182,16 +187,24 @@ class Emitter:
         self.inline = inline
         self.checks = {}
         self.inlined = {}
+        self.rel = False      # addresses relative to the block's entry PC ('base')
+        self.base_pc = 0
+
+    def a(self, value):
+        """An address as C++: a constant, or base-relative in a relative block."""
+        if self.rel:
+            return f'(base + 0x{(value - self.base_pc) & 0xFFFFFFFF:X}u)'
+        return f'0x{value & 0xFFFFFFFF:08X}u'
 
     def op(self, op, addr, indent, state, allow_inline=True):
         """Emit one instruction. state['pc'] is the value known to be in ctx->pc."""
         handler, kind = self.table[op]
-        form = INLINE.get(handler) if self.inline and allow_inline else None
+        form = INLINE.get(handler) if self.inline and allow_inline and not (self.rel and handler in PC_FORMS) else None
         lines = []
         if form is not None:
             body, flags = form(op, addr)
             if flags & MEM and state['pc'] != addr + 2:
-                lines.append(f'{indent}ctx->pc = 0x{addr + 2:08X}u;')
+                lines.append(f'{indent}ctx->pc = {self.a(addr + 2)};')
                 state['pc'] = addr + 2
             lines += [indent + line for line in body]
             if handler in SETS_PC:
@@ -199,10 +212,10 @@ class Emitter:
             self.inlined[op] = (handler, flags)
             return lines
         if state['pc'] != addr + 2:
-            lines.append(f'{indent}ctx->pc = 0x{addr + 2:08X}u;')
+            lines.append(f'{indent}ctx->pc = {self.a(addr + 2)};')
         state['pc'] = None if kind & self.types['WritesPC'] else addr + 2
         if kind & self.types['UsesFPU']:
-            lines.append(f'{indent}if (ctx->sr.FD) throw SH4ThrownException(0x{addr:08X}u, Sh4Ex_FpuDisabled);')
+            lines.append(f'{indent}if (ctx->sr.FD) throw SH4ThrownException({self.a(addr)}, Sh4Ex_FpuDisabled);')
         if handler in self.declared:
             self.checks[op] = handler
             lines.append(f'{indent}{handler}(ctx, 0x{op:04X}u);')
@@ -221,17 +234,17 @@ class Emitter:
             target = (addr + 4 + sext(op & 0xFFF, 12) * 2) & 0xFFFFFFFF
             out = self.slot(ds, addr, '\t')
             if op & 0xF000 == 0xB000:
-                out.append(f'\tctx->pr = 0x{addr + 4:08X}u;')
-            return out + [f'\tctx->pc = 0x{target:08X}u;']
+                out.append(f'\tctx->pr = {self.a(addr + 4)};')
+            return out + [f'\tctx->pc = {self.a(target)};']
         if (op & 0xFF00) in (0x8D00, 0x8F00):  # bt/s, bf/s
             target = (addr + 4 + sext(op & 0xFF, 8) * 2) & 0xFFFFFFFF
             cond = 'ctx->sr.T != 0' if op & 0xFF00 == 0x8D00 else 'ctx->sr.T == 0'
             plain = self.op(ds, addr + 2, '\t\t', {'pc': None})
-            return ([f'\tif ({cond}) {{', *self.slot(ds, addr, '\t\t'), f'\t\tctx->pc = 0x{target:08X}u;',
-                     '\t} else {', *plain, f'\t\tctx->pc = 0x{addr + 4:08X}u;', '\t}'])
+            return ([f'\tif ({cond}) {{', *self.slot(ds, addr, '\t\t'), f'\t\tctx->pc = {self.a(target)};',
+                     '\t} else {', *plain, f'\t\tctx->pc = {self.a(addr + 4)};', '\t}'])
         forms = {
-            0x0023: (f'ctx->r[{n}] + 0x{addr + 4:08X}u', False),  # braf
-            0x0003: (f'ctx->r[{n}] + 0x{addr + 4:08X}u', True),   # bsrf
+            0x0023: (f'ctx->r[{n}] + {self.a(addr + 4)}', False),  # braf
+            0x0003: (f'ctx->r[{n}] + {self.a(addr + 4)}', True),   # bsrf
             0x402B: (f'ctx->r[{n}]', False),                      # jmp
             0x400B: (f'ctx->r[{n}]', True),                       # jsr
         }
@@ -244,7 +257,7 @@ class Emitter:
             return None
         out = [f'\t{{ const u32 newpc = {expr};', *self.slot(ds, addr, '\t')]
         if link:
-            out.append(f'\tctx->pr = 0x{addr + 4:08X}u;')
+            out.append(f'\tctx->pr = {self.a(addr + 4)};')
         return out + ['\tctx->pc = newpc; }']
 
     def pure_self_loop(self, pc, ops):
@@ -265,7 +278,8 @@ class Emitter:
         return True
 
     def block(self, name, pc, ops):
-        body = []
+        self.base_pc = pc
+        body = ['\tconst u32 base = ctx->pc;', '\t(void)base;'] if self.rel else []
         state = {'pc': pc}
         i = 0
         while i < len(ops):
@@ -286,7 +300,7 @@ class Emitter:
             i += 1
         last = (pc + (len(ops) - 1) * 2) & 0xFFFFFFFF
         if state['pc'] is not None and state['pc'] != last + 2:
-            body.append(f'\tctx->pc = 0x{last + 2:08X}u;')
+            body.append(f'\tctx->pc = {self.a(last + 2)};')
         return [f'static void {name}(Sh4Context *ctx)', '{', *body, '}']
 
     def selftest(self):
@@ -330,6 +344,8 @@ def main():
     parser.add_argument('--out', type=Path, default=ROOT / 'generated/recomp')
     parser.add_argument('--manifest', type=Path, default=ROOT / 'generated/recomp-manifest.txt')
     parser.add_argument('--no-inline', action='store_true', help='call Flycast handlers for every opcode')
+    parser.add_argument('--static', type=Path,
+                        help='blocks found by discover_blocks.py; compiled in compact form, not saved to the manifest')
     args = parser.parse_args()
 
     inputs = list(args.traces)
@@ -371,12 +387,50 @@ def main():
                   f'const size_t sp_blocks_{number}_count = {len(chunk)};', '']
         (args.out / f'sp_aot_blocks_{number:03d}.cpp').write_text('\n'.join(lines))
 
+    # Static blocks: address-relative, one function per distinct instruction
+    # sequence, shared by every address it occurs at. Cycles are counted by
+    # the executor at startup (0 here).
+    static_chunks, static_id, static_rows = [], None, 0
+    if args.static:
+        found = read_traces([args.static])
+        extra = sorted(key for key in found if key not in blocks)
+        static_id = hashlib.sha256(args.static.read_bytes()).hexdigest()[:16]
+        uses = {}
+        for pc, ops in extra:
+            uses.setdefault(ops, []).append(pc)
+        distinct = sorted(uses)
+        static_rows = len(extra)
+        emitter.rel = True
+        for start in range(0, len(distinct), STATIC_PER_FILE):
+            number = len(static_chunks)
+            lines = ['// Generated by scripts/recomp/generate_blocks.py; do not edit.',
+                     '// Statically discovered blocks; addresses are relative to the entry PC.',
+                     '#include "sp_block_api.h"', '', 'namespace {']
+            rows = []
+            for i, ops in enumerate(distinct[start:start + STATIC_PER_FILE], start):
+                lines += emitter.block(f'z_{i}', uses[ops][0], ops)
+                lines.append(f'const u16 k_{i}[] = {{' + ', '.join(f'0x{op:04X}' for op in ops) + '};')
+                rows += [f'\t{{0x{pc:08X}u, {len(ops)}, 0, 0, k_{i}, z_{i}}},' for pc in uses[ops]]
+            lines += ['} // namespace', '',
+                      f'extern const SpAotBlock sp_static_{number}[];',
+                      f'extern const size_t sp_static_{number}_count;',
+                      f'const SpAotBlock sp_static_{number}[] = {{', *rows, '};',
+                      f'const size_t sp_static_{number}_count = {len(rows)};', '']
+            (args.out / f'sp_aot_static_{number:03d}.cpp').write_text('\n'.join(lines))
+            static_chunks.append(number)
+        emitter.rel = False
+        manifest_id = f'{manifest_id}+{static_id}'
+
     index = ['// Generated by scripts/recomp/generate_blocks.py; do not edit.', '#include "sp_block_api.h"', '']
     for number in range(len(chunks)):
         index += [f'extern const SpAotBlock sp_blocks_{number}[];', f'extern const size_t sp_blocks_{number}_count;']
+    for number in static_chunks:
+        index += [f'extern const SpAotBlock sp_static_{number}[];', f'extern const size_t sp_static_{number}_count;']
     index += ['', 'const SpAotTable sp_aot_tables[] = {']
     index += [f'\t{{sp_blocks_{n}, sp_blocks_{n}_count}},' for n in range(len(chunks))] or ['\t{nullptr, 0},']
-    index += ['};', f'const size_t sp_aot_table_count = {len(chunks)};', '', 'const SpOpCheck sp_aot_opchecks[] = {']
+    index += [f'\t{{sp_static_{n}, sp_static_{n}_count}},' for n in static_chunks]
+    index += ['};', f'const size_t sp_aot_table_count = {len(chunks) + len(static_chunks)};', '',
+              'const SpOpCheck sp_aot_opchecks[] = {']
     index += [f'\t{{0x{op:04X}, {handler}}},' for op, handler in sorted(emitter.checks.items())] or ['\t{0, nullptr},']
     index += ['};', f'const size_t sp_aot_opcheck_count = {len(emitter.checks)};',
               f'const char sp_aot_manifest_id[] = "{manifest_id}";', '']
@@ -385,7 +439,8 @@ def main():
     args.manifest.write_text(manifest_text)
     ops_total = sum(len(ops) for (_, ops), _ in ordered)
     print(f'manifest={manifest_id} blocks={len(ordered)} ops={ops_total} files={len(chunks) + 1} '
-          f'handlers={len(emitter.checks)} inlined_forms={len(emitter.inlined)}')
+          f'handlers={len(emitter.checks)} inlined_forms={len(emitter.inlined)} '
+          f'static_blocks={static_rows} static_files={len(static_chunks)}')
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
 # No game data: each block is a byte range of a file on the player's disc,
 # rebuilt by scripts/recomp/disc_blocks.py import.
 # manifest 44c8a6d568863459
+# static 13d3333b81a8c42c (scripts/recomp/discover_blocks.py run, seeded by this manifest)
 @0 1ST_READ.BIN b3563abfa536deac
 @1 IP.BIN 0b257318c1273095
 @2 SONICAD/ADV00.PRS 013703b0a96014e8

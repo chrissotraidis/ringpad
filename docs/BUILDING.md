@@ -41,6 +41,33 @@ Quit the app normally so the trace is flushed; it is also written every few
 seconds. The generator merges new traces into `generated/recomp-manifest.txt`
 and rewrites `generated/recomp/`. Both are game-derived and stay ignored.
 
+## Static blocks: the rest of the game's code
+
+Traces only cover what ran on a recorded route. The rest of the game's code is
+in the same disc files: `1ST_READ.BIN`, the movie player and 204 PRS-compressed
+code modules (stages, adventure fields, bosses, mini-games, Chao and events),
+listed with their load addresses in `config/code-modules.txt`.
+`scripts/recomp/discover_blocks.py` walks that code from the traced blocks, from
+call targets in constant pools and from code pointers that land on a function
+prologue, and decodes every block exactly as the executor's `decodeBlock` does:
+
+```sh
+python3 scripts/recomp/discover_blocks.py run "ref/<disc folder>/<disc>.gdi" \
+  --traced generated/recomp-manifest.txt --out generated/static-manifest.txt
+python3 scripts/recomp/generate_blocks.py generated/recomp-manifest.txt \
+  --static generated/static-manifest.txt
+ninja -C generated/build-mac
+```
+
+Static blocks that were not traced compile in a compact form: Flycast's
+handlers for PC-relative instructions, addresses relative to the block's entry,
+and one function per distinct instruction sequence (the 165 event modules
+repeat most of their code). The executor counts their cycles at startup and
+runs them under the same byte check as traced blocks, so a block decoded from
+data never runs. `SONICPAD_NO_STATIC=1` leaves them to the interpreter for
+comparisons. `discover_blocks.py modules <gdi>` rebuilds the module list (about a
+minute) if the detection changes.
+
 Then refresh the published block list, which players build from:
 
 ```sh
@@ -53,6 +80,8 @@ module) and an offset, with a SHA-256 per source file and for the whole
 manifest. It holds no instruction bytes, and `scripts/check-repo-safety.sh`
 rejects any row that could. `disc_blocks.py import <gdi>` rebuilds the exact
 manifest from a disc and stops if any source file or the manifest hash differs.
+Export also runs static discovery and records its id (`# static`), so a
+player's build stops if its static blocks differ from the tested ones.
 
 | Variable | Effect |
 |---|---|
@@ -67,6 +96,7 @@ manifest from a disc and stops if any source file or the manifest hash differs.
 | `SONICPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
 | `SONICPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
 | `SONICPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
+| `SONICPAD_NO_STATIC=1` | Leave statically discovered blocks to the interpreter. |
 | `SONICPAD_CHEATS=<id,id>` | Turn on cheats at boot (`rings`, `lives`, `characters`). |
 
 Input script commands:
@@ -179,7 +209,7 @@ private files:
 
 It checks the disc, fetches the pinned Flycast and MoltenVK into `ref/` if
 they are missing, rebuilds the manifest from `config/recomp-blocks.txt`,
-generates the recompiled C++ into `build/personal/`, builds the iOS app
+finds the static blocks, generates the recompiled C++ into `build/personal/`, builds the iOS app
 without signing and packages an unsigned IPA. It never touches
 `generated/`. It runs on Apple's Python 3.9 and needs full Xcode and CMake 3.24+.
 `padmint.json` runs this one script. The IPA contains code translated from the

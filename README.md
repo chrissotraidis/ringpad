@@ -45,6 +45,7 @@ Install the unsigned IPA with your own signing tool. In the app, ••• ▸ G
 Files ▸ Import Game picks the same disc folder from Files. See
 [BUILDING.md](docs/BUILDING.md#player-build-padmint) for what the build does.
 
-SonicPad is experimental: it has been tested on one iPad Pro (M2), and stages
-not yet traced run on Flycast's slower interpreter until a later release covers them.
+SonicPad is experimental and has been tested on one iPad Pro (M2). Code that
+no route has recorded is found in the disc's modules and compiled too; what it
+misses runs on Flycast's slower interpreter.
 Licence: GPL-3.0 ([LICENSE](LICENSE), [notices](THIRD_PARTY_NOTICES.md)).

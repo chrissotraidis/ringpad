@@ -10,6 +10,8 @@ Updated **23 October 2026**. Private repository; no public release approved.
 | SonicPad sources (`port/`, `scripts/`, CMake) | Ours | Would be released under GPL-3.0 if published. |
 | Disc, traces, block manifest, generated C++ | Derived from Sega's game | Private and ignored; never published. |
 | `config/recomp-blocks.txt` | Ours: addresses, disc file names, offsets and SHA-256 digests | Committed. Holds no instruction bytes; players rebuild the manifest from their own disc. Chris decides whether it ships publicly with the source. |
+| `config/code-modules.txt` | Ours: disc file names, load addresses and SHA-256 digests of the code modules | Committed. Holds no game bytes; static discovery reads the modules from the player's disc. |
+| Static block manifest and its generated C++ | Derived from Sega's game | Made on the player's Mac in `build/personal/` (or `generated/`); never published. |
 | Personal IPA from `scripts/build-personal.py` | Contains code translated from the player's disc | Built on the player's Mac for their own devices; never published. |
 
 Publication needs Chris's separate approval against exact artifacts.

@@ -272,6 +272,43 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   2,551 ms), so it is the game loading, not texture upscaling. The `render`
   line's worst frame includes these pauses.
 
+### Static blocks from the disc files (23 October 2026, night)
+
+- **What runs compiled now:** `scripts/recomp/discover_blocks.py` finds code in
+  `1ST_READ.BIN`, `MOVIE.BIN` and 204 PRS code modules (`config/code-modules.txt`:
+  165 event and 3 Chao modules at `0CB80000`; 12 stages, 6 adventure fields,
+  11 bosses, the Chao garden, Twinkle Circuit, Sky Chase and the sandboard at
+  `0C900000`; three menu modules at `8C900000`). It walks from the traced blocks, constant-pool call
+  targets and code pointers that land on a function prologue, decoding blocks
+  as `decodeBlock` does. 277,929 blocks (1.97 million instructions) in 20 s;
+  every traced block is found except 381 in IP.BIN, Flycast's BIOS stubs and
+  the `AC` mirror, which stay traced. Without traces it finds 80.5% of the
+  traced `1ST_READ.BIN` blocks.
+- **Compact code:** the 243,215 static blocks that were not traced compile
+  address-relative with one function per distinct instruction sequence (1.05
+  million instructions; the event modules share most of their code). The iOS
+  app grew from 30 MB to 75 MB; the iPad build compiled in 44 s on this Mac.
+  The startup self-test now covers 16,948 inline forms (313,696 trials, 0.6 s
+  on the iPad).
+- **Same behavior:** on the Mac, Windy Valley (never traced), Emerald Coast with
+  other inputs and the traced Chaos 0 route gave byte-identical screenshots
+  with and without static blocks (23 frames). The iPad executed exactly the
+  same number of blocks as the Mac on the Windy Valley route in both builds.
+- **Coverage on an untraced stage:** Trial ▸ Sonic ▸ Windy Valley, 145 s of
+  play. Recompiled share 98.34% -> 99.94%, interpreted instructions 319 million
+  -> 11 million, on the Mac and on the iPad Pro (M2). On the iPad, SH-4 CPU
+  per guest second in the stage windows fell from 0.41-0.43 to 0.40-0.41;
+  both ran at 1.00x. SH-4 CPU on the traced Chaos 0 route is unchanged within
+  run-to-run noise (0.215-0.232 s per guest second, uncapped).
+- **Executor:** each block remembers the exact successor variant that ran, so
+  modules sharing a load address do not walk the variant chain;
+  `SONICPAD_NO_STATIC=1` turns static blocks off for comparisons. On iOS,
+  relative `SONICPAD_INPUT_SCRIPT`, `SONICPAD_SHOT_DIR` and
+  `SONICPAD_STATE_LOAD` paths are inside Documents, so routes run on a device.
+- **Player builds:** `build-personal.py` runs discovery on the player's disc and
+  stops unless it gives the tested set (`# static 13d3333b81a8c42c` in
+  `config/recomp-blocks.txt`).
+
 ## Not yet verified
 
 - Audio quality, reload, device speed in Emerald Coast, and stages past its opening.

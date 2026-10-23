@@ -8,8 +8,10 @@ the PAL v1.003 GDI (MK-5100050) with its three tracks next to it. Steps:
 
 1. Check the disc's tracks against config/game-identity.json.
 2. Fetch the pinned Flycast and MoltenVK into ref/ if they are not there.
-3. Rebuild the recompiled-code manifest from the disc (config/recomp-blocks.txt)
-   and generate its C++. Both stay in build/personal/ on this Mac.
+3. Rebuild the recompiled-code manifest from the disc (config/recomp-blocks.txt),
+   find the rest of the game's code in the disc's modules
+   (scripts/recomp/discover_blocks.py) and generate C++ for both. All of it
+   stays in build/personal/ on this Mac.
 4. Build the iOS app without signing and package an unsigned IPA.
 
 The IPA contains code translated from the player's disc: it is for the
@@ -105,10 +107,16 @@ def main():
     flycast(lock['Flycast'])
     moltenvk(lock['MoltenVK'])
 
-    manifest, recomp = WORK / 'recomp-manifest.txt', WORK / 'recomp'
+    manifest, static, recomp = WORK / 'recomp-manifest.txt', WORK / 'static-manifest.txt', WORK / 'recomp'
     WORK.mkdir(parents=True, exist_ok=True)
+    header = (ROOT / 'config/recomp-blocks.txt').read_text().split('\n', 6)
+    expected = next(line.split()[2] for line in header if line.startswith('# manifest '))
+    expected_static = next(line.split()[2] for line in header if line.startswith('# static '))
     run(sys.executable, ROOT / 'scripts/recomp/disc_blocks.py', 'import', gdi, '--manifest', manifest)
-    run(sys.executable, ROOT / 'scripts/recomp/generate_blocks.py', manifest, '--manifest', manifest, '--out', recomp)
+    run(sys.executable, ROOT / 'scripts/recomp/discover_blocks.py', 'run', gdi, '--traced', manifest,
+        '--out', static, '--expect', expected_static)
+    run(sys.executable, ROOT / 'scripts/recomp/generate_blocks.py', manifest, '--manifest', manifest,
+        '--out', recomp, '--static', static)
 
     build = WORK / 'ios'
     run('cmake', '-S', ROOT, '-B', build, '-G', 'Xcode', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_SYSROOT=iphoneos',
@@ -117,7 +125,7 @@ def main():
         '-configuration', 'Release', '-sdk', 'iphoneos', '-jobs', args.jobs, '-quiet',
         'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO')
     app = build / 'flycast/Release-iphoneos/SonicPad.app'
-    expected = (ROOT / 'config/recomp-blocks.txt').read_text().split('# manifest ', 1)[1].split()[0]
+    expected = f'{expected}+{expected_static}'
     if expected.encode() not in (app / 'SonicPad').read_bytes():
         raise SystemExit(f'{app.name} does not contain the recompiled code for manifest {expected}')
 

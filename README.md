@@ -29,7 +29,7 @@ Mac from your own disc; it contains code translated from that disc, so it is
 for your devices only.
 
 You need an Apple Silicon Mac with full Xcode (with the iOS platform) and
-CMake 3.24 or newer, about 12 GB of free space, and your own **Sonic Adventure
+CMake 3.24 or newer, about 6 GB of free space, and your own **Sonic Adventure
 PAL v1.003** disc (MK-5100050) as a GDI: the `.gdi` file with `track01.bin`,
 `track02.raw` and `track03.bin` next to it. Other releases, CDI and CHD images
 are not supported.

@@ -838,20 +838,11 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 
 @end
 
+// The scene and its SPSceneDelegate are declared in Info.plist.
 @interface SPAppDelegate : UIResponder <UIApplicationDelegate>
 @end
 
 @implementation SPAppDelegate
-
-- (UISceneConfiguration *)application:(UIApplication *)application
-		configurationForConnectingSceneSession:(UISceneSession *)session
-		options:(UISceneConnectionOptions *)options
-{
-	UISceneConfiguration *config = [[UISceneConfiguration alloc] initWithName:@"Default" sessionRole:session.role];
-	config.delegateClass = [SPSceneDelegate class];
-	return config;
-}
-
 @end
 
 // Flycast reaches Vulkan through this entry point; MoltenVK is linked statically.

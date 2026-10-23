@@ -61,7 +61,8 @@ def flycast(lock):
         raise SystemExit(f'{path} is at {head}, not the pinned Flycast {pin}. Move it aside and run again.')
     if output('git', '-C', path, 'status', '--porcelain', '--untracked-files=no'):
         raise SystemExit(f'{path} has local changes; SonicPad builds against an unmodified Flycast.')
-    run('git', '-C', path, 'submodule', 'update', '--init', '--recursive')
+    # Partial clones keep Flycast's dependency history to about 255 MB instead of 1.4 GB.
+    run('git', '-C', path, 'submodule', 'update', '--init', '--recursive', '--filter=blob:none')
     run('git', '-C', path, 'remote', 'set-url', '--push', 'origin', 'DISABLED')
 
 

@@ -21,3 +21,30 @@ reaches Emerald Coast, whose opening runs 99.8% recompiled. See [STATUS.md](docs
 - [Archived Katana route](archive/katana-route/README.md)
 
 Game data and anything generated from it stay out of Git.
+
+## Build your own
+
+SonicPad ships as source and a build recipe only. You build the app on your
+Mac from your own disc; it contains code translated from that disc, so it is
+for your devices only.
+
+You need an Apple Silicon Mac with full Xcode (with the iOS platform) and
+CMake 3.24 or newer, about 12 GB of free space, and your own **Sonic Adventure
+PAL v1.003** disc (MK-5100050) as a GDI: the `.gdi` file with `track01.bin`,
+`track02.raw` and `track03.bin` next to it. Other releases, CDI and CHD images
+are not supported.
+
+With [PadMint](https://github.com/chrissotraidis/padmint), choose SonicPad and
+your `.gdi`. Or from a clone of this repository:
+
+```sh
+python3 scripts/build-personal.py --gdi "/path/to/Sonic Adventure.gdi" --output SonicPad.ipa
+```
+
+Install the unsigned IPA with your own signing tool. In the app, ••• ▸ Game
+Files ▸ Import Game picks the same disc folder from Files. See
+[BUILDING.md](docs/BUILDING.md#player-build-padmint) for what the build does.
+
+SonicPad is experimental: it has been tested on one iPad Pro (M2), and stages
+not yet traced run on Flycast's slower interpreter until a later release covers them.
+Licence: GPL-3.0 ([LICENSE](LICENSE), [notices](THIRD_PARTY_NOTICES.md)).

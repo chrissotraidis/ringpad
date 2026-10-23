@@ -249,6 +249,18 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   `check-manifest` accepts `padmint.json` and `padmint audit` passes the IPA.
 - **Build identity:** every iOS build now reports version, build number (commit
   count) and commit in About and the diagnostic log.
+- **Physical iPad, build 0.1.0 (33, 81ff44c):** installed in place on the iPad
+  Pro 12.9-inch (M2), iPadOS 27.0.1, after backing up the app's saves and
+  settings; every file read back identical afterwards. Hands-off boot, title and
+  attract demo at 1920p with 4x xBRZ and the Unlock All Characters cheat: 1.00x
+  speed and 30 FPS in every 30-second window over six minutes, 0.37-0.44 s of
+  SH-4 CPU per guest second, 100% recompiled until the demo enters a stage
+  (99.1-99.8%), self-test 209,624 trials passed, no memory or thermal events.
+- **Load pauses are the game's own:** at boot and when the demo enters a stage
+  one frame takes about 2.5 s while guest time keeps running at 1.00x. The
+  pause is the same with 2x xBRZ (2,499 and 2,556 ms) as with 4x (2,504 and
+  2,551 ms), so it is the game loading, not texture upscaling. The `render`
+  line's worst frame includes these pauses.
 
 ## Not yet verified
 

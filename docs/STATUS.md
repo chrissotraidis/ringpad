@@ -253,6 +253,10 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   and for `1387621` (5 min 47 s): build completed, checkout check passed,
   scene startup `declared`, publication gate PASS. With partial clones the
   whole check used 1.5 GB, Flycast's Git history 254 MB.
+- **Scene declared in Info.plist:** the app starts from `UISceneConfigurations`
+  instead of a delegate callback, so PadMint can confirm startup. Checked on the
+  iPad (landscape 2732x2048, full speed) and with all 14 UI tests on the iPad
+  Pro 12.9-inch Simulator.
 - **Build identity:** every iOS build now reports version, build number (commit
   count) and commit in About and the diagnostic log.
 - **Physical iPad, build 0.1.0 (33, 81ff44c):** installed in place on the iPad

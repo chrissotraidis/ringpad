@@ -247,6 +247,12 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   SonicPad from scratch in 2 min 57 s on this Mac: a 14 MB IPA, arm64, iOS 16+,
   SDK 27.1, version 0.1.0 with build number and commit. PadMint's
   `check-manifest` accepts `padmint.json` and `padmint audit` passes the IPA.
+- **PadMint player check:** `scripts/player-check.sh sonicpad ios <gdi> <checkout>`
+  from PadMint main `a723ae0` (Apple Python 3.9, empty PadMint folder, fresh
+  clone with no `ref/`, two compile jobs) passed for `81ff44c` (6 min 28 s)
+  and for `1387621` (5 min 47 s): build completed, checkout check passed,
+  scene startup `declared`, publication gate PASS. With partial clones the
+  whole check used 1.5 GB, Flycast's Git history 254 MB.
 - **Build identity:** every iOS build now reports version, build number (commit
   count) and commit in About and the diagnostic log.
 - **Physical iPad, build 0.1.0 (33, 81ff44c):** installed in place on the iPad

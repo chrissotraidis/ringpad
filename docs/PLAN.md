@@ -13,7 +13,7 @@ the evidence named in its row; record results in [STATUS.md](STATUS.md).
 | S4 SonicPad shell | Landscape layout, touch layer from `port/input`, three-dot menu, GDI import with hash check | Simulator UI tests and touch routing tests | **Done 11 Oct**. Since then: signed iPad build, diagnostic log, Graphics menu, cheats, VMU save import, iPhone widescreen (22 Oct) |
 | S5 Coverage and stability | Seven stories, Chao, soak | Trace manifests per story, scripted regressions | Open |
 | S6 Device acceptance | Chris tests the exact build | Recorded hashes and notes | Open |
-| S7 Publication | Separate approval | License and package audit; a clean player build from the published recipe | Player route built 23 Oct: `scripts/build-personal.py` and `padmint.json` make an unsigned IPA from the player's disc using `config/recomp-blocks.txt`. Open: clean-checkout and PadMint player checks, licence review, Chris's approval |
+| S7 Publication | Separate approval | License and package audit; a clean player build from the published recipe | Player route **done 23 Oct**: `scripts/build-personal.py` and `padmint.json` make an unsigned IPA from the player's disc using `config/recomp-blocks.txt`; the PadMint pre-tag player check passes; GPL-3.0 licence and notices added. Open: hands-on play, broader coverage, making the repository public, a PadMint catalog entry, the post-publication player check, Chris's approval |
 
 ## The loop
 

@@ -130,8 +130,9 @@ void SPDiagnosticsStart(void)
 	NSProcessInfo *info = NSProcessInfo.processInfo;
 	UIDevice *device = UIDevice.currentDevice;
 	NSDictionary *fs = [NSFileManager.defaultManager attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
-	SPLog(@"session start: SonicPad %@ (%@) on %@ %@ %@, %.1f GB RAM, %.1f GB free, thermal %@, low power %d",
+	SPLog(@"session start: SonicPad %@ (%@, %@) on %@ %@ %@, %.1f GB RAM, %.1f GB free, thermal %@, low power %d",
 			[bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"], [bundle objectForInfoDictionaryKey:@"CFBundleVersion"],
+			[bundle objectForInfoDictionaryKey:@"SonicPadCommit"],
 			Machine(), device.systemName, device.systemVersion, info.physicalMemory / 1073741824.0,
 			[fs[NSFileSystemFreeSize] doubleValue] / 1e9, ThermalName(info.thermalState), info.lowPowerModeEnabled ? 1 : 0);
 

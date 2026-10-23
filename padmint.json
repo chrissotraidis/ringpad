@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "sonicpad",
+  "name": "SonicPad",
+  "game": "Sonic Adventure (Dreamcast, PAL v1.003)",
+  "kind": "disc-translation",
+  "status": "draft-untested",
+  "inputs": [
+    {
+      "type": "dreamcast-gdi",
+      "formats": [
+        "gdi"
+      ],
+      "when": "build",
+      "description": "Your own Sonic Adventure PAL v1.003 disc (MK-5100050) as a GDI: choose the .gdi file, with track01.bin, track02.raw and track03.bin in the same folder. Other releases, CDI and CHD images are not supported."
+    }
+  ],
+  "targets": {
+    "ios": {
+      "hosts": {
+        "macos-arm64": "experimental"
+      },
+      "output": "ipa",
+      "check": "ipa",
+      "steps": [
+        {
+          "stage": "compile",
+          "command": [
+            "python3",
+            "{repo}/scripts/build-personal.py",
+            "--gdi",
+            "{disc}",
+            "--output",
+            "{output}",
+            "--jobs",
+            "{jobs}"
+          ]
+        }
+      ]
+    }
+  },
+  "requirements": {
+    "disk_gb": 12,
+    "tools": [
+      {
+        "name": "git",
+        "version_args": [
+          "--version"
+        ],
+        "player": true,
+        "note": "Install the Xcode command-line tools."
+      },
+      {
+        "name": "cmake",
+        "version_args": [
+          "--version"
+        ],
+        "player": true,
+        "min_version": "3.24",
+        "note": "Install CMake 3.24 or newer: brew install cmake"
+      },
+      {
+        "name": "python3",
+        "version_args": [
+          "--version"
+        ],
+        "player": true,
+        "note": "Install the Xcode command-line tools."
+      },
+      {
+        "name": "curl",
+        "version_args": [
+          "--version"
+        ],
+        "player": true,
+        "note": "curl comes with macOS."
+      },
+      {
+        "name": "xcodebuild",
+        "version_args": [
+          "-version"
+        ],
+        "player": true,
+        "note": "Install full Xcode, open it once, and install the iOS platform."
+      }
+    ]
+  },
+  "notes": "Sonic Adventure's SH-4 code is translated ahead of time to ARM64 C++ from the player's disc; Flycast (pinned, unmodified) supplies the Dreamcast hardware layer and renders through MoltenVK. No JIT.",
+  "publication": {
+    "public_binaries": false,
+    "reason": "Recipe only: the app contains code translated from the player's own disc, so each player builds their own."
+  }
+}

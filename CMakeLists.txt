@@ -103,11 +103,28 @@ if(IOS)
 	# set there for Xcode to compile the catalog into the app.
 	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets TARGET_DIRECTORY flycast PROPERTIES
 		MACOSX_PACKAGE_LOCATION "Resources")
+	# Every build is identifiable: version, commit count as the build number,
+	# and the commit (with -dirty for uncommitted changes) in About and the log.
+	set(SONICPAD_VERSION "0.1.0")
+	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-list --count HEAD
+		OUTPUT_VARIABLE _sp_build OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} describe --always --dirty --abbrev=7
+		OUTPUT_VARIABLE _sp_commit OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	if(NOT _sp_build)
+		set(_sp_build 0)
+		set(_sp_commit "unknown")
+	endif()
+	message(STATUS "SonicPad ${SONICPAD_VERSION} build ${_sp_build} (${_sp_commit})")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"
 		MACOSX_BUNDLE_EXECUTABLE_NAME "SonicPad"
 		MACOSX_BUNDLE_GUI_IDENTIFIER "com.chrissotraidis.sonicpad"
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Info.plist.in
+		MACOSX_BUNDLE_SHORT_VERSION_STRING "${SONICPAD_VERSION}"
+		MACOSX_BUNDLE_BUNDLE_VERSION "${_sp_build}"
+		MACOSX_BUNDLE_LONG_VERSION_STRING "${_sp_commit}"
+		XCODE_ATTRIBUTE_MARKETING_VERSION "${SONICPAD_VERSION}"
+		XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION "${_sp_build}"
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad"
 		XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
 		XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"

@@ -10,8 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def digest(path):
+    sha = hashlib.sha256()
     with path.open('rb') as stream:
-        return hashlib.file_digest(stream, 'sha256').hexdigest()
+        for chunk in iter(lambda: stream.read(1 << 20), b''):
+            sha.update(chunk)
+    return sha.hexdigest()
 
 
 def expected_tracks():

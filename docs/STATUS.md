@@ -1,6 +1,6 @@
 # SonicPad status
 
-Updated **22 October 2026**. History before the static-recompilation decision
+Updated **23 October 2026**. History before the static-recompilation decision
 is archived in [archive/katana-route](../archive/katana-route/README.md).
 
 ## Verified
@@ -231,12 +231,30 @@ widescreen by itself either, because the game culls and places the HUD for
 4:3 before anything is drawn. Visual improvements come from settings and
 game patches on top of Flycast. See [PLAN.md](PLAN.md).
 
+### Player builds from the player's own disc (23 October 2026)
+
+- **Published block list:** every one of the 35,095 recompiled blocks is a byte
+  range of a file on the disc: 25,168 in `1ST_READ.BIN` at its load address
+  `8C010000`, the rest in the IP.BIN boot sector, `MOVIE.BIN`, or a
+  PRS-compressed stage (`0C900000`) or event (`0CB80000`) module. Four are
+  Flycast's own BIOS stubs. `config/recomp-blocks.txt` (757 KB) records the
+  address, file and offset of each, with SHA-256 digests, and no game bytes.
+  Rebuilt from the disc it gives a byte-identical manifest
+  (`44c8a6d568863459`) in one second.
+- **One-command player build:** `scripts/build-personal.py` checks the disc,
+  fetches pinned dependencies, rebuilds the manifest, generates the code and
+  packages an unsigned IPA. With Apple's Python 3.9 it built Flycast and
+  SonicPad from scratch in 2 min 57 s on this Mac: a 14 MB IPA, arm64, iOS 16+,
+  SDK 27.1, version 0.1.0 with build number and commit. PadMint's
+  `check-manifest` accepts `padmint.json` and `padmint audit` passes the IPA.
+- **Build identity:** every iOS build now reports version, build number (commit
+  count) and commit in About and the diagnostic log.
+
 ## Not yet verified
 
 - Audio quality, reload, device speed in Emerald Coast, and stages past its opening.
 - The new stick, cheats and save import on the physical iPad: they were checked in
-  the Simulator and in scripted runs. SonicPad is on the iPad, but every build
-  reports version 0.1 (1), so whether it is the 14:22 build is not recorded.
+  the Simulator and in scripted runs.
 - Hands-on touch play on the physical iPad. The controls were only tested
   with UI tests in the Simulator; the device runs above were the intro and
   attract demo without touches.

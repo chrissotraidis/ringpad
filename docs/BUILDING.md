@@ -41,6 +41,19 @@ Quit the app normally so the trace is flushed; it is also written every few
 seconds. The generator merges new traces into `generated/recomp-manifest.txt`
 and rewrites `generated/recomp/`. Both are game-derived and stay ignored.
 
+Then refresh the published block list, which players build from:
+
+```sh
+python3 scripts/recomp/disc_blocks.py export "ref/<disc folder>/<disc>.gdi"
+```
+
+`config/recomp-blocks.txt` records each block as an address, a file on the disc
+(`1ST_READ.BIN`, the IP.BIN boot sector, a PRS-compressed stage, event or movie
+module) and an offset, with a SHA-256 per source file and for the whole
+manifest. It holds no instruction bytes, and `scripts/check-repo-safety.sh`
+rejects any row that could. `disc_blocks.py import <gdi>` rebuilds the exact
+manifest from a disc and stops if any source file or the manifest hash differs.
+
 | Variable | Effect |
 |---|---|
 | `SONICPAD_TRACE=<file>` | Record blocks that ran on the interpreter. |
@@ -154,3 +167,20 @@ Players share it from ••• ▸ Help ▸ Share Diagnostic Log;
 `scripts/ios/pull-device-log.sh <UDID>` copies it into `generated/device-logs/`.
 
 Host input tests for the touch layer: `scripts/run-host-tests.sh`.
+
+## Player build (PadMint)
+
+Players build their own app from their own disc, with no traces and no
+private files:
+
+```sh
+/usr/bin/python3 scripts/build-personal.py --gdi "<disc folder>/<disc>.gdi" --output SonicPad.ipa
+```
+
+It checks the disc, fetches the pinned Flycast and MoltenVK into `ref/` if
+they are missing, rebuilds the manifest from `config/recomp-blocks.txt`,
+generates the recompiled C++ into `build/personal/`, builds the iOS app
+without signing and packages an unsigned IPA. It never touches
+`generated/`. It runs on Apple's Python 3.9 and needs full Xcode and CMake 3.24+.
+`padmint.json` runs this one script. The IPA contains code translated from the
+player's disc and is for their own devices only.

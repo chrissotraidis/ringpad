@@ -699,9 +699,10 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 - (void)showAbout
 {
 	extern const char sp_aot_manifest_id[];
-	NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"?";
-	NSString *message = [NSString stringWithFormat:@"Version %@\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
-			version, sp_aot_manifest_id,
+	NSDictionary *info = NSBundle.mainBundle.infoDictionary;
+	NSString *message = [NSString stringWithFormat:@"Version %@ (build %@, %@)\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
+			info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?", info[@"SonicPadCommit"] ?: @"?",
+			sp_aot_manifest_id,
 			settings.content.path.empty() ? @"not loaded" : @"Sonic Adventure PAL v1.003"];
 	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"SonicPad" message:message
 			preferredStyle:UIAlertControllerStyleAlert];

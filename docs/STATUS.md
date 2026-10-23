@@ -308,6 +308,10 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
 - **Player builds:** `build-personal.py` runs discovery on the player's disc and
   stops unless it gives the tested set (`# static 13d3333b81a8c42c` in
   `config/recomp-blocks.txt`).
+- **PadMint player check on `95ae4dd`:** passed (PadMint main `a723ae0`, Apple
+  Python 3.9, empty PadMint folder, fresh clone, two compile jobs, a heavily
+  loaded Mac): discovery on the clean clone gave `13d3333b81a8c42c`, scene startup
+  declared, publication gate PASS, 12 min 6 s, 1.8 GB, a 26 MB IPA.
 
 ## Not yet verified
 

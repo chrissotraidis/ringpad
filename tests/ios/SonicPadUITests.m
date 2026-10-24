@@ -327,6 +327,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[app.buttons[@"dcpad.menu"] tap];
 	[[self menuItem:@"Graphics" in:app] tap];
 	XCTAssertTrue([[self menuItem:@"Resolution" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Dreamcast Original" in:app].exists);
 	XCTAssertTrue([self menuItem:@"Texture Upscaling" in:app].exists);
 	XCTAssertTrue(app.buttons[@"Show FPS"].exists);
 	[self attachScreenshot:@"graphics-menu"];
@@ -365,6 +366,9 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertFalse(app.staticTexts[@"sp.fps"].exists, @"Show FPS toggles off");
 	choose(@[@"Graphics", @"Texture Upscaling", @"Off"]);
 	choose(@[@"Graphics", @"Resolution", @"3×"]);
+	choose(@[@"Graphics", @"Dreamcast Original"]);
+	[self attachScreenshot:@"graphics-dreamcast"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at the original look");
 }
 
 // Closing the menu must leave the game moving, every time.

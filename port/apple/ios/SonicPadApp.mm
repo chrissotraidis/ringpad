@@ -652,10 +652,12 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 	if ([NSUserDefaults.standardUserDefaults boolForKey:kKey])
 		return;
 	[NSUserDefaults.standardUserDefaults setBool:YES forKey:kKey];
-	const BOOL phone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
-	config::RenderResolution = phone ? 960 : 1920;
+	// New installs start as the Dreamcast drew the game; sharper rendering is
+	// a choice in ••• ▸ Graphics. Existing installs keep their settings.
+	config::RenderResolution = 480;
+	config::TextureUpscale = 1;
 	SaveSettings();
-	SPLog(@"graphics defaults: resolution=%d", (int)config::RenderResolution);
+	SPLog(@"graphics defaults: dreamcast original (resolution=480, texture_upscale=1)");
 }
 
 - (void)shareDiagnostics

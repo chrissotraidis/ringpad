@@ -158,6 +158,20 @@ static UIMenu *ChoiceMenu(NSString *title, NSString *image, NSArray<NSString *> 
 - (UIMenu *)graphicsMenu
 {
 	__weak UIViewController<SPPortMenuHost> *host = _host;
+	// One tap back to how the Dreamcast drew the game: its own 640x480
+	// picture and textures, scaled to the screen.
+	const BOOL original = config::RenderResolution == 480 && config::TextureUpscale == 1;
+	UIAction *dreamcast = [UIAction actionWithTitle:@"Dreamcast Original" image:[UIImage systemImageNamed:@"tv"]
+			identifier:nil handler:^(UIAction *) {
+		config::RenderResolution = 480;
+		config::TextureUpscale = 1;
+		SaveSettings();
+		SPResetTextureCache();
+		SPLog(@"setting graphics=dreamcast resolution=480 texture_upscale=1");
+		[host portMenuShowMessage:@"Graphics: Dreamcast Original"];
+	}];
+	dreamcast.subtitle = @"480p with the original textures";
+	dreamcast.state = original ? UIMenuElementStateOn : UIMenuElementStateOff;
 	// Internal render height. 4× (1920 lines) is about native on a 12.9-inch iPad.
 	const int lines[] = {480, 960, 1440, 1920};
 	UIMenu *resolution = ChoiceMenu(@"Resolution", @"square.resize.up",
@@ -178,7 +192,7 @@ static UIMenu *ChoiceMenu(NSString *title, NSString *image, NSArray<NSString *> 
 		SPLog(@"setting texture_upscale=%d", value);
 		[host portMenuShowMessage:[NSString stringWithFormat:@"Texture Upscaling: %@", name]];
 	});
-	NSMutableArray *children = [NSMutableArray arrayWithObjects:resolution, textures, nil];
+	NSMutableArray *children = [NSMutableArray arrayWithObjects:dreamcast, resolution, textures, nil];
 	if (SPPortMenu.widescreenAvailable) {
 		const BOOL wide = config::WidescreenGameHacks;
 		UIAction *widescreen = [UIAction actionWithTitle:@"Widescreen (16:9)" image:[UIImage systemImageNamed:@"rectangle.ratio.16.to.9"]

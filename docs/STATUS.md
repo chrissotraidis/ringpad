@@ -315,6 +315,15 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
 
 ## Not yet verified
 
+- **Dreamcast Original graphics (25 October 2026):** after Chris's first hands-on
+  session felt unlike the Dreamcast game, ••• ▸ Graphics gained a Dreamcast
+  Original preset (the game's 640x480 picture and original textures, scaled to
+  the screen), now the default for new installs; existing installs keep their
+  settings. That session ran at 1920p with 4x xBRZ, which redraws textures as
+  hard-edged painted shapes (Mac comparison of the Chaos 0 frame). Build 40
+  (`542c186`) is signed and not yet installed; the UI tests for the preset have not
+  run because another task held the Simulator.
+
 - Audio quality, reload, device speed in Emerald Coast, and stages past its opening.
 - The new stick, cheats and save import on the physical iPad: they were checked in
   the Simulator and in scripted runs.

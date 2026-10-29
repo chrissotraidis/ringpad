@@ -1,4 +1,4 @@
-# SonicPad private integration workspace.
+# SonicPad local build workspace.
 # Never commit original game data, private development material or evidence.
 
 # Original game data and odd disc containers are never part of this project.
@@ -10,8 +10,12 @@
 track*.bin
 track*.raw
 *.7z
+*.zip
+*.ipa
+*.app/
+*.xcarchive/
 
-# Pinned read-only reference checkouts (SARecomp / SunPad / PaperPad).
+# Pinned read-only dependency and reference checkouts.
 ref/
 
 # Authentication material, private development package, extracted content.
@@ -31,6 +35,8 @@ docs/artifacts/
 *.ksave
 *.ksave.bak
 *.vmu
+*.vms
+*.vmi
 dreamcast_vmu_*.bin
 *.sav
 *.dmp
@@ -42,3 +48,12 @@ sonicpad-display.ini
 __pycache__/
 *.pyc
 .DS_Store
+
+# Signing material and local credentials.
+*.p12
+*.pfx
+*.mobileprovision
+*.key
+*.pem
+.env
+.env.*

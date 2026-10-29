@@ -1,10 +1,39 @@
 # Building SonicPad
 
-Requires an Apple Silicon Mac, the Command Line Tools, CMake 3.24+, Ninja,
-Python 3.11+ (for `verify-game.py`), Git and Homebrew `libpng`. Run commands
-from the repository root.
+For a personal iPhone/iPad app, start with [Install and update](INSTALL.md).
+That route needs an Apple Silicon Mac, full Xcode with the iOS platform,
+CMake 3.24+, Git and Python 3.9+ (including Apple's `/usr/bin/python3`).
+Ninja and Homebrew `libpng` are only needed for the macOS development lane.
+Run commands from the repository root.
 
-## One-time setup
+## Player build (PadMint recipe)
+
+Players build their own app from their own disc, without private traces or
+maintainer files:
+
+```sh
+/usr/bin/python3 scripts/build-personal.py \
+  --gdi "/path/to/Sonic Adventure.gdi" --output SonicPad.ipa
+```
+
+The script verifies the disc, fetches pinned Flycast and MoltenVK into `ref/`
+if missing, reconstructs the traced manifest from `config/recomp-blocks.txt`,
+discovers static blocks, generates C++ in `build/personal/`, and builds and
+packages an unsigned IPA. It leaves `generated/` untouched and refuses to
+replace an existing output. Add `--jobs 2` to limit parallel build work.
+
+[`padmint.json`](../padmint.json) runs the same script. SonicPad is not yet in
+PadMint's public catalog; use the command above. The IPA and generated game
+code are private outputs, excluded from the source release. See the
+[release checklist](RELEASE-CHECKLIST.md) for current publication gates.
+
+## macOS development build
+
+This is the tracing and regression lane, not a packaged Mac player release.
+It needs the Command Line Tools, CMake 3.24+, Ninja, Python 3.9+, Git and
+Homebrew `libpng`.
+
+### One-time setup
 
 ```sh
 git clone --recursive https://github.com/flyinghead/flycast.git ref/flycast
@@ -14,16 +43,28 @@ git -C ref/flycast remote set-url --push origin DISABLED
 python3 scripts/verify-game.py "ref/<disc folder>/<disc>.gdi"
 ```
 
-## Build
+### Build
 
 ```sh
-export DEVELOPER_DIR=/Library/Developer/CommandLineTools
-cmake -S . -B generated/build-mac -G Ninja -DCMAKE_BUILD_TYPE=Release
+DEVELOPER_DIR=/Library/Developer/CommandLineTools cmake -S . -B generated/build-mac -G Ninja -DCMAKE_BUILD_TYPE=Release
 ninja -C generated/build-mac
 ```
 
 The app is `generated/build-mac/flycast/Flycast.app`. With no generated
-blocks yet, everything runs on the interpreter.
+blocks yet, everything runs on the interpreter. To reconstruct the current
+compiled set directly from your disc before rebuilding:
+
+```sh
+python3 scripts/recomp/disc_blocks.py import "/path/to/Sonic Adventure.gdi"
+python3 scripts/recomp/discover_blocks.py run "/path/to/Sonic Adventure.gdi" \
+  --traced generated/recomp-manifest.txt --out generated/static-manifest.txt
+python3 scripts/recomp/generate_blocks.py generated/recomp-manifest.txt \
+  --static generated/static-manifest.txt
+ninja -C generated/build-mac
+```
+
+For a first developer build, this avoids collecting your own traces. The
+following sections describe extending and checking coverage.
 
 ## Trace, generate, rebuild
 
@@ -127,24 +168,33 @@ Needs Xcode with its licence accepted and the MoltenVK v1.4.2 package
 `562a15a29bc358446a56a4091c5f7e08f604184187c1d34f712148b61ef17276`):
 
 ```sh
-mkdir -p ref/moltenvk-all && cd ref/moltenvk-all
-gh release download v1.4.2 -R KhronosGroup/MoltenVK -p MoltenVK-all.tar
-tar xf MoltenVK-all.tar && cd ../..
-xcrun simctl create "SonicPad iPad Air 11 (M3)" \
-  com.apple.CoreSimulator.SimDeviceType.iPad-Air-11-inch-M3 \
-  com.apple.CoreSimulator.SimRuntime.iOS-26-5
-scripts/ios/run-sim.sh <udid> tests/acceptance/first-play-chaos0.txt 205 /tmp/sim.log
+mkdir -p ref/moltenvk-all
+curl --fail --location --output ref/moltenvk-all/MoltenVK-all.tar \
+  https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2/MoltenVK-all.tar
+printf '%s  %s\n' \
+  562a15a29bc358446a56a4091c5f7e08f604184187c1d34f712148b61ef17276 \
+  ref/moltenvk-all/MoltenVK-all.tar | shasum -a 256 -c -
+tar xf ref/moltenvk-all/MoltenVK-all.tar -C ref/moltenvk-all
+xcrun simctl list devices available
+SONICPAD_GDI="/path/to/Sonic Adventure.gdi" \
+  scripts/ios/run-sim.sh <udid> tests/acceptance/first-play-chaos0.txt 205 /tmp/sim.log
 ```
 
+Use one available iPhone or iPad Simulator UDID from the listing, or create
+a dedicated Simulator in Xcode. Do not shut down another task's Simulator.
+Keep full Xcode selected for this lane; the earlier Command Line Tools setting
+was scoped to the macOS configure command only.
+
 The script configures `generated/build-iossim` with the Xcode generator on
-first use, builds, installs `com.chrissotraidis.sonicpad` and launches it with
+every run, builds, installs `com.chrissotraidis.sonicpad` and launches it with
 the `SONICPAD_*` variables passed through `SIMCTL_CHILD_`. The app reads the
-GDI directly from `ref/`; nothing is copied into the Simulator.
+GDI directly from the selected Mac path; the route runner does not copy it
+into the Simulator.
 
 UI tests (real UIKit touches, the folder picker and the import flow):
 
 ```sh
-scripts/ios/run-ui-tests.sh <udid>
+SONICPAD_GDI="/path/to/Sonic Adventure.gdi" scripts/ios/run-ui-tests.sh <udid>
 ```
 
 Set `SONICPAD_REAL_GDI=ref/<disc folder>` when running
@@ -158,10 +208,12 @@ path is inside the app's Documents),
 
 ## iPad or iPhone
 
-Generate the recompiled code first (trace, generate, rebuild above);
+Generate the recompiled code first (disc reconstruction above, or tracing);
 without it the device runs everything on the interpreter, at about half speed.
-Then build, sign with your development team and install in place (the
-imported disc, saves and settings stay):
+Back up saves first. Then build, sign with your development team and install
+in place using the same identity. Earlier in-place installs preserved the
+imported disc, saves and settings; changing signing identity or uninstalling
+can disconnect or remove them:
 
 ```sh
 SONICPAD_TEAM=<team ID> scripts/ios/run-device.sh <device UDID> [--launch]
@@ -171,7 +223,7 @@ To put the disc on the device without the Files picker, copy the folder into
 the app's Documents and launch with the import variable:
 
 ```sh
-for f in ref/<disc folder>/*; do
+for f in "ref/<disc folder>"/*; do
   xcrun devicectl device copy to --device <UDID> --domain-type appDataContainer \
     --domain-identifier com.chrissotraidis.sonicpad --source "$f" \
     --destination "Documents/SonicAdventure/$(basename "$f")"
@@ -180,8 +232,9 @@ xcrun devicectl device process launch --device <UDID> --terminate-existing \
   --environment-variables '{"SONICPAD_IMPORT":"SonicAdventure"}' com.chrissotraidis.sonicpad
 ```
 
-The import hashes every track on the device and clones the files, so it uses
-no extra space.
+The import hashes every track on the device before copying it. Same-volume
+APFS copies may share storage; do not assume zero additional space for an
+external or cloud-backed folder.
 
 ## Diagnostic log
 
@@ -196,21 +249,15 @@ settings. A `stall` line appears if the game has not moved 2 s after a resume.
 Players share it from ••• ▸ Help ▸ Share Diagnostic Log;
 `scripts/ios/pull-device-log.sh <UDID>` copies it into `generated/device-logs/`.
 
-Host input tests for the touch layer: `scripts/run-host-tests.sh`.
-
-## Player build (PadMint)
-
-Players build their own app from their own disc, with no traces and no
-private files:
+## Host checks
 
 ```sh
-/usr/bin/python3 scripts/build-personal.py --gdi "<disc folder>/<disc>.gdi" --output SonicPad.ipa
+scripts/run-host-tests.sh
+scripts/check-repo-safety.sh
 ```
 
-It checks the disc, fetches the pinned Flycast and MoltenVK into `ref/` if
-they are missing, rebuilds the manifest from `config/recomp-blocks.txt`,
-finds the static blocks, generates the recompiled C++ into `build/personal/`, builds the iOS app
-without signing and packages an unsigned IPA. It never touches
-`generated/`. It runs on Apple's Python 3.9 and needs full Xcode and CMake 3.24+.
-`padmint.json` runs this one script. The IPA contains code translated from the
-player's disc and is for their own devices only.
+The host runner covers the input adapter, mixer, legacy layout contract,
+DCPad, Flycast bridge, game importer and VMU operations. The safety checker
+covers repository content, not gameplay acceptance. The publication/history
+check and clean player build are recorded in
+[RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).

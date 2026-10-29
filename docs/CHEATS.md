@@ -1,6 +1,6 @@
 # Cheats, saves and widescreen
 
-Updated **22 October 2026**. Everything here applies to the PAL v1.003 disc
+Updated **29 October 2026**; verification below was recorded on 22 October. Everything here applies to the PAL v1.003 disc
 (MK-5100050), the only one SonicPad imports.
 
 ## Cheats (••• ▸ Cheats)
@@ -33,7 +33,9 @@ play; neither is in the menu.
 Import accepts either a whole memory card (a 128 KB `.bin`, the format
 Export VMU Save writes) or one save as a `.VMS` file with its `.VMI`
 (select both in Files). A `.VMS` save is written into the current card,
-replacing the Sonic Adventure save already there and leaving other files.
+replacing the same-named save already there and leaving other files.
+Export a VMU backup outside the app first. A whole-card import replaces all
+files on that card; a single-save import replaces only the matching filename.
 The previous card is first copied to
 `Documents/MK-5100050_vmu_save_A1.backup-<time>.bin`, then the game
 restarts. `port/game/VMUImage.cpp` does the card work and has host tests.
@@ -47,5 +49,8 @@ completed and 100% clear. Downloaded saves are not stored in this repository.
 
 Graphics ▸ Widescreen (16:9) turns on Flycast's built-in widescreen patch for
 this disc and stretches the picture to 16:9. It is on by default on phones
-and not offered on iPad, whose 4:3 screen matches the game. Turning it off
-restarts the game, because the patched camera values stay in game memory.
+and not offered on iPad. Turning it off offers **Restart Now** or **Later**,
+because the patched camera values remain in memory until restart. Save in-game
+first; restarting discards unsaved progress. The **Dreamcast Original** preset
+changes resolution and textures, not this setting. HUD appearance and edge
+culling remain unverified; see [Known issues](KNOWN-ISSUES.md#widescreen).

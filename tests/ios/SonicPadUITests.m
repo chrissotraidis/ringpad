@@ -364,11 +364,25 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[self attachScreenshot:@"graphics-fps"];
 	choose(@[@"Graphics", @"Show FPS"]);
 	XCTAssertFalse(app.staticTexts[@"sp.fps"].exists, @"Show FPS toggles off");
-	choose(@[@"Graphics", @"Texture Upscaling", @"Off"]);
 	choose(@[@"Graphics", @"Resolution", @"3×"]);
 	choose(@[@"Graphics", @"Dreamcast Original"]);
 	[self attachScreenshot:@"graphics-dreamcast"];
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at the original look");
+	void (^checkOriginal)(void) = ^{
+		[app.buttons[@"dcpad.menu"] tap];
+		[[self menuItem:@"Graphics" in:app] tap];
+		XCUIElement *resolution = [self menuItem:@"Resolution" in:app];
+		XCTAssertTrue([resolution waitForExistenceWithTimeout:5]);
+		XCTAssertTrue([resolution.label containsString:@"Original (480p)"], @"preset restores resolution: %@", resolution.label);
+		XCUIElement *textures = [self menuItem:@"Texture Upscaling" in:app];
+		XCTAssertTrue([textures.label containsString:@"Off"], @"preset restores original textures: %@", textures.label);
+		[self dismissMenu:app];
+	};
+	checkOriginal();
+	[app terminate];
+	[app launch];
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30]);
+	checkOriginal();   // both graphics choices survive a cold app relaunch
 }
 
 // Closing the menu must leave the game moving, every time.

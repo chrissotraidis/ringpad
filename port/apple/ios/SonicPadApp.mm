@@ -642,10 +642,8 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 	gui_start_game(settings.content.path);
 }
 
-// First launch only: render above the Dreamcast's 480 lines. On an M2 iPad
-// Pro, 4× (1920 lines, about native on a 12.9-inch screen) held the game's
-// frame rate with no frame over 50 ms, even with 2× xBRZ textures. Phones get
-// 2×, close to their screen height. Players can change it under Graphics.
+// First launch only: keep the original resolution and textures. Existing
+// installs retain their choices; players can change them under Graphics.
 - (void)applyGraphicsDefaultsOnce
 {
 	static NSString *const kKey = @"SonicPad.graphicsDefaults.v1";

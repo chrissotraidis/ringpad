@@ -1,13 +1,12 @@
 {
   "schema": "sonicpad-dependency-lock-v2",
-  "private_only": true,
   "references": {
     "Flycast": {
       "origin": "https://github.com/flyinghead/flycast",
       "commit": "ed953fcbfdd1b8a7521d2966b13cc700c7e2d233",
       "path": "ref/flycast",
       "role": "Dreamcast hardware layer, HLE BIOS, SH-4 interpreter fallback",
-      "build": "root CMakeLists.txt with TARGET_NO_REC, USE_VULKAN=OFF, USE_LUA=OFF, USE_BREAKPAD=OFF, USE_OPENMP=OFF",
+      "build": "root CMakeLists.txt with TARGET_NO_REC, USE_LUA=OFF, USE_BREAKPAD=OFF, USE_OPENMP=OFF; OpenGL on macOS, Vulkan through MoltenVK on iOS",
       "license": "GPL-2.0-or-later"
     },
     "SunPad": {

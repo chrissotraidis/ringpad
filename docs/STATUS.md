@@ -1,9 +1,26 @@
 # SonicPad status
 
-Updated **23 October 2026**. History before the static-recompilation decision
-is archived in [archive/katana-route](../archive/katana-route/README.md).
+Updated **29 October 2026**. The dated sections below retain historical
+measurements; they are not fresh acceptance of the release candidate.
 
-## Verified
+## Current release preparation
+
+The intended release is experimental source and a build recipe. The player
+route reconstructs both traced and statically discovered code from the
+owner's disc, then builds a private unsigned IPA on an Apple Silicon Mac.
+SonicPad is not yet in PadMint's public catalog.
+
+Documentation now reflects the current Flycast input bridge, Python 3.9
+player build, Dreamcast Original defaults, save backups and hardware limits.
+No new hardware pass was requested for release preparation. The
+[release checklist](RELEASE-CHECKLIST.md) records current checks and the
+source/history publication gate; do not infer that changing visibility of
+the existing repository is safe from a successful app build.
+
+Current player instructions: [Install and update](INSTALL.md).
+Outstanding acceptance: [Known issues](KNOWN-ISSUES.md).
+
+## Initial foundation evidence (10 October 2026)
 
 - Disc: the PAL v1.003 GDI in `ref/` passes all three track hashes and the
   descriptor hash (`scripts/verify-game.py`).
@@ -72,12 +89,12 @@ fight, with the HUD and Homing Attack hint on screen.
 ## Touch controls: DCPad (11 October 2026)
 
 The first S4 overlay (plain circles, fixed stick, four separate D-pad
-circles) was replaced by **DCPad** (@@port/dcpad@@). It is a reusable Dreamcast
+circles) was replaced by **DCPad** (`port/dcpad`). It is a reusable Dreamcast
 control kit built on SunPad's accepted layout and mechanisms, so the next
 Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.md).
 
 - **Controls:**
-  - floating analog stick whose base follows the thumb
+  - floating analog stick (the later 22 October refinement fixes its base at touch-down)
   - eight-way rolling D-pad
   - colour-coded Dreamcast face diamond with slide and neighbour chords
   - analog L/R sliders with a haptic full-press detent
@@ -87,7 +104,7 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
 - **Settings:** opacity, size, floating stick, haptics and hide-with-controller. Move Controls drags each control group and resizes it. Layouts persist per game and per phone or tablet; Reset restores the defaults.
 - **Physical controllers:** Apple game controllers feed the same mixer, with player-1 ownership and an A/B/X/Y remap (adapted from SunPad).
 - **Tests:**
-  - @@tests/host/test_dcpad.cpp@@ runs 311 layout and engine checks on six device classes: everything on screen, no overlaps, clear of the menu, minimum sizes, eight-way sectors, chords, trigger hysteresis, the floating stick and multi-finger ownership.
+  - `tests/host/test_dcpad.cpp` runs 311 layout and engine checks on six device classes: everything on screen, no overlaps, clear of the menu, minimum sizes, eight-way sectors, chords, trigger hysteresis, the floating stick and multi-finger ownership.
   - Eight XCUITest UI tests pass on both the iPad Air 11 and iPhone 16 Pro Simulators with real taps, drags and holds. They cover buttons, slides, the D-pad roll, fixed and floating stick, light and full triggers, menu pause and resume, settings, Move Controls persistence across relaunch, Reset, import and relaunch.
   - A touch-only UI test played from boot through the title, file and character select and the opening into Station Square on the iPad Simulator.
 - Fixed while iterating: the text fonts, the menu size on a landscape phone (Controls is now a submenu) and the editor bar covering controls.
@@ -321,37 +338,42 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   the screen), now the default for new installs; existing installs keep their
   settings. That session ran at 1920p with 4x xBRZ, which redraws textures as
   hard-edged painted shapes (Mac comparison of the Chaos 0 frame). Build 40
-  (`542c186`) is signed and not yet installed; the UI tests for the preset have not
-  run because another task held the Simulator.
+  (`542c186`) was installed in place with saves/settings preserved, but no
+  post-install play result was recorded. At that point the preset UI tests
+  had not run because another task held the Simulator; see the release
+  checklist for any later automated result.
 
 - Audio quality, reload, device speed in Emerald Coast, and stages past its opening.
 - The new stick, cheats and save import on the physical iPad: they were checked in
   the Simulator and in scripted runs.
-- Hands-on touch play on the physical iPad. The controls were only tested
-  with UI tests in the Simulator; the device runs above were the intro and
-  attract demo without touches.
+- Recorded acceptance of physical touch feel, input latency and Bluetooth
+  controllers. The maintainer's hands-on session prompted the graphics preset,
+  but is not a complete acceptance pass; automated device routes and
+  Simulator UI checks do not establish those outcomes.
 - iPhone hardware, and device speed in Emerald Coast and later stages.
-- Render resolutions above 480p on the device.
+- Broad-device and sustained-stage acceptance at each graphics setting; the
+  earlier M2 intro/demo checks did exercise resolutions above 480p.
 
 ## Known limits of the current runtime
 
 - Every block is checked against guest memory bytes before it runs.
 - Interrupts are checked at block boundaries, as in Flycast's own JIT.
-- New routes need one trace pass; until generated, their code runs on the
-  interpreter (correct, slower).
-- Flycast runs create `~/Library/Application Support/Flycast/` for settings
-  and VMU data.
+- Static discovery covers many untraced routes. Blocks it misses run on the
+  interpreter; tracing and regeneration can extend coverage. A compiled
+  module is not evidence that its gameplay has been accepted.
+- macOS development runs use `~/Library/Application Support/Flycast/` for
+  settings and VMU data. iOS stores its data inside the SonicPad app container.
 - Widescreen is Flycast's two-value patch for this disc plus a 4:3 to 16:9
   stretch. Players of the same patch report objects popping in at the right
   edge and a stretched HUD; not yet checked in SonicPad. No PAL v1.003 culling
   or HUD fix has been found; Dreamcast Image Builder's culling fix targets USA
   v1.005.
 
-## Next
+## Remaining gameplay work
 
-Chris plays on the iPad and reports how the controls feel, sharing the
+When hardware testing resumes, Chris plays on the iPad and reports how the controls feel, sharing the
 diagnostic log after anything odd. Then: device speed in Emerald Coast, an
 iPhone pass, and Bluetooth controller acceptance. S2: extend the acceptance
 script through Station Square into Emerald Coast and trace it, so later stages
 run as recompiled code. With a 130-emblem save, later stages can be reached
-quickly; each new stage needs one trace pass before it runs as recompiled code.
+quickly; tracing can improve the remaining misses beyond static discovery.

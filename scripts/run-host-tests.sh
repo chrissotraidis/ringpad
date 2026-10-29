@@ -116,7 +116,7 @@ rc=$?
 [ "$rc" -eq 0 ] || exit "$rc"
 
 # The app's built-in disc identity must match config/game-identity.json.
-python3 - <<'EOF' | tee -a "$log"
+python3 - <<'EOF' > "$out/game-identity.run.out" 2>&1
 import json, re, sys
 identity = json.load(open('config/game-identity.json'))['supported']
 source = open('port/game/GameImport.cpp').read()
@@ -126,4 +126,5 @@ print('game identity consistency:', 'PASS' if not missing else 'FAIL ' + ', '.jo
 sys.exit(1 if missing else 0)
 EOF
 rc=$?
+cat "$out/game-identity.run.out" | tee -a "$log"
 exit "$rc"

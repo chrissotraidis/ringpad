@@ -1,6 +1,6 @@
 # SonicPad plan and work loop
 
-Updated **22 October 2026**. Work the lowest open gate. A gate closes only with
+Updated **29 October 2026**. Work the lowest open gate. A gate closes only with
 the evidence named in its row; record results in [STATUS.md](STATUS.md).
 
 | Gate | Outcome | Evidence | Status |
@@ -10,10 +10,19 @@ the evidence named in its row; record results in [STATUS.md](STATUS.md).
 | S1b Discovery | Static discovery from traced seeds; per-route coverage report | Fewer first-run misses on a new route | **Done 23 Oct**: 243,215 static blocks from 1ST_READ.BIN and 204 code modules; untraced Windy Valley went from 98.34% to 99.94% recompiled on the Mac and the iPad |
 | S2 macOS first play | D3 in [prd.md](prd.md) | Scripted replay plus a human run; save and reload verified; audio heard | Open. Emerald Coast's opening runs 99.8% recompiled through Trial mode with a 130-emblem save (22 Oct); the new-game route through Station Square, save, cold reload and audio check remain |
 | S3 iOS performance | iOS build of core plus AOT blocks; one iPad Simulator; Chris measures Emerald Coast on device | Frame-rate log from the device build | Simulator **done 11 Oct**. Device: full speed on the iPad Pro (M2) through the intro and attract demo (22 Oct); Emerald Coast on device open |
-| S4 SonicPad shell | Landscape layout, touch layer from `port/input`, three-dot menu, GDI import with hash check | Simulator UI tests and touch routing tests | **Done 11 Oct**. Since then: signed iPad build, diagnostic log, Graphics menu, cheats, VMU save import, iPhone widescreen (22 Oct) |
+| S4 SonicPad shell | Landscape layout, DCPad touch layer and `port/input` bridge, three-dot menu, GDI import with hash check | Simulator UI tests and touch routing tests | **Done 11 Oct**. Since then: signed iPad build, diagnostic log, Graphics menu, cheats, VMU save import, iPhone widescreen (22 Oct) |
 | S5 Coverage and stability | Seven stories, Chao, soak | Trace manifests per story, scripted regressions | Open |
 | S6 Device acceptance | Chris tests the exact build | Recorded hashes and notes | Open |
-| S7 Publication | Separate approval | License and package audit; a clean player build from the published recipe | Player route **done 23 Oct**: `scripts/build-personal.py` and `padmint.json` make an unsigned IPA from the player's disc using `config/recomp-blocks.txt`; the PadMint pre-tag player check passes; GPL-3.0 licence and notices added. Open: hands-on play, broader coverage, making the repository public, a PadMint catalog entry, the post-publication player check, Chris's approval |
+| S7 Publication | Experimental source and recipe release | License/content/history audit; clean player build; exact public-source selection | Preparation authorized **29 Oct**, with no new hardware pass requested. Historical player checks passed, but publication must use the audited source set and satisfy [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md). Repository visibility remains the owner's action; a public PadMint catalog entry and post-publication player check are separate. |
+
+## Experimental release scope
+
+The source/recipe release does not claim all seven stories or broad device
+acceptance. S2, S5 and S6 stay open, with limits explained in
+[KNOWN-ISSUES.md](KNOWN-ISSUES.md). Historical device evidence is retained;
+release preparation on 29 October does not require or imply a new hardware
+run. Do not publish personal IPAs, game-derived code or the historical
+recovery archive. The release checklist owns the source and Git-history gate.
 
 ## The loop
 

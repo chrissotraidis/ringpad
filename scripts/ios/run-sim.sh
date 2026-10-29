@@ -9,9 +9,9 @@ build=generated/build-iossim
 app=$build/flycast/Release-iphonesimulator/SonicPad.app
 gdi=${SONICPAD_GDI:-$PWD/$(ls ref/*/*.gdi | head -1)}
 
-if [ ! -d "$build" ]; then
-    cmake -S . -B "$build" -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_BUILD_TYPE=Release
-fi
+# Configure every time (about 2 s once cached): the Xcode generator only sees
+# newly generated recompiled sources when CMake runs again.
+cmake -S . -B "$build" -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_BUILD_TYPE=Release -Wno-deprecated >/dev/null
 cmake --build "$build" --config Release --target flycast -- -sdk iphonesimulator -arch arm64 -quiet
 
 booted=$(xcrun simctl list devices booted | grep -c Booted || true)

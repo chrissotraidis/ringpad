@@ -259,9 +259,16 @@ static void test_stick() {
     CHECK(e.state().moveX == 0, "a floating touch starts neutral");
     e.move(2, fx - r * 3, fy, l, s);
     v = e.visual(l);
-    CHECK(e.state().moveX == -127 && std::fabs(v.stick_base_x - (fx - r * 2)) < 1, "the base follows past the rim");
-    e.move(2, fx - r * 2 + r * 0.85f, fy, l, s);
-    CHECK(e.state().moveX == 127, "reversing direction is immediate after the base followed");
+    CHECK(e.state().moveX == -127 && std::fabs(v.stick_base_x - fx) < 1, "past the rim: full tilt, base stays put");
+    CHECK(v.stick_x >= -1.0f && std::fabs(v.stick_x + 1.0f) < 0.01f, "the knob stops at the rim");
+    e.move(2, l.safe.x + l.safe.w - 1, fy, l, s);
+    v = e.visual(l);
+    CHECK(e.state().moveX == 127 && std::fabs(v.stick_base_x - fx) < 1,
+          "dragging across the whole screen leaves the base where the thumb landed");
+    e.move(2, fx + r * 0.85f, fy, l, s);
+    CHECK(e.state().moveX == 127, "full tilt at the travel point inside the rim");
+    e.move(2, fx, fy, l, s);
+    CHECK(e.state().moveX == 0, "back to the landing point is neutral");
     e.end(2);
     CHECK(e.visual(l).stick_active == false && e.visual(l).stick_base_x == home.midX(), "the base returns home");
 

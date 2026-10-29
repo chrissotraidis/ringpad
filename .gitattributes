@@ -1,0 +1,3 @@
+# Historical recovery research is not part of the source-release package.
+# This affects git archive only; it does not remove files from Git history.
+/archive export-ignore

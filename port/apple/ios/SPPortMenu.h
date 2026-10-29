@@ -11,6 +11,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setPaused:(BOOL)paused reason:(NSString *)reason;
 /* Short confirmation shown over the game. */
 - (void)portMenuShowMessage:(NSString *)message;
+@optional
+/* The host draws its own FPS counter; Graphics ▸ Show FPS toggles it. */
+- (BOOL)portMenuFPSVisible;
+- (void)portMenuSetFPSVisible:(BOOL)visible;
+/* Restart the loaded game from the beginning (memory card import, widescreen off). */
+- (void)portMenuRestartGame;
 @end
 
 @interface SPPortMenu : NSObject
@@ -20,12 +26,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 /* Save State ▸ and Load State ▸ with three slots and their dates. */
 - (NSArray<UIMenuElement *> *)saveStateElementsForGameLoaded:(BOOL)loaded;
-/* Display ▸: render resolution and Show FPS. */
-- (UIMenu *)displayMenu;
+/* Graphics ▸: render resolution, texture upscaling, widescreen (iPhone) and Show FPS. */
+- (UIMenu *)graphicsMenu;
 /* Sound ▸: volume. */
 - (UIMenu *)soundMenu;
 /* Shares the game's VMU save file (A1) through the system share sheet. */
 - (UIAction *)exportVMUActionForGameLoaded:(BOOL)loaded;
+/* Replaces the port A memory card with a 128 KB VMU image chosen in Files,
+ * keeping the current card as a dated backup, then restarts the game. */
+- (UIAction *)importVMUActionForGameLoaded:(BOOL)loaded;
+/* The same import without the picker or the confirmation (SONICPAD_IMPORT_VMU). */
+- (void)importVMUFromURLs:(NSArray<NSURL *> *)urls;
+/* Widescreen is offered on phones, whose screens are wider than 4:3. */
++ (BOOL)widescreenAvailable;
+/* Applies the saved widescreen choice before the game loads (call once). */
++ (void)applyWidescreenPreference;
 
 @end
 

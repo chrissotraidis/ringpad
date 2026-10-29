@@ -1,7 +1,7 @@
 # SonicPad PRD v2: static recompilation of Sonic Adventure for Apple platforms
 
-Status: **active**. Written **10 October 2026**. Supersedes the Katana/SARecomp
-PRD, archived at [archive/katana-route/docs/prd-katana-v1.md](../archive/katana-route/docs/prd-katana-v1.md).
+Status: **active**. Written **10 October 2026**, updated **29 October 2026**.
+Supersedes the historical Katana/SARecomp research route.
 Companion documents: [PLAN.md](PLAN.md), [STATUS.md](STATUS.md), [BUILDING.md](BUILDING.md), [INPUT.md](INPUT.md).
 
 ## Goal
@@ -20,12 +20,12 @@ on SARecomp, KatanaRecomp or any private source package.
 | Layer | Implementation |
 |---|---|
 | Game code | SH-4 machine code from the owner's disc, translated ahead of time to C++ by `scripts/recomp/generate_blocks.py` and compiled for arm64 into the app. |
-| Code discovery | Trace-guided: a Mac build records every block the game executes, including code loaded later from disc, and the generator compiles them. Static discovery from traced seeds is the next extension. |
+| Code discovery | Trace-guided blocks plus static discovery from disc modules, traced seeds, constant-pool call targets and code pointers. Players reconstruct the tested manifests from their own disc using the committed address/offset lists. |
 | Runtime | `port/recomp/sp_aot_executor.cpp` runs compiled blocks keyed by guest address and checked against the guest bytes, so stage code loaded over old code never runs stale. |
 | Dreamcast hardware | [Flycast](https://github.com/flyinghead/flycast) at a pinned commit supplies PowerVR2, AICA sound, GD-ROM, Maple/VMU and the high-level BIOS replacement. No BIOS file is needed. |
 | Fallback and oracle | Flycast's SH-4 interpreter runs any block not yet compiled and is the reference for differential tests. It is portable C++ and allowed on iOS. |
 | JIT | **None.** Every Flycast JIT is compiled out (`TARGET_NO_REC`). |
-| App shell | SunPad-derived Apple shell plus `port/input` (one stick, independent analog L/R, Start separate from the three-dot menu). |
+| App shell | SonicPad UIKit shell with DCPad touch controls and SunPad-derived input mechanisms. `port/input/FlycastPadBridge` maps one stick, independent analog L/R and Start to Flycast port A; the three-dot menu is separate. |
 
 Why this route: a matching decompilation of a game this size is a multi-year
 effort with no Dreamcast starting point, and the Katana route needs private
@@ -38,8 +38,12 @@ a time and never reached a title screen.
 
 Only the PAL v1.003 GDI with three tracks is supported; hashes are in
 `config/game-identity.json` and checked by `scripts/verify-game.py`. The app
-never downloads game content. Traces, the block manifest and generated C++ are
-derived from the game and stay ignored and private, like the disc itself.
+never downloads game content. Traces, instruction-bearing block manifests
+and generated C++ are derived from the game and stay ignored and private,
+like the disc itself.
+`config/recomp-blocks.txt` and `config/code-modules.txt` contain addresses,
+file names, offsets and hashes, allowing players to reconstruct the compiled
+set without a private trace.
 
 ## Definition of done
 
@@ -52,7 +56,11 @@ derived from the game and stay ignored and private, like the disc itself.
 | D5 | Measured frame rate on Chris's physical iPad/iPhone holds the original game's rate in Emerald Coast without JIT. |
 | D6 | All seven stories, credits and Chao flows covered by traces, scripts and play; 60-minute soak. |
 | D7 | Chris accepts the exact device build. |
-| D8 | Publication is a separate decision. Flycast is GPL-2.0-or-later and SunPad is GPL-3.0-or-later, so released source would be GPL-3.0; game-derived files are never published. |
+| D8 | Source publication passes the [release checklist](RELEASE-CHECKLIST.md), including history/content audit and clean player build. SonicPad source is GPL-3.0; game-derived files and personal IPAs are excluded. The owner controls repository visibility. |
+
+An experimental source/recipe release does not close D3–D7. Those remain the
+full project acceptance goals and must be disclosed as open until measured.
 
 Non-goals: SADX content, other disc revisions, online features, mods, a general
-Dreamcast emulator front end, and App Store distribution.
+Dreamcast emulator front end, App Store distribution, and a native renderer
+replacing Flycast's graphics (decided 22 October; see [PLAN.md](PLAN.md)).

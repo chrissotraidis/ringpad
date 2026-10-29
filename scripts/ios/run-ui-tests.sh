@@ -8,9 +8,8 @@ build=generated/build-iossim
 gdi=${SONICPAD_GDI:-$PWD/$(ls ref/*/*.gdi | head -1)}
 results=generated/ui-tests-$(date +%Y%m%d-%H%M%S).xcresult
 
-if [ ! -d "$build" ]; then
-    cmake -S . -B "$build" -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_BUILD_TYPE=Release
-fi
+# Configure every time so newly generated recompiled sources are included.
+cmake -S . -B "$build" -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_BUILD_TYPE=Release -Wno-deprecated >/dev/null
 if xcrun simctl list devices booted | grep Booted | grep -vq "$udid"; then
     echo "Another Simulator is booted; shut it down first." >&2
     exit 2

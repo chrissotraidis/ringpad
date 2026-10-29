@@ -27,12 +27,12 @@ DCPad adds what a Dreamcast pad needs:
 
 | Control | Behaviour |
 |---|---|
-| Analog stick | Floating by default: touch anywhere in the lower-left area and the stick centres under your thumb. The base follows the thumb past the rim, so changing direction is instant. Full tilt at 85% of the radius by default; **Stick travel** in settings sets it from 50% to 100%. A fixed mode is in settings. A direction arc on the rim shows where the stick points. |
+| Analog stick | Floating by default: touch anywhere in the lower-left area and the stick centres under your thumb. The base stays where the thumb landed; past the rim the knob stops at the edge and the stick holds full tilt in that direction. Full tilt at 85% of the radius by default; **Stick travel** in settings sets it from 50% to 100%. A fixed mode is in settings. A direction arc on the rim shows where the stick points. |
 | D-pad | One eight-way cross. Roll the thumb between directions without lifting; cardinals own 60° and diagonals 30°. Keeps tracking if the thumb drifts off the cross. Pressed arms light up inside the cross. |
 | A / B / X / Y | Dreamcast diamond and colours (A red bottom, B blue right, X yellow left, Y green top). Slide between buttons without lifting. Resting between two neighbours presses both, but opposite buttons never chord. |
 | L / R | Analog sliders. A light touch is already past the game's digital threshold; pressure grows toward the outer screen edge, and past the rim notches (72% of the length) is a full press with a haptic tap, a glow and hysteresis. |
 | Start | Separate pill beside the right thumb, never part of the ••• menu. |
-| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); About. `showMessage:` confirms actions such as "Saved to Slot 1". |
+| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); Help (About, Share Diagnostic Log). `showMessage:` confirms actions such as "Saved to Slot 1". |
 
 Each finger owns one control from touch-down to lift, so lifting one thumb
 never releases another's input, and a second finger can't take over a stick,
@@ -76,6 +76,8 @@ DCPadOverlayView *pad = [[DCPadOverlayView alloc] initWithFrame:view.bounds stor
 pad.menuTitle = @"MyPad";
 pad.delegate = self;                 // menu items, pause on modal, controller mapping
 [view addSubview:pad];
+// To place DCPad's Controls submenu among your own sections, implement
+// -dcpadOverlay:menuElementsWithControls: and return the whole menu.
 
 DCPadControllerInput *controllers = [[DCPadControllerInput alloc] initWithNamespace:@"MyGame"];
 controllers.connectionChanged = ^(BOOL connected) { [pad setControllerConnected:connected]; };

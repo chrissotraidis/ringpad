@@ -148,13 +148,10 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 {
 	if ([UIButton instancesRespondToSelector:_cmd])
 		[super contextMenuInteraction:interaction willEndForConfiguration:configuration animator:animator];
-	void (^closed)(void) = self.menuDidClose;
-	if (closed == nil)
-		return;
-	if (animator != nil)
-		[animator addCompletion:closed];
-	else
-		closed();
+	// Report the close now: on iPadOS 27 the dismiss animator's completion can
+	// wait for the next touch, which left the game paused until a second tap.
+	if (self.menuDidClose)
+		self.menuDidClose();
 }
 
 @end
@@ -495,6 +492,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		if (strong == nil)
 			return;
 		strong->_menuOpen = YES;
+		NSLog(@"DCPad: menu open");
 		[strong modalChanged];
 	};
 	_menuButton.menuDidClose = ^{
@@ -502,6 +500,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		if (strong == nil)
 			return;
 		strong->_menuOpen = NO;
+		NSLog(@"DCPad: menu closed");
 		[strong modalChanged];
 	};
 	[self addSubview:_menuButton];
@@ -509,9 +508,6 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 
 - (NSArray<UIMenuElement *> *)menuElements
 {
-	NSMutableArray<UIMenuElement *> *items = [NSMutableArray array];
-	if ([self.delegate respondsToSelector:@selector(dcpadOverlayMenuElements:)])
-		[items addObjectsFromArray:[self.delegate dcpadOverlayMenuElements:self]];
 	__weak DCPadOverlayView *weakSelf = self;
 	NSMutableArray<UIMenuElement *> *controls = [NSMutableArray array];
 	[controls addObject:[UIAction actionWithTitle:@"Touch Control Settings…" image:[UIImage systemImageNamed:@"slider.horizontal.3"]
@@ -525,8 +521,14 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 			[strong.delegate dcpadOverlayRequestsControllerMapping:strong];
 		}]];
 	// A submenu keeps the top level short enough for a landscape phone.
-	[items addObject:[UIMenu menuWithTitle:@"Controls" image:[UIImage systemImageNamed:@"gamecontroller.fill"]
-			identifier:nil options:0 children:controls]];
+	UIMenu *controlsMenu = [UIMenu menuWithTitle:@"Controls" image:[UIImage systemImageNamed:@"gamecontroller.fill"]
+			identifier:nil options:0 children:controls];
+	if ([self.delegate respondsToSelector:@selector(dcpadOverlay:menuElementsWithControls:)])
+		return [self.delegate dcpadOverlay:self menuElementsWithControls:controlsMenu];
+	NSMutableArray<UIMenuElement *> *items = [NSMutableArray array];
+	if ([self.delegate respondsToSelector:@selector(dcpadOverlayMenuElements:)])
+		[items addObjectsFromArray:[self.delegate dcpadOverlayMenuElements:self]];
+	[items addObject:controlsMenu];
 	// The title header costs a row a landscape phone does not have.
 	return @[[UIMenu menuWithTitle:_phone ? @"" : self.menuTitle image:nil identifier:nil options:UIMenuOptionsDisplayInline children:items]];
 }
@@ -1019,6 +1021,13 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 		[self hideSettingsPanel];
 		return;
 	}
+	if (_menuOpen) {
+		// The menu takes every touch while it is on screen, so a touch here means
+		// it has gone without telling us. Never let that keep the game paused.
+		NSLog(@"DCPad: menu closed (missed close event)");
+		_menuOpen = NO;
+		[self modalChanged];
+	}
 	if ([self inputBlocked])
 		return;
 	_dimmed = NO;
@@ -1119,6 +1128,9 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 - (void)hideSettingsPanel
 {
 	_panel.hidden = YES;
+	NSLog(@"DCPad: touch settings opacity=%.2f size=%.2f travel=%.2f floating=%d haptics=%d hide_with_controller=%d dim=%d",
+			_settings.opacity, _settings.size, _settings.stick_travel, _settings.floating_stick, _settings.haptics,
+			_settings.hide_with_controller, _settings.dim_when_idle);
 	[self modalChanged];
 }
 
@@ -1149,6 +1161,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 
 - (void)resetLayout
 {
+	NSLog(@"DCPad: layout reset");
 	[_store resetLayoutForPhone:_phone];
 	_settings = [_store settingsForPhone:_phone];
 	_sizeSlider.value = _settings.size;
@@ -1191,6 +1204,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 	_selected = Control::None;
 	_dragging = Control::None;
 	[_store saveSettings:_settings phone:_phone];
+	NSLog(@"DCPad: layout saved");
 	[self modalChanged];
 	[self render];
 }

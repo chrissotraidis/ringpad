@@ -63,6 +63,8 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	NSScanner *scanner = [NSScanner scannerWithString:text];
 	unsigned kcode = 0, seen = 0;
 	int minX = 0, maxX = 0, minY = 0, maxY = 0, lt = 0, rt = 0, run = 0;
+	long long frames = 0;
+	double guest = 0;
 	const BOOL ok = [scanner scanString:@"kcode=" intoString:nil] && [scanner scanHexInt:&kcode]
 			&& [scanner scanString:@"seen=" intoString:nil] && [scanner scanHexInt:&seen]
 			&& [scanner scanString:@"x=" intoString:nil] && [scanner scanInt:&minX]
@@ -71,9 +73,11 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 			&& [scanner scanString:@".." intoString:nil] && [scanner scanInt:&maxY]
 			&& [scanner scanString:@"lt=" intoString:nil] && [scanner scanInt:&lt]
 			&& [scanner scanString:@"rt=" intoString:nil] && [scanner scanInt:&rt]
-			&& [scanner scanString:@"run=" intoString:nil] && [scanner scanInt:&run];
+			&& [scanner scanString:@"run=" intoString:nil] && [scanner scanInt:&run]
+			&& [scanner scanString:@"frames=" intoString:nil] && [scanner scanLongLong:&frames]
+			&& [scanner scanString:@"guest=" intoString:nil] && [scanner scanDouble:&guest];
 	XCTAssertTrue(ok, @"unparsed debug label: %@", text);
-	return @{ @"kcode": @(kcode), @"seen": @(seen), @"minX": @(minX), @"maxX": @(maxX), @"minY": @(minY),
+	return @{ @"guest": @(guest), @"frames": @(frames), @"kcode": @(kcode), @"seen": @(seen), @"minX": @(minX), @"maxX": @(maxX), @"minY": @(minY),
 			@"maxY": @(maxY), @"lt": @(lt), @"rt": @(rt), @"run": @(run) };
 }
 
@@ -101,6 +105,20 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 {
 	[[app coordinateWithNormalizedOffset:CGVectorMake(0.45, 0.5)] tap];
 	[NSThread sleepForTimeInterval:0.8];
+}
+
+- (void)openHelpMenu:(XCUIApplication *)app
+{
+	[app.buttons[@"dcpad.menu"] tap];
+	XCUIElement *help = app.buttons[@"Help"];
+	XCTAssertTrue([help waitForExistenceWithTimeout:5]);
+	if (!help.isHittable) {
+		// Native UIMenu scrolls when the landscape phone cannot fit every row.
+		[[[self menuItem:@"Cheats" in:app] coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] pressForDuration:0.05
+				thenDragToCoordinate:[[self menuItem:@"Controls" in:app] coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)]];
+	}
+	XCTAssertTrue(help.isHittable, @"Help is reachable through the native menu");
+	[help tap];
 }
 
 #pragma mark - Import and lifecycle
@@ -235,6 +253,17 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 
 #pragma mark - Menu and settings
 
+- (void)testHelpMenuIsReachable
+{
+	XCUIApplication *app = [self launchGame];
+	[self openHelpMenu:app];
+	XCTAssertTrue([[self menuItem:@"About This Build" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Share Diagnostic Log…" in:app].isHittable);
+	[self attachScreenshot:@"help-reachable"];
+	[self dismissMenu:app];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"closing Help resumes the game");
+}
+
 - (void)testMenuPausesAndOffersControls
 {
 	XCUIApplication *app = [self launchGame];
@@ -242,8 +271,9 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
 	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
-	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Display", @"Sound", @"Game Files", @"About This Build"])
-		XCTAssertTrue(app.buttons[item].isHittable, @"top-level item %@ fits on screen", item);
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Cheats", @"Game Files"])
+		XCTAssertTrue([self menuItem:item in:app].isHittable, @"top-level item %@ fits on screen", item);
+	XCTAssertTrue(app.buttons[@"Help"].exists, @"Help is present; short landscape menus may need scrolling");
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
 	[self attachScreenshot:@"menu"];
@@ -260,6 +290,24 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[app.buttons[@"Game Files"] tap];
 	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
 	XCTAssertTrue([self menuItem:@"Export VMU Save…" in:app].exists);
+	XCTAssertTrue([self menuItem:@"Import VMU Save…" in:app].exists);
+	[self dismissMenu:app];
+
+	[self openHelpMenu:app];
+	XCTAssertTrue([[self menuItem:@"About This Build" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Share Diagnostic Log…" in:app].exists);
+	[self attachScreenshot:@"menu-help"];
+	[[self menuItem:@"Share Diagnostic Log…" in:app] tap];
+	[NSThread sleepForTimeInterval:2];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the share sheet pauses the game");
+	[self attachScreenshot:@"share-diagnostics"];
+	[self dismissMenu:app];
+	[NSThread sleepForTimeInterval:1];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"closing the share sheet resumes");
+
+	[app.buttons[@"dcpad.menu"] tap];
+	[app.buttons[@"Game Files"] tap];
+	XCTAssertTrue([[self menuItem:@"Import Game…" in:app] waitForExistenceWithTimeout:5]);
 	[[self menuItem:@"Import Game…" in:app] tap];
 	XCUIElement *cancel = app.buttons[@"sp.import.cancel"];
 	XCTAssertTrue([cancel waitForExistenceWithTimeout:10]);
@@ -302,19 +350,21 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game runs after loading");
 
 	[app.buttons[@"dcpad.menu"] tap];
-	[app.buttons[@"Display"] tap];
-	XCTAssertTrue([app.buttons[@"Resolution"] waitForExistenceWithTimeout:5]);
+	[[self menuItem:@"Graphics" in:app] tap];
+	XCTAssertTrue([[self menuItem:@"Resolution" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Dreamcast Original" in:app].exists);
+	XCTAssertTrue([self menuItem:@"Texture Upscaling" in:app].exists);
 	XCTAssertTrue(app.buttons[@"Show FPS"].exists);
-	[self attachScreenshot:@"display-menu"];
+	[self attachScreenshot:@"graphics-menu"];
 	[self dismissMenu:app];
 }
 
-// Render resolution applies while the game runs, then returns to the default.
-- (void)testDisplayOptionsApply
+// Resolution, texture upscaling and the FPS counter apply while the game runs.
+- (void)testGraphicsOptionsApply
 {
 	XCUIApplication *app = [self launchGame];
 	[NSThread sleepForTimeInterval:8];
-	[self attachScreenshot:@"display-default"];
+	[self attachScreenshot:@"graphics-default"];
 	void (^choose)(NSArray<NSString *> *) = ^(NSArray<NSString *> *path) {
 		[app.buttons[@"dcpad.menu"] tap];
 		for (NSString *item in path) {
@@ -324,10 +374,85 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 		}
 		[NSThread sleepForTimeInterval:2];
 	};
-	choose(@[@"Display", @"Resolution", @"2×"]);
-	[self attachScreenshot:@"display-2x"];
-	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at 2x");
-	choose(@[@"Display", @"Resolution", @"Original"]);
+	choose(@[@"Graphics", @"Resolution", @"4×"]);
+	[self attachScreenshot:@"graphics-4x"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at 4x");
+	choose(@[@"Graphics", @"Texture Upscaling", @"2×"]);
+	[self attachScreenshot:@"graphics-xbrz"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running with xBRZ");
+	choose(@[@"Graphics", @"Show FPS"]);
+	XCUIElement *fps = app.staticTexts[@"sp.fps"];
+	XCTAssertTrue([fps waitForExistenceWithTimeout:3]);
+	XCTAssertTrue([fps.label hasSuffix:@"FPS"]);
+	XCTAssertLessThan(fps.frame.origin.x, app.frame.size.width * 0.2, @"FPS sits at the left");
+	XCTAssertLessThan(fps.frame.origin.y, app.frame.size.height * 0.2, @"FPS sits at the top");
+	[self attachScreenshot:@"graphics-fps"];
+	choose(@[@"Graphics", @"Show FPS"]);
+	XCTAssertFalse(app.staticTexts[@"sp.fps"].exists, @"Show FPS toggles off");
+	choose(@[@"Graphics", @"Resolution", @"3×"]);
+	choose(@[@"Graphics", @"Dreamcast Original"]);
+	[self attachScreenshot:@"graphics-dreamcast"];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game keeps running at the original look");
+	void (^checkOriginal)(void) = ^{
+		[app.buttons[@"dcpad.menu"] tap];
+		[[self menuItem:@"Graphics" in:app] tap];
+		XCUIElement *resolution = [self menuItem:@"Resolution" in:app];
+		XCTAssertTrue([resolution waitForExistenceWithTimeout:5]);
+		XCTAssertTrue([resolution.label containsString:@"Original (480p)"], @"preset restores resolution: %@", resolution.label);
+		XCUIElement *textures = [self menuItem:@"Texture Upscaling" in:app];
+		XCTAssertTrue([textures.label containsString:@"Off"], @"preset restores original textures: %@", textures.label);
+		[self dismissMenu:app];
+	};
+	checkOriginal();
+	[app terminate];
+	[app launch];
+	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30]);
+	checkOriginal();   // both graphics choices survive a cold app relaunch
+}
+
+// Closing the menu must leave the game moving, every time.
+// Cheats ▸ toggles a cheat, the menu shows it as on, and the game keeps running.
+- (void)testCheatsToggle
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:6];
+	[app.buttons[@"dcpad.menu"] tap];
+	[[self menuItem:@"Cheats" in:app] tap];
+	for (NSString *item in @[@"Max Rings", @"Infinite Lives", @"Unlock All Characters"])
+		XCTAssertTrue([[self menuItem:item in:app] waitForExistenceWithTimeout:5], @"%@", item);
+	[self attachScreenshot:@"cheats-menu"];
+	[[self menuItem:@"Max Rings" in:app] tap];
+	[NSThread sleepForTimeInterval:1.5];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"the game runs after turning a cheat on");
+	[app.buttons[@"dcpad.menu"] tap];
+	XCUIElement *cheats = [self menuItem:@"Cheats" in:app];
+	XCTAssertTrue([cheats waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([cheats.label containsString:@"1 on"], @"Cheats shows how many are on: %@", cheats.label);
+	[cheats tap];
+	[[self menuItem:@"Max Rings" in:app] tap];   // back off, so other tests start clean
+	[NSThread sleepForTimeInterval:1];
+}
+
+- (void)testGameKeepsMovingAfterMenu
+{
+	XCUIApplication *app = [self launchGame];
+	[NSThread sleepForTimeInterval:8];
+	for (int i = 0; i < 8; i++) {
+		[app.buttons[@"dcpad.menu"] tap];
+		XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:5]);
+		[NSThread sleepForTimeInterval:0.3 * (i % 3)];
+		[self dismissMenu:app];
+		const long long before = [[self inputState:app][@"frames"] longLongValue];
+		const double guestBefore = [[self inputState:app][@"guest"] doubleValue];
+		[NSThread sleepForTimeInterval:1.0];
+		NSDictionary *after = [self inputState:app];
+		XCTAssertEqual([after[@"run"] intValue], 1, @"running after close %d", i);
+		XCTAssertGreaterThan([after[@"frames"] longLongValue], before + 20, @"frames advance after close %d", i);
+		XCTAssertGreaterThan([after[@"guest"] doubleValue], guestBefore + 0.5, @"guest time advances after close %d", i);
+		XCTAssertFalse([self seen:app] & kStart, @"closing the menu never sends Start");
+		if (i == 0)
+			[self attachScreenshot:@"after-menu-close"];
+	}
 }
 
 - (void)testSettingsAndMoveControlsPersist

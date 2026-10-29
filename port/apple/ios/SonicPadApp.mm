@@ -9,10 +9,12 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "SPGameLibrary.h"
+#import "SPDiagnostics.h"
 #import "SPPortMenu.h"
 #import "DCPadControllerInput.h"
 #import "DCPadOverlayView.h"
 
+#include "SonicCheats.h"
 #include "types.h"
 #include "emulator.h"
 #include "stdclass.h"
@@ -46,7 +48,7 @@ static_assert(sonicpad::kFlycastLeft == DC_DPAD_LEFT && sonicpad::kFlycastRight 
 
 // Flycast's fault handler chains here for faults it does not own. Log where
 // the fault happened (symbol and image offset) before the process traps, so
-// crash reports name the faulting function.
+// crash reports and the diagnostic log name the faulting function.
 static void reportFault(int sig, siginfo_t *info, void *context)
 {
 	const ucontext_t *uc = static_cast<const ucontext_t *>(context);
@@ -55,9 +57,13 @@ static void reportFault(int sig, siginfo_t *info, void *context)
 	Dl_info where{}, caller{};
 	dladdr(reinterpret_cast<void *>(pc), &where);
 	dladdr(reinterpret_cast<void *>(lr), &caller);
-	NSLog(@"SONICPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx", sig, info->si_addr,
+	char line[512];
+	const int n = snprintf(line, sizeof line, "SONICPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx\n", sig, info->si_addr,
 			where.dli_sname ?: "?", (unsigned long)(pc - (uintptr_t)(where.dli_saddr ?: where.dli_fbase)),
 			caller.dli_sname ?: "?", (unsigned long)(lr - (uintptr_t)(caller.dli_saddr ?: caller.dli_fbase)));
+	// Straight to the log file: the stderr copier thread may not run again.
+	if (SPDiagnosticsFD() >= 0 && n > 0)
+		write(SPDiagnosticsFD(), line, (size_t)MIN(n, (int)sizeof line - 1));
 	signal(sig, SIG_DFL);
 	raise(sig);
 }
@@ -103,9 +109,13 @@ static void hideFlycastGamepad(Event, void *)
 @property (nonatomic, strong) UIButton *importChoose;
 @property (nonatomic, strong) UIButton *importCancel;
 @property (nonatomic, strong) UILabel *inputDebug;
+@property (nonatomic, strong) UILabel *fpsLabel;
 @property (nonatomic) BOOL renderStarted;
 @property (nonatomic) BOOL scriptedInput;
 @end
+
+static NSString *const kShowFPSKey = @"SonicPad.showFPS";
+double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 
 @implementation SPGameViewController
 {
@@ -114,6 +124,20 @@ static void hideFlycastGamepad(Event, void *)
 	uint32_t _seenPressed;
 	int _minX, _maxX, _minY, _maxY;
 	unsigned _maxLT, _maxRT;
+	// Presented frames: the FPS counter, the log's render line and the
+	// check that the game moves again after a resume.
+	uint64_t _frames;
+	CFTimeInterval _lastFrame;
+	CFTimeInterval _fpsStart;
+	uint64_t _fpsFrames;
+	CFTimeInterval _windowStart;
+	uint64_t _windowFrames;
+	int _windowHitches;
+	double _windowWorst;
+	CFTimeInterval _resumedAt;
+	uint64_t _framesAtResume;
+	double _guestAtResume;
+	BOOL _stallLogged;
 }
 
 - (void)loadView
@@ -129,6 +153,7 @@ static void hideFlycastGamepad(Event, void *)
 	[view addSubview:self.overlay];
 	self.pauseReasons = [NSMutableSet set];
 	self.portMenu = [[SPPortMenu alloc] initWithHost:self];
+	[self buildFPSLabel];
 
 	if (std::getenv("SONICPAD_INPUT_DEBUG") != nullptr) {
 		self.inputDebug = [[UILabel alloc] init];
@@ -143,6 +168,43 @@ static void hideFlycastGamepad(Event, void *)
 		]];
 	}
 	[self buildImportView];
+}
+
+// Top-left counter in the controls' glass style.
+- (void)buildFPSLabel
+{
+	UILabel *label = [[UILabel alloc] init];
+	label.accessibilityIdentifier = @"sp.fps";
+	label.font = [UIFont monospacedDigitSystemFontOfSize:15 weight:UIFontWeightSemibold];
+	label.textColor = UIColor.whiteColor;
+	label.textAlignment = NSTextAlignmentCenter;
+	label.backgroundColor = [UIColor colorWithWhite:0.05 alpha:0.55];
+	label.layer.cornerRadius = 15;
+	label.layer.borderWidth = 1;
+	label.layer.borderColor = [UIColor colorWithWhite:1 alpha:0.22].CGColor;
+	label.layer.masksToBounds = YES;
+	label.text = @"-- FPS";
+	label.hidden = ![NSUserDefaults.standardUserDefaults boolForKey:kShowFPSKey];
+	label.translatesAutoresizingMaskIntoConstraints = NO;
+	[self.view addSubview:label];
+	[NSLayoutConstraint activateConstraints:@[
+		[label.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:12],
+		[label.leadingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:12],
+		[label.heightAnchor constraintEqualToConstant:30],
+		[label.widthAnchor constraintEqualToConstant:84],
+	]];
+	self.fpsLabel = label;
+}
+
+- (BOOL)portMenuFPSVisible
+{
+	return !self.fpsLabel.hidden;
+}
+
+- (void)portMenuSetFPSVisible:(BOOL)visible
+{
+	[NSUserDefaults.standardUserDefaults setBool:visible forKey:kShowFPSKey];
+	self.fpsLabel.hidden = !visible;
 }
 
 - (void)buildImportView
@@ -222,6 +284,11 @@ static void hideFlycastGamepad(Event, void *)
 	os_InstallFaultHandler();
 	flycast_init(0, nullptr);
 	config::RendererType = RenderType::Vulkan;
+	// SonicPad draws its own FPS counter at the top left.
+	config::ShowFPS = false;
+	[self applyGraphicsDefaultsOnce];
+	[SPPortMenu applyWidescreenPreference];
+	[self restoreCheats];
 	vgamepad::hide();
 	EventManager::listen(Event::Resume, hideFlycastGamepad);
 	self.scriptedInput = std::getenv("SONICPAD_INPUT_SCRIPT") != nullptr;
@@ -233,18 +300,27 @@ static void hideFlycastGamepad(Event, void *)
 	self.controllerInput = [[DCPadControllerInput alloc] initWithNamespace:@"SonicAdventure"];
 	__weak SPGameViewController *weakSelf = self;
 	self.controllerInput.connectionChanged = ^(BOOL connected) {
+		SPLog(@"controller %@", connected ? @"connected" : @"disconnected");
 		[weakSelf.overlay setControllerConnected:connected];
 	};
 	[self.controllerInput start];
 
 	if (const char *game = std::getenv("SONICPAD_GAME")) {
+		SPLog(@"game: from SONICPAD_GAME");
 		settings.content.path = game;
 	} else if (const char *folder = std::getenv("SONICPAD_IMPORT")) {
+		// A relative path is inside the app's Documents, where a device copy
+		// (devicectl, Finder file sharing) puts the disc folder.
+		NSString *path = [NSString stringWithUTF8String:folder];
+		if (!path.isAbsolutePath)
+			path = [@(home.c_str()) stringByAppendingPathComponent:path];
 		[self showImport:NO];
-		[self importFromURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:folder] isDirectory:YES]];
+		[self importFromURL:[NSURL fileURLWithPath:path isDirectory:YES]];
 	} else if (NSString *installed = std::getenv("SONICPAD_IGNORE_INSTALLED") ? nil : [SPGameLibrary installedGamePath]) {
+		SPLog(@"game: installed disc");
 		settings.content.path = installed.fileSystemRepresentation;
 	} else {
+		SPLog(@"game: none installed, showing import");
 		[self showImport:NO];
 	}
 }
@@ -262,6 +338,8 @@ static void hideFlycastGamepad(Event, void *)
 	[self updateDrawableSize];
 	CAMetalLayer *layer = (CAMetalLayer *)self.view.layer;
 	settings.display.dpi = 160.f * layer.contentsScale;
+	SPLog(@"render start: %.0fx%.0f px, resolution %d lines, volume %d", layer.drawableSize.width, layer.drawableSize.height,
+			(int)config::RenderResolution, (int)config::AudioVolume);
 	initRenderApi((__bridge void *)layer);
 	mainui_init();
 	self.renderStarted = YES;
@@ -270,6 +348,17 @@ static void hideFlycastGamepad(Event, void *)
 	self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, 60, 60);
 	[self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 	[self showMenuHintOnce];
+	// Development and device testing: SONICPAD_IMPORT_VMU=<file>[,<file>] imports
+	// a save (paths relative to Documents) once the game has started.
+	if (const char *vmu = std::getenv("SONICPAD_IMPORT_VMU")) {
+		NSMutableArray<NSURL *> *urls = [NSMutableArray array];
+		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+		for (NSString *part in [@(vmu) componentsSeparatedByString:@","])
+			[urls addObject:[NSURL fileURLWithPath:part.isAbsolutePath ? part : [documents stringByAppendingPathComponent:part]]];
+		dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+			[self.portMenu importVMUFromURLs:urls];
+		});
+	}
 }
 
 // One tip on the first play: where save states and settings live.
@@ -310,8 +399,70 @@ static void hideFlycastGamepad(Event, void *)
 - (void)renderFrame
 {
 	[self updateInput];
-	if (mainui_rend_frame() && imguiDriver != nullptr)
-		imguiDriver->present();
+	if (mainui_rend_frame()) {
+		if (imguiDriver != nullptr)
+			imguiDriver->present();
+		[self countFrame];
+	}
+	[self updateFrameStats];
+}
+
+- (void)countFrame
+{
+	const CFTimeInterval now = CACurrentMediaTime();
+	if (_lastFrame > 0 && self.pauseReasons.count == 0) {
+		const double gap = (now - _lastFrame) * 1000;
+		if (gap > 50)
+			_windowHitches++;
+		_windowWorst = MAX(_windowWorst, gap);
+	}
+	_lastFrame = now;
+	_frames++;
+	_fpsFrames++;
+	_windowFrames++;
+}
+
+// Twice a second: the FPS counter. Every 30 s of play: one render line in
+// the log. After a resume: a log line if no frame arrives within 2 s.
+- (void)updateFrameStats
+{
+	const CFTimeInterval now = CACurrentMediaTime();
+	const BOOL running = self.pauseReasons.count == 0 && emu.running();
+	if (now - _fpsStart >= 0.5) {
+		if (running && !self.fpsLabel.hidden)
+			self.fpsLabel.text = [NSString stringWithFormat:@"%.0f FPS", _fpsFrames / (now - _fpsStart)];
+		_fpsStart = now;
+		_fpsFrames = 0;
+	}
+	if (!running) {
+		[self resetFrameWindow];
+		return;
+	}
+	if (now - _windowStart >= 30) {
+		SPLog(@"render fps=%.1f hitches_over_50ms=%d worst_frame_ms=%.0f resolution=%d texture_upscale=%d",
+				_windowFrames / (now - _windowStart), _windowHitches, _windowWorst,
+				(int)config::RenderResolution, (int)config::TextureUpscale);
+		[self resetFrameWindow];
+	}
+	// The game should have moved on within 2 s of a resume: new frames from
+	// the renderer and new guest time from the emulator thread.
+	if (_resumedAt > 0 && !_stallLogged && now - _resumedAt > 2) {
+		const double guest = SonicPad_GuestSeconds() - _guestAtResume;
+		const uint64_t frames = _frames - _framesAtResume;
+		if (guest < 0.5 || frames < 10)
+			SPLog(@"stall: %.1f s after resume, guest advanced %.2f s, %llu frames (emu running=%d)",
+					now - _resumedAt, guest, frames, emu.running() ? 1 : 0);
+		_stallLogged = YES;
+	}
+}
+
+- (void)resetFrameWindow
+{
+	_windowStart = CACurrentMediaTime();
+	_windowFrames = 0;
+	_windowHitches = 0;
+	_windowWorst = 0;
+	_lastFrame = 0;
 }
 
 - (void)updateInput
@@ -334,8 +485,9 @@ static void hideFlycastGamepad(Event, void *)
 		_maxY = MAX(_maxY, (int)pad.joyy);
 		_maxLT = MAX(_maxLT, (unsigned)pad.lt);
 		_maxRT = MAX(_maxRT, (unsigned)pad.rt);
-		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d",
-				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0];
+		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d frames=%llu guest=%.1f",
+				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0, _frames,
+				SonicPad_GuestSeconds()];
 	}
 }
 
@@ -358,11 +510,17 @@ static void hideFlycastGamepad(Event, void *)
 		[self.pauseReasons removeObject:reason];
 	const BOOL nowPaused = self.pauseReasons.count > 0;
 	if (nowPaused && !wasPaused && emu.running()) {
+		SPLog(@"pause (%@)", reason);
 		emu.stop();
 		self.stoppedByShell = YES;
 	} else if (!nowPaused && wasPaused && self.stoppedByShell) {
+		SPLog(@"resume (%@)", reason);
 		self.stoppedByShell = NO;
 		emu.start();
+		_resumedAt = CACurrentMediaTime();
+		_framesAtResume = _frames;
+		_guestAtResume = SonicPad_GuestSeconds();
+		_stallLogged = NO;
 	}
 }
 
@@ -389,7 +547,9 @@ static void hideFlycastGamepad(Event, void *)
 	});
 }
 
-- (NSArray<UIMenuElement *> *)dcpadOverlayMenuElements:(DCPadOverlayView *)overlay
+// The ••• menu, top to bottom: the quick row (save, load, reset), then how
+// the game plays (Controls, Graphics, Sound), then files and help.
+- (NSArray<UIMenuElement *> *)dcpadOverlay:(DCPadOverlayView *)overlay menuElementsWithControls:(UIMenu *)controls
 {
 	__weak SPGameViewController *weakSelf = self;
 	const BOOL loaded = !settings.content.path.empty();
@@ -401,24 +561,124 @@ static void hideFlycastGamepad(Event, void *)
 	reset.attributes = loaded ? 0 : UIMenuElementAttributesDisabled;
 	UIAction *about = [UIAction actionWithTitle:@"About This Build" image:[UIImage systemImageNamed:@"info.circle"]
 			identifier:nil handler:^(UIAction *) { [weakSelf showAbout]; }];
-	// Save, load and reset sit in one row of icons at the top: the things a
-	// player reaches for most. The rest stays one level down so the menu
-	// fits a landscape phone.
+	UIAction *diagnostics = [UIAction actionWithTitle:@"Share Diagnostic Log…" image:[UIImage systemImageNamed:@"doc.text.magnifyingglass"]
+			identifier:nil handler:^(UIAction *) { [weakSelf shareDiagnostics]; }];
+	diagnostics.subtitle = @"This session and the last one";
 	NSMutableArray *quick = [[self.portMenu saveStateElementsForGameLoaded:loaded] mutableCopy];
 	[quick addObject:reset];
-	UIMenu *quickRow = [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:quick];
+	const BOOL phone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
+	UIMenu *quickRow = [UIMenu menuWithTitle:phone ? @"" : @"SonicPad" image:nil identifier:nil
+			options:UIMenuOptionsDisplayInline children:quick];
 	quickRow.preferredElementSize = UIMenuElementSizeMedium;
 	UIMenu *files = [UIMenu menuWithTitle:@"Game Files" image:[UIImage systemImageNamed:@"folder"] identifier:nil options:0
-			children:@[importGame, [self.portMenu exportVMUActionForGameLoaded:loaded]]];
+			children:@[importGame, [self.portMenu importVMUActionForGameLoaded:loaded],
+				[self.portMenu exportVMUActionForGameLoaded:loaded]]];
+	UIMenu *help = [UIMenu menuWithTitle:@"Help" image:[UIImage systemImageNamed:@"questionmark.circle"] identifier:nil options:0
+			children:@[about, diagnostics]];
 	return @[
 		quickRow,
 		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline
-				children:@[[self.portMenu displayMenu], [self.portMenu soundMenu], files, about]],
+				children:@[controls, [self.portMenu graphicsMenu], [self.portMenu soundMenu], [self cheatsMenu]]],
+		[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[files, help]],
 	];
+}
+
+#pragma mark Cheats
+
+static NSString *const kCheatsKey = @"SonicPad.cheats";
+
+// Cheats ▸: each one is a toggle that stays on across launches.
+- (UIMenu *)cheatsMenu
+{
+	NSMutableArray *items = [NSMutableArray array];
+	int on = 0;
+	for (size_t i = 0; i < sonicpad::cheat_count(); i++) {
+		const sonicpad::CheatInfo& info = sonicpad::cheat_info(i);
+		const BOOL enabled = sonicpad::cheat_enabled(i);
+		on += enabled ? 1 : 0;
+		NSString *title = @(info.title);
+		UIAction *a = [UIAction actionWithTitle:title image:nil identifier:nil handler:^(UIAction *) {
+			sonicpad::set_cheat_enabled(i, !enabled);
+			[self saveCheats];
+			SPLog(@"cheat %s=%d", sonicpad::cheat_info(i).id, !enabled);
+			[self.overlay showMessage:[NSString stringWithFormat:@"%@ %@", title, enabled ? @"off" : @"on"]];
+		}];
+		a.subtitle = @(info.subtitle);
+		a.state = enabled ? UIMenuElementStateOn : UIMenuElementStateOff;
+		[items addObject:a];
+	}
+	UIMenu *menu = [UIMenu menuWithTitle:@"Cheats" image:[UIImage systemImageNamed:@"wand.and.rays"] identifier:nil
+			options:0 children:items];
+	menu.subtitle = on > 0 ? [NSString stringWithFormat:@"%d on", on] : nil;
+	return menu;
+}
+
+- (void)saveCheats
+{
+	NSMutableArray *ids = [NSMutableArray array];
+	for (size_t i = 0; i < sonicpad::cheat_count(); i++)
+		if (sonicpad::cheat_enabled(i))
+			[ids addObject:@(sonicpad::cheat_info(i).id)];
+	[NSUserDefaults.standardUserDefaults setObject:ids forKey:kCheatsKey];
+}
+
+- (void)restoreCheats
+{
+	sonicpad::install_cheats();
+	NSArray *ids = [NSUserDefaults.standardUserDefaults arrayForKey:kCheatsKey];
+	if (ids.count > 0)
+		sonicpad::enable_cheats_from_list([ids componentsJoinedByString:@","].UTF8String);
+	SPLog(@"cheats on: %@", ids.count > 0 ? [ids componentsJoinedByString:@","] : @"none");
+}
+
+// Restart the loaded game (Reset, memory card import, widescreen off).
+- (void)portMenuRestartGame
+{
+	if (settings.content.path.empty())
+		return;
+	SPLog(@"restart game");
+	[self.pauseReasons minusSet:[NSSet setWithArray:@[@"reset", @"vmu-import", @"widescreen"]]];
+	self.stoppedByShell = NO;   // reloading starts the emulator itself
+	gui_start_game(settings.content.path);
+}
+
+// First launch only: keep the original resolution and textures. Existing
+// installs retain their choices; players can change them under Graphics.
+- (void)applyGraphicsDefaultsOnce
+{
+	static NSString *const kKey = @"SonicPad.graphicsDefaults.v1";
+	if ([NSUserDefaults.standardUserDefaults boolForKey:kKey])
+		return;
+	[NSUserDefaults.standardUserDefaults setBool:YES forKey:kKey];
+	// New installs start as the Dreamcast drew the game; sharper rendering is
+	// a choice in ••• ▸ Graphics. Existing installs keep their settings.
+	config::RenderResolution = 480;
+	config::TextureUpscale = 1;
+	SaveSettings();
+	SPLog(@"graphics defaults: dreamcast original (resolution=480, texture_upscale=1)");
+}
+
+- (void)shareDiagnostics
+{
+	SPLog(@"diagnostic log shared");
+	NSURL *report = SPDiagnosticsReportURL();
+	if (report == nil) {
+		[self.overlay showMessage:@"Couldn't read the log"];
+		return;
+	}
+	[self setPaused:YES reason:@"diagnostics"];
+	UIActivityViewController *share = [[UIActivityViewController alloc] initWithActivityItems:@[report] applicationActivities:nil];
+	share.popoverPresentationController.sourceView = self.view;
+	share.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMaxX(self.view.bounds) - 60, 40, 1, 1);
+	share.completionWithItemsHandler = ^(UIActivityType, BOOL, NSArray *, NSError *) {
+		[self setPaused:NO reason:@"diagnostics"];
+	};
+	[self presentViewController:share animated:YES completion:nil];
 }
 
 - (void)portMenuShowMessage:(NSString *)message
 {
+	SPLog(@"%@", message);
 	[self.overlay showMessage:message];
 }
 
@@ -431,10 +691,7 @@ static void hideFlycastGamepad(Event, void *)
 		[self setPaused:NO reason:@"reset"];
 	}]];
 	[alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
-		[self.pauseReasons removeObject:@"reset"];
-		self.stoppedByShell = NO;   // reloading starts the emulator itself
-		if (!settings.content.path.empty())
-			gui_start_game(settings.content.path);
+		[self portMenuRestartGame];
 	}]];
 	[self presentViewController:alert animated:YES completion:nil];
 }
@@ -442,9 +699,10 @@ static void hideFlycastGamepad(Event, void *)
 - (void)showAbout
 {
 	extern const char sp_aot_manifest_id[];
-	NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"?";
-	NSString *message = [NSString stringWithFormat:@"Version %@\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
-			version, sp_aot_manifest_id,
+	NSDictionary *info = NSBundle.mainBundle.infoDictionary;
+	NSString *message = [NSString stringWithFormat:@"Version %@ (build %@, %@)\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
+			info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?", info[@"SonicPadCommit"] ?: @"?",
+			sp_aot_manifest_id,
 			settings.content.path.empty() ? @"not loaded" : @"Sonic Adventure PAL v1.003"];
 	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"SonicPad" message:message
 			preferredStyle:UIAlertControllerStyleAlert];
@@ -497,7 +755,7 @@ static void hideFlycastGamepad(Event, void *)
 	self.importProgress.hidden = NO;
 	self.importProgress.progress = 0;
 	self.importStatus.text = @"Checking the disc…";
-	NSLog(@"SONICPAD_IMPORT start %@", folder.path);
+	SPLog(@"import start %@", folder.lastPathComponent);
 	[SPGameLibrary importFolder:folder
 			progress:^(double fraction) {
 				self.importProgress.progress = fraction;
@@ -507,11 +765,11 @@ static void hideFlycastGamepad(Event, void *)
 				self.importCancel.enabled = YES;
 				self.importProgress.hidden = YES;
 				if (gdiPath == nil) {
-					NSLog(@"SONICPAD_IMPORT failed %@", error);
+					SPLog(@"import failed: %@", error);
 					self.importStatus.text = error;
 					return;
 				}
-				NSLog(@"SONICPAD_IMPORT ok %@", gdiPath);
+				SPLog(@"import ok %@", gdiPath.lastPathComponent);
 				[self hideImport];
 				[self.pauseReasons removeObject:@"import"];
 				self.stoppedByShell = NO;   // loading starts the emulator itself
@@ -522,6 +780,7 @@ static void hideFlycastGamepad(Event, void *)
 
 - (void)startGame:(NSString *)gdiPath
 {
+	SPLog(@"start game");
 	settings.content.path = gdiPath.fileSystemRepresentation;
 	if (self.renderStarted)
 		gui_start_game(settings.content.path);
@@ -561,36 +820,29 @@ static void hideFlycastGamepad(Event, void *)
 	UIWindowSceneGeometryPreferencesIOS *landscape = [[UIWindowSceneGeometryPreferencesIOS alloc]
 			initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscape];
 	[windowScene requestGeometryUpdateWithPreferences:landscape errorHandler:^(NSError *error) {
-		NSLog(@"SonicPad landscape request failed: %@", error);
+		SPLog(@"landscape request failed: %@", error);
 	}];
 }
 
 - (void)sceneDidEnterBackground:(UIScene *)scene
 {
+	SPLog(@"background");
 	[(SPGameViewController *)self.window.rootViewController setPaused:YES reason:@"background"];
 }
 
 - (void)sceneWillEnterForeground:(UIScene *)scene
 {
+	SPLog(@"foreground");
 	[(SPGameViewController *)self.window.rootViewController setPaused:NO reason:@"background"];
 }
 
 @end
 
+// The scene and its SPSceneDelegate are declared in Info.plist.
 @interface SPAppDelegate : UIResponder <UIApplicationDelegate>
 @end
 
 @implementation SPAppDelegate
-
-- (UISceneConfiguration *)application:(UIApplication *)application
-		configurationForConnectingSceneSession:(UISceneSession *)session
-		options:(UISceneConnectionOptions *)options
-{
-	UISceneConfiguration *config = [[UISceneConfiguration alloc] initWithName:@"Default" sessionRole:session.role];
-	config.delegateClass = [SPSceneDelegate class];
-	return config;
-}
-
 @end
 
 // Flycast reaches Vulkan through this entry point; MoltenVK is linked statically.
@@ -617,6 +869,16 @@ void setEditMode(bool)
 int main(int argc, char *argv[])
 {
 	@autoreleasepool {
+		// MoltenVK lists every Vulkan extension at info level; keep warnings
+		// and errors so the diagnostic log stays readable.
+		setenv("MVK_CONFIG_LOG_LEVEL", "2", 0);
+		// Development runs on a device: relative script, screenshot and state
+		// paths are inside the app's Documents, where devicectl copies files.
+		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+		for (const char *name : {"SONICPAD_INPUT_SCRIPT", "SONICPAD_SHOT_DIR", "SONICPAD_STATE_LOAD"})
+			if (const char *value = std::getenv(name); value != nullptr && value[0] != '/')
+				setenv(name, [documents stringByAppendingPathComponent:@(value)].fileSystemRepresentation, 1);
+		SPDiagnosticsStart();
 		return UIApplicationMain(argc, argv, nil, NSStringFromClass([SPAppDelegate class]));
 	}
 }

@@ -79,28 +79,55 @@ if(IOS)
 	# deprecated and unavailable in the Apple Silicon Simulator, so iOS renders
 	# with Flycast's Vulkan renderer on MoltenVK (Metal).
 	get_target_property(_sp_sources flycast SOURCES)
-	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|.*\\.storyboard|.*\\.xib)")
+	# Flycast's Images.xcassets goes too: its AppIcon would replace SonicPad's.
+	list(FILTER _sp_sources EXCLUDE REGEX "emulator-ios/emulator/(AppDelegate|FlycastViewController|PadViewController|EditPadViewController|EmulatorView|main\\.m|iCade-iOS/|Images\\.xcassets|.*\\.storyboard|.*\\.xib)")
 	set_property(TARGET flycast PROPERTY SOURCES ${_sp_sources})
 	set(_sp_ios_shell
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SonicPadApp.mm
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPDiagnostics.mm
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPGameLibrary.mm
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPPortMenu.mm)
 	# The touch kit is its own library so other Dreamcast ports can reuse it.
 	add_subdirectory(port/dcpad)
 	target_link_libraries(flycast PRIVATE dcpad)
 	target_sources(flycast PRIVATE ${_sp_ios_shell}
+		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input/FlycastPadBridge.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/SPFrameCapture.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp)
+		${CMAKE_CURRENT_SOURCE_DIR}/port/game/GameImport.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/port/game/VMUImage.cpp)
 	target_include_directories(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios
 		${CMAKE_CURRENT_SOURCE_DIR}/port/input ${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 	set_source_files_properties(${_sp_ios_shell} PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+	# The flycast target lives in Flycast's directory, so the property must be
+	# set there for Xcode to compile the catalog into the app.
+	set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Assets.xcassets TARGET_DIRECTORY flycast PROPERTIES
+		MACOSX_PACKAGE_LOCATION "Resources")
+	# Every build is identifiable: version, commit count as the build number,
+	# and the commit (with -dirty for uncommitted changes) in About and the log.
+	set(SONICPAD_VERSION "0.1.0")
+	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-list --count HEAD
+		OUTPUT_VARIABLE _sp_build OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} describe --always --dirty --abbrev=7
+		OUTPUT_VARIABLE _sp_commit OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	if(NOT _sp_build)
+		set(_sp_build 0)
+		set(_sp_commit "unknown")
+	endif()
+	message(STATUS "SonicPad ${SONICPAD_VERSION} build ${_sp_build} (${_sp_commit})")
 	set_target_properties(flycast PROPERTIES
 		OUTPUT_NAME "SonicPad"
 		MACOSX_BUNDLE_EXECUTABLE_NAME "SonicPad"
 		MACOSX_BUNDLE_GUI_IDENTIFIER "com.chrissotraidis.sonicpad"
 		MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/port/apple/ios/Info.plist.in
+		MACOSX_BUNDLE_SHORT_VERSION_STRING "${SONICPAD_VERSION}"
+		MACOSX_BUNDLE_BUNDLE_VERSION "${_sp_build}"
+		MACOSX_BUNDLE_LONG_VERSION_STRING "${_sp_commit}"
+		XCODE_ATTRIBUTE_MARKETING_VERSION "${SONICPAD_VERSION}"
+		XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION "${_sp_build}"
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.chrissotraidis.sonicpad"
+		XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+		XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
 		# Xcode 27's Swift compiler rejects Flycast's "5.0" language version.
 		Swift_LANGUAGE_VERSION 5
 		XCODE_ATTRIBUTE_SWIFT_VERSION 5)
@@ -118,7 +145,8 @@ if(IOS)
 		message(FATAL_ERROR "MoltenVK xcframework missing at ${SONICPAD_MOLTENVK_XCFRAMEWORK}; see docs/BUILDING.md")
 	endif()
 	target_link_libraries(flycast PRIVATE ${SONICPAD_MOLTENVK_XCFRAMEWORK}
-		"-framework Metal" "-framework QuartzCore" "-framework IOSurface"
+		# Flycast's OpenGL renderer stays compiled in; SonicPad renders with Vulkan.
+		"-framework Metal" "-framework QuartzCore" "-framework IOSurface" "-framework CoreGraphics" "-framework OpenGLES"
 		# Flycast's controller rumble uses Core Haptics, which this SDK does not auto-link.
 		"-framework CoreHaptics" "-framework UniformTypeIdentifiers" "-framework GameController")
 	# UI tests: real UIKit touches against the shell in the Simulator.
@@ -144,7 +172,9 @@ endif()
 list(LENGTH _sp_generated _sp_generated_count)
 message(STATUS "SonicPad AOT sources: ${_sp_generated_count}")
 
-target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp ${_sp_generated})
-target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp)
+target_sources(flycast PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp/sp_aot_executor.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/port/game/SonicCheats.cpp ${_sp_generated})
+target_include_directories(flycast PRIVATE ${SONICPAD_FLYCAST_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/port/recomp
+	${CMAKE_CURRENT_SOURCE_DIR}/port/game)
 target_compile_definitions(flycast PRIVATE TARGET_NO_REC)
 set_source_files_properties(${_sp_generated} PROPERTIES COMPILE_OPTIONS "-O2;-Wno-unused-function")

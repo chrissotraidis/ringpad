@@ -1,8 +1,12 @@
 // See SPPortMenu.h.
 #import "SPPortMenu.h"
+#import "SPDiagnostics.h"
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+#include "VMUImage.h"
 #include "types.h"
 #include "emulator.h"
+#include "cheats.h"
 #include "cfg/option.h"
 #include "oslib/oslib.h"
 
@@ -10,8 +14,13 @@
 #include <vector>
 
 bool SPCaptureLastFrameRGB(std::vector<u8>& rgb, int& width, int& height);   // SPFrameCapture.cpp
+void SPResetTextureCache();                                                   // SPFrameCapture.cpp
 
 static constexpr int kSlots = 3;
+static NSString *const kWidescreenKey = @"SonicPad.widescreen";
+
+@interface SPPortMenu () <UIDocumentPickerDelegate>
+@end
 
 // PNG of the last presented frame, 320 pixels wide, stored in the state file
 // so the menu can show what each slot holds. Rendering runs on the main
@@ -110,6 +119,7 @@ static UIImage *SlotThumbnail(int slot)
 	const std::vector<u8> png = CaptureThumbnailPNG();
 	dc_savestate(slot, png.empty() ? nullptr : png.data(), u32(png.size()));
 	const BOOL ok = dc_getStateCreationDate(slot) != 0;
+	SPLog(@"save state slot %d ok=%d", slot, ok);
 	[host setPaused:NO reason:@"state"];
 	[host portMenuShowMessage:ok ? [NSString stringWithFormat:@"Saved to Slot %d", slot] : @"Couldn't save the state"];
 }
@@ -118,35 +128,143 @@ static UIImage *SlotThumbnail(int slot)
 {
 	UIViewController<SPPortMenuHost> *host = _host;
 	[host setPaused:YES reason:@"state"];
+	SPLog(@"load state slot %d", slot);
 	dc_loadstate(slot);
 	[host setPaused:NO reason:@"state"];
 	[host portMenuShowMessage:[NSString stringWithFormat:@"Loaded Slot %d", slot]];
 }
 
-- (UIMenu *)displayMenu
+// One single-choice submenu whose subtitle shows the current choice.
+static UIMenu *ChoiceMenu(NSString *title, NSString *image, NSArray<NSString *> *names, const int *values, int count,
+		int current, void (^choose)(int value, NSString *name))
 {
-	UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
-			identifier:nil handler:^(UIAction *) {
-		config::ShowFPS = !config::ShowFPS;
-		SaveSettings();
-	}];
-	fps.state = config::ShowFPS ? UIMenuElementStateOn : UIMenuElementStateOff;
-	struct Res { int lines; NSString *title; };
-	const Res res[] = {{480, @"Original (480p)"}, {960, @"2× (960p)"}, {1440, @"3× (1440p)"}};
-	NSMutableArray *resolutions = [NSMutableArray array];
-	for (const Res& r : res) {
-		const int lines = r.lines;
-		UIAction *a = [UIAction actionWithTitle:r.title image:nil identifier:nil handler:^(UIAction *) {
-			config::RenderResolution = lines;
-			SaveSettings();
-		}];
-		a.state = config::RenderResolution == lines ? UIMenuElementStateOn : UIMenuElementStateOff;
-		[resolutions addObject:a];
+	NSMutableArray *items = [NSMutableArray array];
+	NSString *currentName = nil;
+	for (int i = 0; i < count; i++) {
+		const int value = values[i];
+		NSString *name = names[i];
+		UIAction *a = [UIAction actionWithTitle:name image:nil identifier:nil handler:^(UIAction *) { choose(value, name); }];
+		a.state = current == value ? UIMenuElementStateOn : UIMenuElementStateOff;
+		if (current == value)
+			currentName = name;
+		[items addObject:a];
 	}
-	UIMenu *resolution = [UIMenu menuWithTitle:@"Resolution" image:[UIImage systemImageNamed:@"square.resize.up"]
-			identifier:nil options:UIMenuOptionsSingleSelection children:resolutions];
-	return [UIMenu menuWithTitle:@"Display" image:[UIImage systemImageNamed:@"display"] identifier:nil options:0
-			children:@[resolution, fps]];
+	UIMenu *menu = [UIMenu menuWithTitle:title image:[UIImage systemImageNamed:image] identifier:nil
+			options:UIMenuOptionsSingleSelection children:items];
+	menu.subtitle = currentName;
+	return menu;
+}
+
+- (UIMenu *)graphicsMenu
+{
+	__weak UIViewController<SPPortMenuHost> *host = _host;
+	// One tap back to how the Dreamcast drew the game: its own 640x480
+	// picture and textures, scaled to the screen.
+	const BOOL original = config::RenderResolution == 480 && config::TextureUpscale == 1;
+	UIAction *dreamcast = [UIAction actionWithTitle:@"Dreamcast Original" image:[UIImage systemImageNamed:@"tv"]
+			identifier:nil handler:^(UIAction *) {
+		config::RenderResolution = 480;
+		config::TextureUpscale = 1;
+		SaveSettings();
+		SPResetTextureCache();
+		SPLog(@"setting graphics=dreamcast resolution=480 texture_upscale=1");
+		[host portMenuShowMessage:@"Graphics: Dreamcast Original"];
+	}];
+	dreamcast.subtitle = @"480p with the original textures";
+	dreamcast.state = original ? UIMenuElementStateOn : UIMenuElementStateOff;
+	// Internal render height. 4× (1920 lines) is about native on a 12.9-inch iPad.
+	const int lines[] = {480, 960, 1440, 1920};
+	UIMenu *resolution = ChoiceMenu(@"Resolution", @"square.resize.up",
+			@[@"Original (480p)", @"2× (960p)", @"3× (1440p)", @"4× (1920p)"], lines, 4, config::RenderResolution,
+			^(int value, NSString *name) {
+		config::RenderResolution = value;
+		SaveSettings();
+		SPLog(@"setting resolution=%d", value);
+		[host portMenuShowMessage:[NSString stringWithFormat:@"Resolution: %@", name]];
+	});
+	// xBRZ redraws each texture at a higher resolution with smoothed edges.
+	const int factors[] = {1, 2, 4};
+	UIMenu *textures = ChoiceMenu(@"Texture Upscaling", @"wand.and.stars", @[@"Off", @"2× (xBRZ)", @"4× (xBRZ)"],
+			factors, 3, config::TextureUpscale, ^(int value, NSString *name) {
+		config::TextureUpscale = value;
+		SaveSettings();
+		SPResetTextureCache();
+		SPLog(@"setting texture_upscale=%d", value);
+		[host portMenuShowMessage:[NSString stringWithFormat:@"Texture Upscaling: %@", name]];
+	});
+	NSMutableArray *children = [NSMutableArray arrayWithObjects:dreamcast, resolution, textures, nil];
+	if (SPPortMenu.widescreenAvailable) {
+		const BOOL wide = config::WidescreenGameHacks;
+		UIAction *widescreen = [UIAction actionWithTitle:@"Widescreen (16:9)" image:[UIImage systemImageNamed:@"rectangle.ratio.16.to.9"]
+				identifier:nil handler:^(UIAction *) { [self setWidescreen:!wide]; }];
+		widescreen.subtitle = @"Wider view instead of side bars";
+		widescreen.state = wide ? UIMenuElementStateOn : UIMenuElementStateOff;
+		[children addObject:widescreen];
+	}
+	if ([host respondsToSelector:@selector(portMenuSetFPSVisible:)]) {
+		const BOOL visible = [host portMenuFPSVisible];
+		UIAction *fps = [UIAction actionWithTitle:@"Show FPS" image:[UIImage systemImageNamed:@"speedometer"]
+				identifier:nil handler:^(UIAction *) {
+			[host portMenuSetFPSVisible:!visible];
+			SPLog(@"setting show_fps=%d", !visible);
+		}];
+		fps.state = visible ? UIMenuElementStateOn : UIMenuElementStateOff;
+		[children addObject:fps];
+	}
+	return [UIMenu menuWithTitle:@"Graphics" image:[UIImage systemImageNamed:@"sparkles.tv"] identifier:nil options:0
+			children:children];
+}
+
+#pragma mark Widescreen
+
++ (BOOL)widescreenAvailable
+{
+	return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
+}
+
+// Flycast's built-in widescreen patch for this disc widens the game's camera,
+// and the picture is stretched from 4:3 to 16:9 to match. On by default on
+// phones; never on a tablet, whose 4:3 screen already fits the game.
++ (void)applyWidescreenPreference
+{
+	NSNumber *saved = [NSUserDefaults.standardUserDefaults objectForKey:kWidescreenKey];
+	config::WidescreenGameHacks = self.widescreenAvailable && (saved == nil || saved.boolValue);
+	// Saved to emu.cfg: Flycast reloads its settings from that file when the game loads.
+	SaveSettings();
+	SPLog(@"setting widescreen=%d", (int)config::WidescreenGameHacks);
+}
+
+- (void)setWidescreen:(BOOL)on
+{
+	UIViewController<SPPortMenuHost> *host = _host;
+	[NSUserDefaults.standardUserDefaults setBool:on forKey:kWidescreenKey];
+	config::WidescreenGameHacks = on;
+	SaveSettings();
+	SPLog(@"setting widescreen=%d", on);
+	if (settings.content.path.empty())
+		return;
+	if (on) {
+		// The patch can be applied to the running game.
+		[host setPaused:YES reason:@"widescreen"];
+		cheatManager.reset(settings.content.gameId);
+		if (cheatManager.isWidescreen())
+			config::ScreenStretching.override(134);   // 4:3 -> 16:9
+		[host setPaused:NO reason:@"widescreen"];
+		[host portMenuShowMessage:@"Widescreen on"];
+		return;
+	}
+	// The patched camera stays in game memory until the game reloads.
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Turn Off Widescreen?"
+			message:@"The game restarts to go back to 4:3. Progress since your last in-game save is lost."
+			preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:^(UIAlertAction *) {
+		[host portMenuShowMessage:@"Widescreen turns off next launch"];
+	}]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Restart Now" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
+		config::ScreenStretching.reset();
+		[host portMenuRestartGame];
+	}]];
+	[host presentViewController:alert animated:YES completion:nil];
 }
 
 - (UIMenu *)soundMenu
@@ -154,18 +272,24 @@ static UIImage *SlotThumbnail(int slot)
 	struct Level { int volume; NSString *title; NSString *image; };
 	const Level levels[] = {{100, @"Full", @"speaker.wave.3"}, {50, @"Half", @"speaker.wave.1"}, {0, @"Off", @"speaker.slash"}};
 	NSMutableArray *items = [NSMutableArray array];
+	NSString *current = nil;
 	for (const Level& l : levels) {
 		const int volume = l.volume;
 		UIAction *a = [UIAction actionWithTitle:l.title image:[UIImage systemImageNamed:l.image] identifier:nil handler:^(UIAction *) {
 			config::AudioVolume.set(volume);
 			config::AudioVolume.calcDbPower();
 			SaveSettings();
+			SPLog(@"setting volume=%d", volume);
 		}];
 		a.state = config::AudioVolume == volume ? UIMenuElementStateOn : UIMenuElementStateOff;
+		if (config::AudioVolume == volume)
+			current = l.title;
 		[items addObject:a];
 	}
-	return [UIMenu menuWithTitle:@"Sound" image:[UIImage systemImageNamed:@"speaker.wave.2"] identifier:nil
+	UIMenu *sound = [UIMenu menuWithTitle:@"Sound" image:[UIImage systemImageNamed:@"speaker.wave.2"] identifier:nil
 			options:UIMenuOptionsSingleSelection children:items];
+	sound.subtitle = current;
+	return sound;
 }
 
 - (UIAction *)exportVMUActionForGameLoaded:(BOOL)loaded
@@ -200,6 +324,188 @@ static UIImage *SlotThumbnail(int slot)
 		[host setPaused:NO reason:@"export"];
 	};
 	[host presentViewController:share animated:YES completion:nil];
+}
+
+#pragma mark VMU import
+
+- (UIAction *)importVMUActionForGameLoaded:(BOOL)loaded
+{
+	__weak SPPortMenu *weakSelf = self;
+	UIAction *a = [UIAction actionWithTitle:@"Import VMU Save…" image:[UIImage systemImageNamed:@"square.and.arrow.down.on.square"]
+			identifier:nil handler:^(UIAction *) { [weakSelf chooseVMU]; }];
+	a.subtitle = @"A .VMS save with its .VMI, or a whole card";
+	if (!loaded)
+		a.attributes = UIMenuElementAttributesDisabled;
+	return a;
+}
+
+- (void)chooseVMU
+{
+	UIViewController<SPPortMenuHost> *host = _host;
+	[host setPaused:YES reason:@"vmu-import"];
+	UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc]
+			initForOpeningContentTypes:@[UTTypeData] asCopy:YES];
+	picker.delegate = self;
+	picker.allowsMultipleSelection = YES;   // a .VMS and its .VMI together
+	[host presentViewController:picker animated:YES completion:nil];
+}
+
+- (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller
+{
+	[_host setPaused:NO reason:@"vmu-import"];
+}
+
+static std::vector<uint8_t> Bytes(NSData *data)
+{
+	const uint8_t *p = static_cast<const uint8_t *>(data.bytes);
+	return std::vector<uint8_t>(p, p + data.length);
+}
+
+static NSData *ReadCurrentCard()
+{
+	return [NSData dataWithContentsOfFile:[NSString stringWithUTF8String:hostfs::getVmuPath("A1", true).c_str()]];
+}
+
+// Builds the new port A card from what was picked: a whole 128 KB card, or a
+// .VMS save plus its .VMI, written into a copy of the current card so other
+// games' saves stay. Returns nil and sets *problem when the pick is unusable.
+static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString **problem)
+{
+	NSData *vms = nil, *vmi = nil, *card = nil;
+	NSString *vmsName = nil;
+	for (NSURL *url in urls) {
+		NSData *data = [NSData dataWithContentsOfURL:url];
+		NSString *ext = url.pathExtension.lowercaseString;
+		if (data.length == sonicpad::kVMUImageBytes)
+			card = data;
+		else if ([ext isEqualToString:@"vmi"])
+			vmi = data;
+		else if ([ext isEqualToString:@"vms"]) {
+			vms = data;
+			vmsName = url.lastPathComponent;
+		}
+	}
+	if (card != nil) {
+		const std::string why = sonicpad::vmu_image_problem(Bytes(card));
+		if (!why.empty()) {
+			*problem = [NSString stringWithFormat:@"This file is 128 KB but %s.", why.c_str()];
+			return nil;
+		}
+		*summary = @"the whole memory card";
+		return card;
+	}
+	if (vms == nil || vmi == nil) {
+		*problem = @"Choose a memory card image (a 128 KB .bin), or a save's .VMS file together with its .VMI file. "
+				@"Select both in Files before tapping Open.";
+		return nil;
+	}
+	sonicpad::VMUFile file = sonicpad::vmu_file_from_vmi(Bytes(vmi));
+	if (file.name.empty()) {
+		*problem = @"The .VMI file is not a VMU file description.";
+		return nil;
+	}
+	file.data = Bytes(vms);
+	NSData *current = ReadCurrentCard();
+	std::vector<uint8_t> image = current != nil ? Bytes(current) : std::vector<uint8_t>();
+	if (!sonicpad::vmu_image_problem(image).empty()) {
+		*problem = @"SonicPad's memory card is not ready yet. Start the game once, then import the save.";
+		return nil;
+	}
+	NSDateComponents *c = [NSCalendar.currentCalendar components:NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay
+			| NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond | NSCalendarUnitWeekday fromDate:NSDate.date];
+	auto bcd = [](long v) { return uint8_t(((v / 10) % 10) << 4 | (v % 10)); };
+	const uint8_t when[8] = {bcd(c.year / 100), bcd(c.year % 100), bcd(c.month), bcd(c.day), bcd(c.hour), bcd(c.minute),
+			bcd(c.second), uint8_t((c.weekday + 5) % 7)};
+	const std::string why = sonicpad::vmu_write_file(image, file, when);
+	if (!why.empty()) {
+		*problem = [NSString stringWithFormat:@"The save could not be added: %s.", why.c_str()];
+		return nil;
+	}
+	*summary = [NSString stringWithFormat:@"%@ (%s)", vmsName, file.name.c_str()];
+	return [NSData dataWithBytes:image.data() length:image.size()];
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls
+{
+	[self importVMUFromURLs:urls confirm:YES];
+}
+
+- (void)importVMUFromURLs:(NSArray<NSURL *> *)urls
+{
+	[_host setPaused:YES reason:@"vmu-import"];
+	[self importVMUFromURLs:urls confirm:NO];
+}
+
+- (void)importVMUFromURLs:(NSArray<NSURL *> *)urls confirm:(BOOL)confirm
+{
+	UIViewController<SPPortMenuHost> *host = _host;
+	NSString *summary = nil, *problem = nil;
+	NSData *data = CardFromPick(urls, &summary, &problem);
+	NSString *names = [[urls valueForKey:@"lastPathComponent"] componentsJoinedByString:@", "];
+	if (data == nil) {
+		SPLog(@"vmu import rejected %@: %@", names, problem);
+		UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Can't Import This Save" message:problem
+				preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:^(UIAlertAction *) {
+			[host setPaused:NO reason:@"vmu-import"];
+		}]];
+		[host presentViewController:alert animated:YES completion:nil];
+		return;
+	}
+	if (!confirm) {
+		[self installVMU:data named:names];
+		return;
+	}
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Import This Save?"
+			message:[NSString stringWithFormat:@"%@ goes onto the memory card in port A, replacing a Sonic Adventure save "
+					@"already there, and the game restarts. Your current card is kept as a backup in SonicPad's Documents folder.",
+					summary]
+			preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *) {
+		[host setPaused:NO reason:@"vmu-import"];
+	}]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Replace and Restart" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *) {
+		[self installVMU:data named:names];
+	}]];
+	[host presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)installVMU:(NSData *)data named:(NSString *)name
+{
+	UIViewController<SPPortMenuHost> *host = _host;
+	NSFileManager *fm = NSFileManager.defaultManager;
+	NSString *live = [NSString stringWithUTF8String:hostfs::getVmuPath("A1", true).c_str()];
+	NSString *backup = nil;
+	if ([fm fileExistsAtPath:live]) {
+		NSDateFormatter *f = [[NSDateFormatter alloc] init];
+		f.dateFormat = @"yyyyMMdd-HHmmss";
+		backup = [[live stringByDeletingPathExtension] stringByAppendingFormat:@".backup-%@.bin", [f stringFromDate:NSDate.date]];
+		if (![fm copyItemAtPath:live toPath:backup error:nil]) {
+			SPLog(@"vmu import: backup failed, card unchanged");
+			[host setPaused:NO reason:@"vmu-import"];
+			[host portMenuShowMessage:@"Couldn't back up the current card"];
+			return;
+		}
+	}
+	// Write beside the card, then swap it in, so a failed write leaves the old card.
+	NSString *staged = [live stringByAppendingString:@".importing"];
+	NSError *error = nil;
+	BOOL ok = [data writeToFile:staged options:NSDataWritingAtomic error:&error];
+	if (ok && backup != nil)
+		ok = [fm replaceItemAtURL:[NSURL fileURLWithPath:live] withItemAtURL:[NSURL fileURLWithPath:staged]
+				backupItemName:nil options:0 resultingItemURL:nil error:&error];
+	else if (ok)
+		ok = [fm moveItemAtPath:staged toPath:live error:&error];
+	if (!ok) {
+		SPLog(@"vmu import failed: %@", error.localizedDescription);
+		[fm removeItemAtPath:staged error:nil];
+		[host setPaused:NO reason:@"vmu-import"];
+		[host portMenuShowMessage:@"Couldn't import the memory card"];
+		return;
+	}
+	SPLog(@"vmu import %@ installed, backup %@", name, backup.lastPathComponent ?: @"none");
+	[host portMenuRestartGame];
+	[host portMenuShowMessage:@"Memory card imported"];
 }
 
 @end

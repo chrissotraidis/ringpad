@@ -8,9 +8,12 @@
 // 90 = right). Duration-0 actions: SHOT:<name> writes a PNG of the last frame to
 // SONICPAD_SHOT_DIR (default generated/shots); STATE:<file> writes a development
 // save state. SONICPAD_STATE_LOAD=<file> resumes from such a state at boot.
+// DUMP:<file> writes the 16 MB of main RAM, for finding game variables.
+// SONICPAD_CHEATS=<id,id> turns on cheats from port/game/SonicCheats at boot.
 // SONICPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
 // SONICPAD_EXIT_AT=<guest seconds> prints a SONICPAD_PERF line and exits.
 #include "sp_block_api.h"
+#include "SonicCheats.h"
 #include "emulator.h"
 #include "serialize.h"
 #include "hw/pvr/Renderer_if.h"
@@ -26,7 +29,9 @@
 #include "stb_image_write.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <thread>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +49,10 @@
 int UpdateSystem_INTC();
 
 namespace {
+
+// Guest time in timeslices, published every 8192 slices (about 18 ms) so the
+// iOS shell can tell whether the game is advancing after a resume.
+std::atomic<u64> gGuestSlices{0};
 
 constexpr int kMaxBlockOps = 64;
 constexpr int kInterpreterCpuRatio = 8; // Sh4Interpreter's non-STRICT_MODE underclock
@@ -146,9 +155,13 @@ public:
 			slicesAtWallStart = slices;
 		}
 		cpuBase = cpuAccumulated - cpuAtStart;
+		resetLiveWindow();
 		if (!selfTestDone)
 		{
 			selfTestDone = true;
+			sonicpad::install_cheats();
+			if (const char *cheats = std::getenv("SONICPAD_CHEATS"))
+				sonicpad::enable_cheats_from_list(cheats);
 			if (aotEnabled && std::getenv("SONICPAD_SKIP_SELFTEST") == nullptr && !runSelfTest())
 			{
 				aotEnabled = false;
@@ -277,8 +290,9 @@ private:
 	{
 		const SpAotBlock *block = nullptr;
 		RtBlock *variant = nullptr;   // other blocks compiled at the same RAM offset
-		RtBlock *succ[2] = {};        // chained successors seen at runtime
+		RtBlock *succ[2] = {};        // the exact blocks that ran next, checked before any lookup
 		u32 succPc[2] = {};
+		u16 cycles = 0;
 		u8 nextSlot = 0;
 	};
 
@@ -295,12 +309,15 @@ private:
 		writeTrace();
 		report(true);
 		std::fflush(stderr);
+		// The iOS shell copies stderr into its diagnostic log on another
+		// thread; give it a moment to write these last lines.
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		std::_Exit(0);
 	}
 
 	struct ScriptEvent
 	{
-		enum Kind : u8 { Input, Shot, State };
+		enum Kind : u8 { Input, Shot, State, Dump };
 		u64 start;
 		u64 end;
 		u32 buttons = 0;
@@ -364,6 +381,11 @@ private:
 				event.kind = ScriptEvent::State;
 				event.arg = what.substr(6);
 			}
+			else if (what.rfind("DUMP:", 0) == 0)
+			{
+				event.kind = ScriptEvent::Dump;
+				event.arg = what.substr(5);
+			}
 			for (const auto& name : names)
 				if (what == name.first)
 					event.buttons = name.second;
@@ -390,6 +412,8 @@ private:
 					event.announced = true;
 					if (event.kind == ScriptEvent::Shot)
 						takeShot(event.arg);
+					else if (event.kind == ScriptEvent::Dump)
+						dumpRam(event.arg);
 					else
 						saveState(event.arg);
 				}
@@ -420,6 +444,19 @@ private:
 	}
 
 	// Development aid: PNG of the last presented frame, written on the UI thread.
+	// Development aid: main RAM (0x0C000000, 16 MB) as raw little-endian bytes.
+	void dumpRam(const std::string& file)
+	{
+		std::vector<u32> ram(RAM_SIZE / 4);
+		for (u32 i = 0; i < ram.size(); i++)
+			ram[i] = ReadMem32_nommu(0x8C000000 + i * 4);
+		FILE *f = std::fopen(file.c_str(), "wb");
+		const bool ok = f != nullptr && std::fwrite(ram.data(), 4, ram.size(), f) == ram.size();
+		if (f != nullptr)
+			std::fclose(f);
+		std::fprintf(stderr, "SONICPAD_DUMP t=%.2f %s ok=%d\n", slices / kSlicesPerSecond, file.c_str(), ok ? 1 : 0);
+	}
+
 	void takeShot(const std::string& name)
 	{
 		const char *dir = std::getenv("SONICPAD_SHOT_DIR");
@@ -519,16 +556,27 @@ private:
 		runtime.resize(blocks);
 		pages.resize((RAM_MASK + 1) >> kPageBits);
 		size_t n = 0;
-		for (size_t t = 0; t < sp_aot_table_count; t++)
+		// SONICPAD_NO_STATIC=1 leaves statically discovered blocks (stored with
+		// 0 cycles) to the interpreter, to compare against traced code alone.
+		const bool useStatic = std::getenv("SONICPAD_NO_STATIC") == nullptr;
+		size_t staticBlocks = 0;
+		// Statically discovered tables come last; inserting in reverse puts
+		// traced (proven hot) blocks first in each variant chain.
+		for (size_t t = sp_aot_table_count; t-- > 0;)
 			for (size_t b = 0; b < sp_aot_tables[t].count; b++)
 			{
 				const SpAotBlock *block = &sp_aot_tables[t].blocks[b];
+				if (block->cycles == 0 && !useStatic)
+					continue;
+				staticBlocks += block->cycles == 0;
 				if (!tracePath.empty())
 					knownShapes.insert(shapeKey(block->pc, block->code, block->nops));
 				if (!isRamAddress(block->pc))
 					continue;
 				RtBlock& rt = runtime[n++];
 				rt.block = block;
+				// Static blocks carry no cycle count; count them as the tracer does.
+				rt.cycles = block->cycles != 0 ? block->cycles : u16(std::min(countBlockCycles(block->code, block->nops), 0xFFFF));
 				const u32 offset = block->pc & RAM_MASK;
 				auto& page = pages[offset >> kPageBits];
 				if (!page)
@@ -537,8 +585,8 @@ private:
 				rt.variant = slot;
 				slot = &rt;
 			}
-		std::fprintf(stderr, "SONICPAD_AOT manifest=%s blocks=%zu opchecks=%zu enabled=%d trace=%s\n",
-				sp_aot_manifest_id, blocks, sp_aot_opcheck_count, aotEnabled ? 1 : 0,
+		std::fprintf(stderr, "SONICPAD_AOT manifest=%s blocks=%zu static=%zu opchecks=%zu enabled=%d trace=%s\n",
+				sp_aot_manifest_id, n, staticBlocks, sp_aot_opcheck_count, aotEnabled ? 1 : 0,
 				tracePath.empty() ? "off" : tracePath.c_str());
 	}
 
@@ -617,47 +665,52 @@ private:
 	void runBlock()
 	{
 		const u32 pc = ctx->pc;
-		RtBlock *head = nullptr;
+		const u8 *guest = &mem_b[pc & RAM_MASK];
+		RtBlock *hit = nullptr;
+		int slot = -1;
 		if (prev != nullptr)
 		{
-			if (prev->succPc[0] == pc && prev->succ[0] != nullptr)
-				head = prev->succ[0];
-			else if (prev->succPc[1] == pc && prev->succ[1] != nullptr)
-				head = prev->succ[1];
-			if (head != nullptr)
-				chainedRun++;
-		}
-		if (head == nullptr)
-		{
-			head = tableLookup(pc);
-			if (head != nullptr && prev != nullptr)
+			slot = prev->succPc[0] == pc && prev->succ[0] != nullptr ? 0
+					: prev->succPc[1] == pc && prev->succ[1] != nullptr ? 1 : -1;
+			if (slot >= 0 && codeMatches(prev->succ[slot]->block, guest))
 			{
-				const int slot = prev->nextSlot;
-				prev->succ[slot] = head;
-				prev->succPc[slot] = pc;
-				prev->nextSlot = u8(slot ^ 1);
+				hit = prev->succ[slot];
+				chainedRun++;
 			}
 		}
-		if (head != nullptr)
+		if (hit == nullptr)
 		{
-			const u8 *guest = &mem_b[pc & RAM_MASK];
-			for (RtBlock *rt = head; rt != nullptr; rt = rt->variant)
-			{
-				const SpAotBlock *block = rt->block;
-				if (block->pc != pc || !codeMatches(block, guest))
-					continue;
-				prev = rt;
-				aotOps += block->nops;
-				blocksRun++;
-				ctx->cycle_counter -= block->cycles;
-				if (block->flags & kSpPureSelfLoop)
+			for (RtBlock *rt = tableLookup(pc); rt != nullptr; rt = rt->variant)
+				if (rt->block->pc == pc && codeMatches(rt->block, guest))
 				{
-					runIdleCandidate(block);
-					return;
+					hit = rt;
+					break;
 				}
-				block->fn(ctx);
+			if (hit != nullptr && prev != nullptr)
+			{
+				if (slot < 0)
+				{
+					slot = prev->nextSlot;
+					prev->nextSlot = u8(slot ^ 1);
+				}
+				prev->succ[slot] = hit;
+				prev->succPc[slot] = pc;
+			}
+		}
+		if (hit != nullptr)
+		{
+			const SpAotBlock *block = hit->block;
+			prev = hit;
+			aotOps += block->nops;
+			blocksRun++;
+			ctx->cycle_counter -= hit->cycles;
+			if (block->flags & kSpPureSelfLoop)
+			{
+				runIdleCandidate(block);
 				return;
 			}
+			block->fn(ctx);
+			return;
 		}
 		prev = nullptr;
 		u16 ops[kMaxBlockOps];
@@ -719,8 +772,38 @@ private:
 
 	void housekeeping()
 	{
+		gGuestSlices.store(slices, std::memory_order_relaxed);
 		writeTrace();
+		liveReport();
 		report(false);
+	}
+
+	// One line every 30 s of play for the on-device log: guest speed (1.00x
+	// is full speed), SH-4 thread CPU per guest second (headroom) and the
+	// share of instructions that ran as recompiled code. The window restarts
+	// whenever the shell resumes the emulator, so pauses are not counted.
+	void resetLiveWindow()
+	{
+		liveStart = std::chrono::steady_clock::now();
+		liveSlices = slices;
+		liveAot = aotOps;
+		liveInterp = interpretedOps;
+		liveCpu = threadCpuSeconds();
+	}
+
+	void liveReport()
+	{
+		const auto now = std::chrono::steady_clock::now();
+		const double wall = std::chrono::duration<double>(now - liveStart).count();
+		if (wall < 30)
+			return;
+		const double guest = (slices - liveSlices) / kSlicesPerSecond;
+		const double cpu = threadCpuSeconds() - liveCpu;
+		const double aot = double(aotOps - liveAot), interp = double(interpretedOps - liveInterp);
+		std::fprintf(stderr, "SONICPAD_LIVE guest_s=%.1f wall_s=%.1f speed=%.2fx sh4_cpu_per_guest_s=%.3f aot_pct=%.2f aot=%d\n",
+				guest, wall, guest / wall, guest > 0 ? cpu / guest : 0.0, aot + interp > 0 ? 100.0 * aot / (aot + interp) : 0.0,
+				aotEnabled ? 1 : 0);
+		resetLiveWindow();
 	}
 
 	void report(bool final)
@@ -787,6 +870,9 @@ private:
 	double cpuAccumulated = 0;
 	std::chrono::steady_clock::time_point wallStart;
 	std::chrono::steady_clock::time_point lastReport;
+	std::chrono::steady_clock::time_point liveStart;
+	u64 liveSlices = 0, liveAot = 0, liveInterp = 0;
+	double liveCpu = 0;
 };
 
 } // namespace
@@ -794,4 +880,10 @@ private:
 Sh4Executor *SonicPad_CreateSh4Executor()
 {
 	return new SonicPadExecutor();
+}
+
+// Guest seconds run so far.
+double SonicPad_GuestSeconds()
+{
+	return gGuestSlices.load(std::memory_order_relaxed) / kSlicesPerSecond;
 }

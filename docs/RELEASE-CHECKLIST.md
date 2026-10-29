@@ -26,13 +26,28 @@ See [rights and distribution boundaries](RIGHTS-STATUS.md).
 | README and player documentation | Updated to the current app and recipe-only scope |
 | GitHub issues | No open issues on 29 October 2026 |
 | PadMint recipe schema | Pass with PadMint main `b090c36` and Apple Python 3.9 |
-| Host tests and built-in disc identity | Final run pending |
-| Simulator UI, including Dreamcast Original persistence | Running |
-| Current-tree source checks and negative controls | Final run pending |
-| Fresh PadMint player build from clean checkout | Pending |
-| Reviewed source export and recipe checksums | Pending |
+| Host tests and built-in disc identity | Seven suites, 582 checks and identity consistency passed; incorrect-identity negative control exits 1 |
+| GitHub source/host CI | Passed for candidate `21bd0df` |
+| Simulator UI, including Dreamcast Original persistence | iPad: 14 passed, no failures or skips. iPhone: graphics/persistence and focused Help reachability tests passed |
+| Current-tree source checks and negative controls | Passed, including five synthetic guard regressions |
+| Fresh PadMint player build from clean checkout | Passed for `21bd0df`, PadMint main `b090c36`, Apple Python 3.9.6, Xcode 27.1; 8 min 11 s, about 1.8 GiB workspace |
+| Reviewed source export and recipe checksums | 94 source files; archive/private-path exclusion and relative-link checks passed |
 | Whole-repository publication review | Blocked by archived research in history |
 | Physical iPad or iPhone validation | Not requested for this preparation pass |
+
+The fresh player build produced a personal unsigned IPA with iOS 16 minimum,
+iOS 27.1 SDK, declared scene startup and a passing package gate. PadMint marks
+it **personal-only, not publishable**. Its runtime launch was not tested by
+the packaging gate; the Simulator results above are a separate run. No IPA
+was uploaded.
+
+The broader iPhone menu test opened Help and the diagnostic share sheet, but
+its dismissal gestures did not close the native sheet. That automation run
+failed and does not prove a runtime resume defect. Phone share-sheet dismissal
+and resume remain unverified; the passing iPad test retains those assertions.
+The focused phone checks cover graphics persistence and native-menu reachability.
+The app/runtime sources are unchanged from the passing `21bd0df` player build;
+subsequent changes record results and correct test navigation only.
 
 ## Player-build gate
 

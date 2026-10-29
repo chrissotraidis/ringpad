@@ -92,6 +92,7 @@ Under **Controls**, adjust touch-control opacity, size and stick travel, move
 control groups, or remap a connected controller's face buttons. The floating
 stick's base stays where your thumb first lands; move past the rim to hold
 full tilt. **Start** is the game's button; **•••** opens SonicPad's menu.
+On a landscape iPhone, scroll inside the menu to reach **Help** at the bottom.
 
 ## Updates and saves
 

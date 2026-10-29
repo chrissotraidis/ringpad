@@ -107,6 +107,20 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	[NSThread sleepForTimeInterval:0.8];
 }
 
+- (void)openHelpMenu:(XCUIApplication *)app
+{
+	[app.buttons[@"dcpad.menu"] tap];
+	XCUIElement *help = app.buttons[@"Help"];
+	XCTAssertTrue([help waitForExistenceWithTimeout:5]);
+	if (!help.isHittable) {
+		// Native UIMenu scrolls when the landscape phone cannot fit every row.
+		[[[self menuItem:@"Cheats" in:app] coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)] pressForDuration:0.05
+				thenDragToCoordinate:[[self menuItem:@"Controls" in:app] coordinateWithNormalizedOffset:CGVectorMake(0.5, 0.5)]];
+	}
+	XCTAssertTrue(help.isHittable, @"Help is reachable through the native menu");
+	[help tap];
+}
+
 #pragma mark - Import and lifecycle
 
 - (void)testFreshInstallShowsImportInLandscape
@@ -239,6 +253,17 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 
 #pragma mark - Menu and settings
 
+- (void)testHelpMenuIsReachable
+{
+	XCUIApplication *app = [self launchGame];
+	[self openHelpMenu:app];
+	XCTAssertTrue([[self menuItem:@"About This Build" in:app] waitForExistenceWithTimeout:5]);
+	XCTAssertTrue([self menuItem:@"Share Diagnostic Log…" in:app].isHittable);
+	[self attachScreenshot:@"help-reachable"];
+	[self dismissMenu:app];
+	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"closing Help resumes the game");
+}
+
 - (void)testMenuPausesAndOffersControls
 {
 	XCUIApplication *app = [self launchGame];
@@ -246,8 +271,9 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 1, @"game running");
 	[app.buttons[@"dcpad.menu"] tap];
 	XCTAssertTrue([app.buttons[@"Save State"] waitForExistenceWithTimeout:10]);
-	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Cheats", @"Game Files", @"Help"])
+	for (NSString *item in @[@"Save State", @"Load State", @"Reset", @"Controls", @"Graphics", @"Sound", @"Cheats", @"Game Files"])
 		XCTAssertTrue([self menuItem:item in:app].isHittable, @"top-level item %@ fits on screen", item);
+	XCTAssertTrue(app.buttons[@"Help"].exists, @"Help is present; short landscape menus may need scrolling");
 	XCTAssertTrue(app.buttons[@"Controls"].isHittable, @"Controls submenu fits on screen");
 	XCTAssertEqual([[self inputState:app][@"run"] intValue], 0, @"the menu pauses the game");
 	[self attachScreenshot:@"menu"];
@@ -267,8 +293,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 	XCTAssertTrue([self menuItem:@"Import VMU Save…" in:app].exists);
 	[self dismissMenu:app];
 
-	[app.buttons[@"dcpad.menu"] tap];
-	[app.buttons[@"Help"] tap];
+	[self openHelpMenu:app];
 	XCTAssertTrue([[self menuItem:@"About This Build" in:app] waitForExistenceWithTimeout:5]);
 	XCTAssertTrue([self menuItem:@"Share Diagnostic Log…" in:app].exists);
 	[self attachScreenshot:@"menu-help"];

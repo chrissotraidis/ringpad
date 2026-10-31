@@ -1,6 +1,6 @@
 # SonicPad status
 
-Updated **29 October 2026**. The dated sections below retain historical
+Updated **31 October 2026**. The dated sections below retain historical
 measurements; they are not fresh acceptance of the release candidate.
 
 ## Current release preparation
@@ -19,6 +19,21 @@ the existing repository is safe from a successful app build.
 
 Current player instructions: [Install and update](INSTALL.md).
 Outstanding acceptance: [Known issues](KNOWN-ISSUES.md).
+Open maintainer work: [Follow-ups](FOLLOW-UPS.md).
+
+## Face rendering investigation (31 October 2026)
+
+The maintainer reported Sonic's face texture sometimes showing over his eyes.
+On the macOS build, the opening Station Square cutscene ran from boot with
+recompilation on (99.999% recompiled) and with `SONICPAD_NO_AOT=1`. The
+close-ups of Sonic's face matched, differing only by a small timing offset, so
+the recompiler is not the cause. The 12.9-inch iPad Pro (M2) replayed the same
+cutscene from a development state at 1920p with 4× xBRZ. With Flycast's
+default Per Triangle sorting, the face rendered correctly in every close-up.
+Flycast's Per Pixel renderer started through MoltenVK but drew stray polygons
+and broken eyes, at both 1920p and 480p, so it was not added to the menu. The
+player's VMU files and settings on the iPad were backed up and confirmed
+unchanged afterward. Details and next steps: [Follow-ups](FOLLOW-UPS.md#sonics-face-head-polygons-over-the-eyes).
 
 ## Initial foundation evidence (10 October 2026)
 

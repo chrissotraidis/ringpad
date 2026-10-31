@@ -1,8 +1,9 @@
 # Known issues and acceptance limits
 
-Updated **29 October 2026**. SonicPad is experimental. The [status record](STATUS.md)
+Updated **31 October 2026**. SonicPad is experimental. The [status record](STATUS.md)
 contains supporting measurements; the [release checklist](RELEASE-CHECKLIST.md)
-records source-release preparation and the publication gate.
+records source-release preparation and the publication gate. Maintainer work
+still to pick up is listed in [follow-ups](FOLLOW-UPS.md).
 
 ## Gameplay and device coverage
 
@@ -39,6 +40,26 @@ Dreamcast Original** when diagnosing a slowdown. Full-speed intro or demo
 measurements on an M2 iPad do not establish performance in every stage or on
 other devices. Startup and stage loads can pause frame presentation; include
 the affected route and a diagnostic log in a report.
+
+### Sonic's face: head polygons over the eyes
+
+Sometimes parts of Sonic's head or muzzle draw over his eyes or mouth, or
+flicker through them. It is most noticeable in close-ups. Sonic's eyes and
+face details are separate see-through polygons laid over his head, and
+Flycast's transparency sorting can occasionally put them in the wrong order.
+Flycast tracks the same report as
+[flycast#1443](https://github.com/flyinghead/flycast/issues/1443). Some face
+clipping during cutscene expressions also happens on a real Dreamcast.
+
+There is no setting that fixes it yet. Flycast's accurate **Per Pixel**
+sorting renders badly broken frames through MoltenVK on iPad, so SonicPad
+keeps Flycast's default Per Triangle sorting. If you see the glitch, note the
+scene and graphics settings and attach a screenshot or short recording to an
+issue; a known location lets it be replayed and tested.
+
+The recompiled game code is not the cause. A Mac run of the opening
+cutscene produced the same frames of Sonic's face with recompilation on and
+off.
 
 ## Builds, imports and saves
 

@@ -4,61 +4,100 @@
   <img src="port/apple/ios/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="160" alt="SonicPad app icon: a gold ring over sky and sea">
 </p>
 
+SonicPad brings **Sonic Adventure to iPhone and iPad**, built from your own
+Dreamcast disc. It translates the game's SH-4 machine code into C++ ahead of
+time on your Mac and compiles it for ARM64, with
+[Flycast](https://github.com/flyinghead/flycast) as the Dreamcast hardware
+layer. It adds Dreamcast touch controls, controller support, save states and a
+native ••• menu.
+
+**AI disclosure:** SonicPad uses substantial AI assistance for code, tests,
+documentation, debugging and maintenance. There is no audited percentage of
+AI-generated code; build, test and device records state what has actually been
+checked. This describes SonicPad's workflow, not the authorship of its upstream
+projects.
+
 <p align="center">
-  <strong>Sonic Adventure for iPhone and iPad, built from your own Dreamcast disc.</strong><br>
-  Ahead-of-time static recompilation, Dreamcast touch controls, controllers, save states, and the original game's graphics.
+  <strong>Sonic Adventure on iPhone and iPad, from your own disc.</strong><br>
+  Ahead-of-time static recompilation. No JIT, no BIOS file, no streaming.<br>
+  Touch or controller, save states, and the original Dreamcast look.
 </p>
 
 <p align="center">
-  <img alt="iPhone and iPad" src="https://img.shields.io/badge/iPhone%20%2F%20iPad-iOS%2016%2B-0A84FF?logo=apple">
+  <img alt="iOS and iPadOS 16 or later" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-16%2B-0A84FF?logo=apple">
   <img alt="SH-4 static recompilation" src="https://img.shields.io/badge/SH--4-static%20recompilation-FF9F0A">
   <img alt="No JIT required" src="https://img.shields.io/badge/JIT-not%20required-30D158">
-  <img alt="Experimental source release" src="https://img.shields.io/badge/status-experimental-FF9F0A">
+  <img alt="Vulkan through MoltenVK on Metal" src="https://img.shields.io/badge/renderer-Vulkan%20%E2%86%92%20Metal-5E5CE6">
   <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
   <a href="LICENSE"><img alt="GPL version 3" src="https://img.shields.io/badge/license-GPL--3.0-5E5CE6"></a>
+  <a href="https://discord.gg/xwHfUD2bxW"><img alt="Join the Discord community" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&amp;logoColor=white"></a>
 </p>
 
-SonicPad translates the supported Dreamcast game's SH-4 code into C++ on your
-Mac, then compiles it for ARM64. [Flycast](https://github.com/flyinghead/flycast)
-provides the Dreamcast hardware layer and interpreter fallback. On iPhone and
-iPad, its Vulkan renderer runs through MoltenVK on Metal. No JIT or Dreamcast
-BIOS file is needed.
+<p align="center">
+  <a href="#get-sonicpad">Get SonicPad</a> ·
+  <a href="#supported-game">Game requirements</a> ·
+  <a href="#controls">Controls</a> ·
+  <a href="docs/INSTALL.md">Install guide</a> ·
+  <a href="docs/KNOWN-ISSUES.md">Known issues</a> ·
+  <a href="#frequently-asked-questions">FAQ</a>
+</p>
 
 > [!IMPORTANT]
-> **Bring your own game.** SonicPad supports **Sonic Adventure PAL v1.003
-> (MK-5100050)** as a three-track GDI. The intended public release supplies
-> source and a build recipe. Game files, translated game code and prebuilt
-> IPAs are excluded. You build your own app and import your disc on the device.
->
-> **Experimental.** Selected routes have run on an M2 iPad Pro, but a complete
-> playthrough, broad device coverage, audio and save/reload acceptance remain
-> open. Build and Simulator checks do not establish those results.
->
-> **AI disclosure:** SonicPad uses substantial AI assistance for code, tests,
-> documentation and debugging. Build, test and device records state what was
-> checked. This describes SonicPad's workflow, not its upstream projects'
-> authorship; no audited percentage of AI-generated code is claimed.
+> **Build your own copy on an Apple Silicon Mac.** SonicPad releases contain
+> source and a build recipe. No prebuilt app, translated game code or game data
+> is distributed. You need your own **Sonic Adventure PAL v1.003
+> (MK-5100050)** disc as a three-track GDI.
+
+## Highlights
+
+- **Recompiled, not emulated, CPU.** The game's SH-4 code runs as
+  ahead-of-time compiled ARM64 code. Flycast supplies the graphics, sound,
+  disc and controller hardware, and its interpreter covers any block the
+  translator missed. All of Flycast's JITs are compiled out.
+- **Dreamcast touch controls.** A floating or fixed analog stick, eight-way
+  D-pad, A/B/X/Y with chords, independent analog L/R and a separate Start.
+  Move, resize and fade the controls to suit your hands.
+- **Controllers.** Apple GameController-compatible pads, such as Xbox,
+  PlayStation and MFi controllers, with face-button remapping. Touch controls
+  hide when a controller connects.
+- **Original graphics by default.** **Dreamcast Original** renders at 480p with
+  the original textures. Up to 4× resolution and xBRZ texture upscaling are
+  optional.
+- **Saves and backups.** In-game VMU saves, three save-state slots with
+  thumbnails, and VMU import and export.
+- **Extras.** iPhone widescreen, plus Max Rings, Infinite Lives and Unlock All
+  Characters cheats for the supported disc.
+
+## What is available now?
+
+| Platform or route | Status |
+|---|---|
+| iPhone / iPad, iOS 16+ | Personal unsigned IPA built on an Apple Silicon Mac |
+| PadMint | Compatible [recipe](padmint.json) in this repository; not yet in PadMint's public catalog |
+| Apple Silicon Mac | Development and regression build only; no packaged Mac player |
+| Windows, Linux, Android, Apple TV | Not offered |
+| App Store, TestFlight, prebuilt IPAs | Not offered |
+
+**SonicPad 0.1.0 is an experimental preview.** On a 12.9-inch iPad Pro (M2),
+recorded runs reached the Chaos 0 fight, Emerald Coast's opening and Windy
+Valley, and the intro, attract demo and Windy Valley held full game speed.
+The Windy Valley route ran 99.94% of its instructions as recompiled code. A
+complete playthrough, audio, save-and-reload, iPhone hardware and other devices
+are not yet accepted. See [Known issues](docs/KNOWN-ISSUES.md) and the
+[status record](docs/STATUS.md) for the exact scope.
 
 ## Get SonicPad
 
-| You want to | What is available |
-|---|---|
-| Play on **iPhone or iPad** | Build a personal unsigned IPA on an Apple Silicon Mac, sign it with your own signing tool, then import your game. |
-| Develop on **Mac** | An Apple Silicon development build for tracing, regression runs and code generation. See [Building](docs/BUILDING.md#macos-development-build). |
-| Use **PadMint** | This repository includes a compatible [build recipe](padmint.json). SonicPad is not yet in PadMint's public catalog; use the direct build below. |
+You need:
 
-**You need:**
-
-- An **Apple Silicon Mac** with full Xcode and its iOS platform installed,
-  CMake **3.24 or newer**, Git and Python **3.9 or newer**. Apple's
-  `/usr/bin/python3` works. Allow at least **6 GB** of build space in addition
-  to Xcode and your disc.
-- An iPhone or iPad running **iOS / iPadOS 16 or newer**, plus your own IPA
-  signing and installation tool. This is the deployment minimum; it does not
-  mean every compatible device has been tested.
-- Your own supported `.gdi` with **`track01.bin`, `track02.raw` and
-  `track03.bin` in the same folder**. Other regions, revisions, CDI and CHD
-  images are not supported.
+- An **Apple Silicon Mac** with full **Xcode and its iOS platform** installed,
+  **CMake 3.24 or newer** (`brew install cmake`), Git and Python 3.9 or newer.
+  Apple's `/usr/bin/python3` works.
+- At least **6 GB** of build space, separate from Xcode and your disc.
+- An iPhone or iPad running **iOS / iPadOS 16 or newer**, and a way to sign and
+  install a personal IPA, such as AltStore Classic, SideStore, Sideloadly or
+  Xcode.
+- Your own supported disc. See [Supported game](#supported-game).
 
 ### Build and install
 
@@ -70,112 +109,165 @@ cd sonicpad
   --output "$HOME/Desktop/SonicPad.ipa"
 ```
 
-The builder verifies your disc, downloads pinned dependencies, translates the
-game and packages the app. It keeps generated game code on your Mac.
+The builder verifies your disc, downloads pinned Flycast and MoltenVK,
+translates the game and packages an unsigned IPA. A clean build took about
+eight minutes on the maintainer's Apple Silicon Mac. Generated game code stays
+in ignored folders on your Mac.
 
-1. Sign and install `SonicPad.ipa` using your own signing tool.
+1. Sign and install `SonicPad.ipa` with your signing tool.
 2. Copy the whole GDI folder to Files on your iPhone or iPad. Download any
-   cloud placeholders before importing.
-3. Open SonicPad, choose **Import Game**, and select that folder. You can
-   also find it under **••• → Game Files → Import Game…**.
+   cloud placeholders first.
+3. Open SonicPad, tap **Import Game** and choose that folder. You can also use
+   **••• → Game Files → Import Game…**.
 4. Let verification finish, then play. Tap **•••** for controls, graphics,
    saves and help.
 
-See the [installation and update guide](docs/INSTALL.md) for prerequisites,
-save backups and troubleshooting. The personal IPA contains code translated
-from your disc; keep it and the generated files private.
+The personal IPA contains code translated from your disc. Keep it, and the
+generated files, private. The [install guide](docs/INSTALL.md) covers Xcode
+setup, troubleshooting and updates.
 
-## Features
+**Updating:** back up your VMU with **••• → Game Files → Export VMU Save…**,
+then install the new build over the existing app with the same signing setup.
+Deleting SonicPad removes its saves, settings and imported disc.
 
-- **Dreamcast controls.** A floating or fixed analog stick, eight-way D-pad,
-  A/B/X/Y, independent analog triggers and a separate Start button. Move and
-  resize controls, change opacity and stick travel, or connect an Apple
-  GameController-compatible controller.
-- **Original graphics by default.** **Graphics → Dreamcast Original** uses
-  480p and original textures. Optional rendering up to 4× and xBRZ texture
-  upscaling are available. Existing installations keep their settings.
-- **iPhone widescreen.** A 16:9 camera patch, on by default on phones. It is
-  separate from the graphics preset and has
-  [known limitations](docs/KNOWN-ISSUES.md#widescreen).
-- **Saves.** In-game VMU saves, three save-state slots with thumbnails, and
-  VMU import/export. [Back up your VMU](docs/INSTALL.md#updates-and-saves)
-  before updating or replacing a save.
-- **Cheats.** Max Rings, Infinite Lives and Unlock All Characters for the
-  supported PAL disc. See [cheats and save import](docs/CHEATS.md).
-- **Diagnostics.** About This Build shows the version and commit;
-  **Help → Share Diagnostic Log** exports recent runtime and app events.
+## Supported game
 
-## What has been checked?
+| Input | Requirement |
+|---|---|
+| Game | **Sonic Adventure PAL v1.003 (1999)**, product **MK-5100050** |
+| Format | `.gdi` with `track01.bin`, `track02.raw` and `track03.bin` in the same folder |
+| Size | About 1.23 GB for the three tracks |
+| Identity | Every track and the descriptor are SHA-256 checked against [`config/game-identity.json`](config/game-identity.json) |
+| Not supported | Other regions and revisions, Sonic Adventure DX, CDI and CHD images |
 
-Recorded routes reach the Chaos 0 fight, Emerald Coast's opening and Windy
-Valley. Static discovery also compiles code from the game's stage, event,
-boss and other modules, with the interpreter handling missed blocks.
-Compiling a module does not mean its whole stage has been played through.
+Renaming a different image does not make it compatible. SonicPad copies the
+disc into its own storage during import and leaves your files unchanged. No
+disc image, BIOS, extracted game files or saves are included in this
+repository or its releases.
 
-On the tested **12.9-inch iPad Pro (M2)**, recorded intro, attract-demo and
-Windy Valley runs held full game speed. The Windy Valley route executed
-**99.94%** of instructions as recompiled code. These are scoped measurements,
-not a whole-game or all-device performance guarantee.
+## Controls
 
-The [status record](docs/STATUS.md) separates historical measurements from
-[release preparation](docs/RELEASE-CHECKLIST.md).
-[Known issues](docs/KNOWN-ISSUES.md) lists the remaining coverage and hardware
-work. The release checklist also records the source-publication gate.
+| Dreamcast | Touch | Controller |
+|---|---|---|
+| Analog stick | Floating stick in the lower left; fixed mode in settings | Left thumbstick |
+| D-pad | Eight-way cross | D-pad |
+| A / B / X / Y | Colored diamond: A bottom, B right, X left, Y top; slide for chords | Positional face buttons, remappable |
+| L / R | Independent analog sliders | Analog triggers; shoulders act as full presses |
+| Start | Start pill | Menu button |
+| SonicPad menu | **•••** | **•••** on screen |
 
-## Questions
+**••• → Controls** sets touch opacity, size and stick travel, moves control
+groups, and opens controller mapping. The **•••** button never sends Start to
+the game. See the [input contract](docs/INPUT.md) and
+[DCPad](port/dcpad/README.md) for details.
 
-**Is this a decompilation or SARecomp port?** SonicPad is a static
-recompilation of the supported disc's machine code. It does not use SARecomp
-or a matching source decompilation.
+## Graphics and settings
 
-**Is it streaming, or does it need JIT?** It runs on the device. All Flycast
-JITs are compiled out; untranslated blocks use the interpreter.
+| Menu | What it does |
+|---|---|
+| **Graphics → Dreamcast Original** | 480p with the original textures; the default for new installs |
+| **Graphics → Resolution** | Original (480p), 2×, 3× or 4× (1920p) |
+| **Graphics → Texture Upscaling** | Off, 2× or 4× xBRZ |
+| **Graphics → Widescreen (16:9)** | iPhone only, on by default; turning it off restarts the game |
+| **Graphics → Show FPS** | Frame counter at the top left |
+| **Sound** | Full, half or off |
+| **Save State / Load State** | Three slots with thumbnails and dates |
+| **Cheats** | Max Rings, Infinite Lives, Unlock All Characters |
+| **Game Files** | Import a game, export or import VMU saves |
+| **Help** | Share Diagnostic Log…, About This Build |
 
-**Can I use Sonic Adventure DX or another Dreamcast release?** Only the
-hash-checked PAL v1.003 GDI is supported. Renaming a different image does not
-make it compatible.
+Use **Dreamcast Original** first if a stage slows down. Widescreen can stretch
+the HUD; see [Known issues](docs/KNOWN-ISSUES.md#widescreen). Cheats and VMU
+import are described in [Cheats, saves and widescreen](docs/CHEATS.md).
 
-**Can I download an IPA or build on Windows?** The release scope is source
-and a recipe. The player build needs an Apple Silicon Mac and full Xcode;
-there is no prebuilt IPA, Windows build route or App Store release.
+## Frequently asked questions
+
+### Is this an emulator, SARecomp or a decompilation?
+
+SonicPad is a static recompilation of the supported disc's machine code. Flycast
+emulates the Dreamcast's other hardware, and its interpreter runs any code the
+translator missed. It does not use SARecomp or a source decompilation.
+
+### Does it need JIT or a connection to my Mac?
+
+No. Everything runs on the device. Flycast's JITs are compiled out, so no JIT
+entitlement or debugger connection is needed.
+
+### Where is the IPA download?
+
+There is none. The app would contain code translated from the game, so each
+player builds their own from their own disc using [the steps above](#get-sonicpad).
+
+### Can I use Sonic Adventure DX or another release?
+
+No. Only the hash-checked PAL v1.003 GDI is supported.
+
+### Can I build on Windows or play on Mac?
+
+Not in this release. The player build needs an Apple Silicon Mac with full
+Xcode. The Mac build is a development tool for tracing and regression runs.
+
+### Does everything work?
+
+Not yet. This is an early preview: a full playthrough, audio quality,
+save-and-reload, iPhone hardware, other iPads, Bluetooth controllers and long
+sessions remain open.
+Sonic's face can occasionally show head polygons over his eyes; see
+[Known issues](docs/KNOWN-ISSUES.md#sonics-face-head-polygons-over-the-eyes).
+
+## Help and community
+
+Use **••• → Help → Share Diagnostic Log…** to export recent app and runtime
+events, and **About This Build** for the version and commit. Review the log for
+personal paths and filenames before you share it. Include your device, OS
+version, graphics settings and steps to reproduce. Never attach game files,
+generated code, IPAs, saves, signing files or credentials.
+
+[GitHub issues](https://github.com/chrissotraidis/sonicpad/issues) ·
+[Discord community](https://discord.gg/xwHfUD2bxW) ·
+[Install guide](docs/INSTALL.md) ·
+[Known issues](docs/KNOWN-ISSUES.md) · [Security](SECURITY.md)
+
+Focused fixes and reproducible reports against the known issues are welcome.
+Run the [host checks](docs/BUILDING.md#host-checks) for relevant changes and
+say exactly which build or device you tested.
 
 ## Project map
 
 | Path | Purpose |
 |---|---|
-| [Installation](docs/INSTALL.md) | Personal build, signing, first launch, updates and save backups |
-| [Building](docs/BUILDING.md) | Developer setup, tracing, static discovery and Simulator checks |
+| [Install guide](docs/INSTALL.md) | Personal build, signing, first launch, updates and save backups |
+| [Building](docs/BUILDING.md) | Developer setup, tracing, static discovery, Simulator and device runs |
 | [Known issues](docs/KNOWN-ISSUES.md) | Limitations, workarounds and outstanding acceptance |
+| [Follow-ups](docs/FOLLOW-UPS.md) | Open maintainer work and next steps |
 | [Status](docs/STATUS.md) | Recorded build, route and device evidence |
-| [Release checklist](docs/RELEASE-CHECKLIST.md) | Source-release validation and publication steps |
-| [Plan](docs/PLAN.md) / [PRD](docs/prd.md) | Project scope and completion gates |
-| [Input contract](docs/INPUT.md) / [DCPad](port/dcpad/README.md) | Touch controls and the Flycast input bridge |
+| [Release checklist](docs/RELEASE-CHECKLIST.md) | Release checks and publication steps |
+| [Rights](docs/RIGHTS-STATUS.md) | Licenses and game-content boundaries |
 | [`scripts/build-personal.py`](scripts/build-personal.py) | Build a private unsigned IPA from your disc |
+| [`scripts/recomp/`](scripts/recomp/) | Block discovery and C++ generation |
+| [`port/recomp/`](port/recomp/) | The executor that runs recompiled blocks inside Flycast |
+| [`port/apple/ios/`](port/apple/ios/) | iPhone/iPad shell, menus, import and diagnostics |
+| [`port/dcpad/`](port/dcpad/) | Dreamcast touch controls and controller input |
 | [`padmint.json`](padmint.json) | PadMint-compatible build recipe |
+| [`tests/`](tests/) | Host tests, iOS UI tests and scripted acceptance routes |
 
-## Credits and license
+## Research and credits
 
-SonicPad builds on Flycast's Dreamcast hardware implementation, MoltenVK's
-Vulkan-to-Metal support, and input and menu mechanisms adapted from
-[SunPad](https://github.com/chrissotraidis/sunpad). Dependency versions and
-attributions are in [Third-party notices](THIRD_PARTY_NOTICES.md).
+SonicPad builds on [Flycast](https://github.com/flyinghead/flycast) for the
+Dreamcast hardware layer, HLE BIOS and SH-4 interpreter, and on
+[MoltenVK](https://github.com/KhronosGroup/MoltenVK) for Vulkan on Metal. Its
+touch input and menu mechanisms are adapted from
+[SunPad](https://github.com/chrissotraidis/sunpad). Exact dependency versions
+are pinned in [`dependencies.lock.json`](dependencies.lock.json), with
+attributions in [Third-party notices](THIRD_PARTY_NOTICES.md).
 
-SonicPad's source is licensed under **GNU GPL version 3** ([LICENSE](LICENSE)).
-Dependencies retain their own licenses. The source license does not grant
-rights to Sega's game data or translated game code; see
-[Rights and release boundaries](docs/RIGHTS-STATUS.md).
+## Legal and provenance
 
-Sonic Adventure, Sonic the Hedgehog and Dreamcast belong to SEGA. SonicPad is
-an independent project and is not affiliated with or endorsed by SEGA.
+SonicPad is an unofficial project and is not affiliated with or endorsed by
+SEGA. Sonic Adventure, Sonic the Hedgehog and Dreamcast belong to SEGA.
 
-## Contributing and support
-
-[Open an issue](https://github.com/chrissotraidis/sonicpad/issues) with your
-version and commit from **About This Build**, device and OS, graphics settings,
-reproduction steps and what happened. A diagnostic log is useful; review it
-for personal paths and filenames before attaching it. Do not upload game
-files, generated code, IPAs, saves, signing material or credentials.
-
-Focused fixes and reproducible reports against the known issues are welcome.
-Run the [host checks](docs/BUILDING.md#host-checks) for relevant changes and
-describe exactly which build or device was tested.
+SonicPad's source is licensed under the **GNU General Public License, version
+3** ([LICENSE](LICENSE)). Dependencies keep their own licenses. The source
+license grants no rights to Sega's game data or to code translated from it; see
+[Rights and distribution boundaries](docs/RIGHTS-STATUS.md). The app icon is
+original project artwork with no character, logo or game imagery.

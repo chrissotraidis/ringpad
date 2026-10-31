@@ -1,6 +1,6 @@
 # Public release preparation
 
-Updated **29 October 2026**. Intended release: **0.1.0 experimental preview**,
+Updated **31 October 2026**. Intended release: **0.1.0 experimental preview**,
 source and build recipe only. Repository visibility remains the maintainer's
 decision. No public IPA, translated game code, disc content, saves or signing
 material are release assets.
@@ -24,7 +24,7 @@ See [rights and distribution boundaries](RIGHTS-STATUS.md).
 | Check | Result |
 |---|---|
 | README and player documentation | Updated to the current app and recipe-only scope |
-| GitHub issues | No open issues on 29 October 2026 |
+| GitHub issues | No open issues on 31 October 2026; maintainer follow-ups are in [FOLLOW-UPS.md](FOLLOW-UPS.md) |
 | PadMint recipe schema | Pass with PadMint main `b090c36` and Apple Python 3.9 |
 | Host tests and built-in disc identity | Seven suites, 582 checks and identity consistency passed; incorrect-identity negative control exits 1 |
 | GitHub source/host CI | Passed for candidate `21bd0df` |
@@ -33,7 +33,7 @@ See [rights and distribution boundaries](RIGHTS-STATUS.md).
 | Fresh PadMint player build from clean checkout | Passed for `21bd0df`, PadMint main `b090c36`, Apple Python 3.9.6, Xcode 27.1; 8 min 11 s, about 1.8 GiB workspace |
 | Reviewed source export and recipe checksums | 94 source files; archive/private-path exclusion and relative-link checks passed |
 | Whole-repository publication review | Blocked by archived research in history |
-| Physical iPad or iPhone validation | Not requested for this preparation pass |
+| Physical iPad or iPhone validation | Not requested for this preparation pass; the 31 October face-rendering check on the M2 iPad is recorded in [STATUS.md](STATUS.md#face-rendering-investigation-31-october-2026) |
 
 The fresh player build produced a personal unsigned IPA with iOS 16 minimum,
 iOS 27.1 SDK, declared scene startup and a passing package gate. PadMint marks

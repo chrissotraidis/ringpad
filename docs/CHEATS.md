@@ -1,7 +1,7 @@
 # Cheats, saves and widescreen
 
 Updated **29 October 2026**; verification below was recorded on 22 October. Everything here applies to the PAL v1.003 disc
-(MK-5100050), the only one SonicPad imports.
+(MK-5100050), the only one RingPad imports.
 
 ## Cheats (••• ▸ Cheats)
 
@@ -12,7 +12,7 @@ Updated **29 October 2026**; verification below was recorded on 22 October. Ever
 | Unlock All Characters | 16-bit `0x0101` at `0x7998A2`, 32-bit `0x01010101` at `0x7998A4` | Character select shows all six plus Super Sonic |
 
 Cheats are written at every vertical blank while on
-(`port/game/SonicCheats.cpp`) and stay on across launches.
+(`port/game/GameCheats.cpp`) and stay on across launches.
 
 **How they were found.** ConsoleDatabase lists CodeBreaker codes for two PAL
 releases. Neither set's addresses hold those values on this disc: the RAM at
@@ -21,7 +21,7 @@ during the Chaos 0 route (`DUMP:` in an input script), the ring counter (0
 then 1 after the first pickup) and the lives counter (4, 3, 2 as Sonic took
 hits) sit at `0x752B24` and `0x752B20`: the "Version 1.0" addresses minus
 0xC0. The character flags follow the same rule. Each cheat then ran the whole
-route from boot (`SONICPAD_CHEATS=rings,lives,characters`) with screenshots.
+route from boot (`RINGPAD_CHEATS=rings,lives,characters`) with screenshots.
 
 **Left out.** Max Emblems at the shifted address changed nothing on the file
 screen. Debug Mode at the shifted address turned on Sega's development

@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad Dreamcast input mixer.
+/* RingPad Dreamcast input mixer.
  *
  * Reuses the pinned SunPad shell mechanism (ref/sunpad/apple/shared/
  * SunPadInputMixer) with GameCube-only semantics removed: the Dreamcast
@@ -23,7 +23,7 @@
 
 #include <mutex>
 
-namespace sonicpad {
+namespace ringpad {
 
 class DreamcastInputMixer {
 public:
@@ -36,7 +36,7 @@ public:
 
     /* Record one source's snapshot. Rising button edges are latched until the
      * next consumeMerged(), so a sub-sample tap survives. */
-    void setState(const SonicPadDreamcastState& state, bool from_touch) noexcept;
+    void setState(const RingPadDreamcastState& state, bool from_touch) noexcept;
 
     /* Drop one source's held state and pending edges. */
     void clear(bool from_touch) noexcept;
@@ -46,14 +46,14 @@ public:
     void clearAll() noexcept;
 
     /* Return the merged snapshot and clear the consumed edges. */
-    SonicPadDreamcastState consumeMerged() noexcept;
+    RingPadDreamcastState consumeMerged() noexcept;
 
 private:
     void clear_locked(unsigned index) noexcept;
 
     std::mutex mutex_;
-    SonicPadDreamcastState states_[2]{};
+    RingPadDreamcastState states_[2]{};
     EdgeLatch latches_[2];
 };
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

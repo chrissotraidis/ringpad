@@ -1,4 +1,4 @@
-/* Source-derived host tests for the SonicPad Dreamcast touch layout.
+/* Source-derived host tests for the RingPad Dreamcast touch layout.
  *
  * Level 1 of the three input acceptance levels (state/unit tests). Covers the
  * game-neutral mechanics reused from the pinned SunPad overlay: normalized
@@ -12,7 +12,7 @@
 #include <cmath>
 #include <cstdio>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -130,19 +130,19 @@ static void test_per_touch_ownership() {
     arbiter.begin(1, center_px(a, w), center_py(a, h), l, w, h);
     arbiter.begin(2, center_px(m, w), center_py(m, h), l, w, h);
     auto s = arbiter.state();
-    CHECK((s.buttons & SonicPadDC_A) != 0u, "touch 1 holds A");
+    CHECK((s.buttons & RingPadDC_A) != 0u, "touch 1 holds A");
     CHECK(arbiter.active_count() == 2, "two touches active");
 
     arbiter.end(1); /* lift the button finger */
     s = arbiter.state();
-    CHECK((s.buttons & SonicPadDC_A) == 0u, "lifting touch 1 releases A");
+    CHECK((s.buttons & RingPadDC_A) == 0u, "lifting touch 1 releases A");
     CHECK(arbiter.active_count() == 1, "touch 2 still active");
     CHECK(s.connected == 1, "still connected via the remaining finger");
 
     /* Slide the stick finger toward a face button: control must not change. */
     arbiter.move(2, center_px(a, w), center_py(a, h), l, w, h);
     s = arbiter.state();
-    CHECK((s.buttons & SonicPadDC_A) == 0u, "sliding off the stick does not fire a button");
+    CHECK((s.buttons & RingPadDC_A) == 0u, "sliding off the stick does not fire a button");
 
     arbiter.end(2);
     s = arbiter.state();

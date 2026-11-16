@@ -17,7 +17,7 @@ bool SPCaptureLastFrameRGB(std::vector<u8>& rgb, int& width, int& height);   // 
 void SPResetTextureCache();                                                   // SPFrameCapture.cpp
 
 static constexpr int kSlots = 3;
-static NSString *const kWidescreenKey = @"SonicPad.widescreen";
+static NSString *const kWidescreenKey = @"RingPad.widescreen";
 
 @interface SPPortMenu () <UIDocumentPickerDelegate>
 @end
@@ -376,7 +376,7 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 	for (NSURL *url in urls) {
 		NSData *data = [NSData dataWithContentsOfURL:url];
 		NSString *ext = url.pathExtension.lowercaseString;
-		if (data.length == sonicpad::kVMUImageBytes)
+		if (data.length == ringpad::kVMUImageBytes)
 			card = data;
 		else if ([ext isEqualToString:@"vmi"])
 			vmi = data;
@@ -386,7 +386,7 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 		}
 	}
 	if (card != nil) {
-		const std::string why = sonicpad::vmu_image_problem(Bytes(card));
+		const std::string why = ringpad::vmu_image_problem(Bytes(card));
 		if (!why.empty()) {
 			*problem = [NSString stringWithFormat:@"This file is 128 KB but %s.", why.c_str()];
 			return nil;
@@ -399,7 +399,7 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 				@"Select both in Files before tapping Open.";
 		return nil;
 	}
-	sonicpad::VMUFile file = sonicpad::vmu_file_from_vmi(Bytes(vmi));
+	ringpad::VMUFile file = ringpad::vmu_file_from_vmi(Bytes(vmi));
 	if (file.name.empty()) {
 		*problem = @"The .VMI file is not a VMU file description.";
 		return nil;
@@ -407,8 +407,8 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 	file.data = Bytes(vms);
 	NSData *current = ReadCurrentCard();
 	std::vector<uint8_t> image = current != nil ? Bytes(current) : std::vector<uint8_t>();
-	if (!sonicpad::vmu_image_problem(image).empty()) {
-		*problem = @"SonicPad's memory card is not ready yet. Start the game once, then import the save.";
+	if (!ringpad::vmu_image_problem(image).empty()) {
+		*problem = @"RingPad's memory card is not ready yet. Start the game once, then import the save.";
 		return nil;
 	}
 	NSDateComponents *c = [NSCalendar.currentCalendar components:NSCalendarUnitYear | NSCalendarUnitMonth | NSCalendarUnitDay
@@ -416,7 +416,7 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 	auto bcd = [](long v) { return uint8_t(((v / 10) % 10) << 4 | (v % 10)); };
 	const uint8_t when[8] = {bcd(c.year / 100), bcd(c.year % 100), bcd(c.month), bcd(c.day), bcd(c.hour), bcd(c.minute),
 			bcd(c.second), uint8_t((c.weekday + 5) % 7)};
-	const std::string why = sonicpad::vmu_write_file(image, file, when);
+	const std::string why = ringpad::vmu_write_file(image, file, when);
 	if (!why.empty()) {
 		*problem = [NSString stringWithFormat:@"The save could not be added: %s.", why.c_str()];
 		return nil;
@@ -458,7 +458,7 @@ static NSData *CardFromPick(NSArray<NSURL *> *urls, NSString **summary, NSString
 	}
 	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Import This Save?"
 			message:[NSString stringWithFormat:@"%@ goes onto the memory card in port A, replacing a Sonic Adventure save "
-					@"already there, and the game restarts. Your current card is kept as a backup in SonicPad's Documents folder.",
+					@"already there, and the game restarts. Your current card is kept as a backup in RingPad's Documents folder.",
 					summary]
 			preferredStyle:UIAlertControllerStyleAlert];
 	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction *) {

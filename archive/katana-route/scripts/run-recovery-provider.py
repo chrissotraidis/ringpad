@@ -19,20 +19,20 @@ def main():
         if index+1>=len(sys.argv):raise ValueError('--system-flash requires an image path')
         flash=Path(sys.argv[index+1]).resolve(strict=True);del sys.argv[index:index+2]
         if flash.stat().st_size!=131072:raise ValueError('System flash image must be exactly128KiB')
-    aot.ENV.pop('SONICPAD_RECOVERY_SYSTEM_FLASH',None)
-    if flash:aot.ENV['SONICPAD_RECOVERY_SYSTEM_FLASH']=str(flash)
+    aot.ENV.pop('RINGPAD_RECOVERY_SYSTEM_FLASH',None)
+    if flash:aot.ENV['RINGPAD_RECOVERY_SYSTEM_FLASH']=str(flash)
     original_startup='--original-startup' in sys.argv
     if original_startup:sys.argv.remove('--original-startup')
     if flash and not original_startup:raise ValueError('--system-flash requires --original-startup')
     aot.REPORT['system_flash_image']=str(flash) if flash else None
     aot.REPORT['original_main_entry_experiment']=original_startup
-    aot.ENV.pop('SONICPAD_RECOVERY_ORIGINAL_STARTUP',None)
-    if original_startup:aot.ENV['SONICPAD_RECOVERY_ORIGINAL_STARTUP']='1'
+    aot.ENV.pop('RINGPAD_RECOVERY_ORIGINAL_STARTUP',None)
+    if original_startup:aot.ENV['RINGPAD_RECOVERY_ORIGINAL_STARTUP']='1'
     outer_loop='--startup-loop' in sys.argv
     if outer_loop:sys.argv.remove('--startup-loop')
     aot.REPORT['original_outer_loop_experiment']=outer_loop
-    aot.ENV.pop('SONICPAD_RECOVERY_OUTER_LOOP',None)
-    if outer_loop:aot.ENV['SONICPAD_RECOVERY_OUTER_LOOP']='1'
+    aot.ENV.pop('RINGPAD_RECOVERY_OUTER_LOOP',None)
+    if outer_loop:aot.ENV['RINGPAD_RECOVERY_OUTER_LOOP']='1'
     board=None
     camera='--sboard-camera' in sys.argv
     if camera:sys.argv.remove('--sboard-camera')

@@ -1,19 +1,19 @@
-// SonicPad SH-4 executor: runs ahead-of-time compiled game blocks and uses
+// RingPad SH-4 executor: runs ahead-of-time compiled game blocks and uses
 // Flycast's interpreter only for code that has not been recompiled yet.
-// SONICPAD_TRACE=<file> records missed blocks so the generator can compile
-// them in the next build. SONICPAD_STATS=1 reports AOT coverage.
-// SONICPAD_INPUT_SCRIPT=<file> replays pad input at guest times, one event per
+// RINGPAD_TRACE=<file> records missed blocks so the generator can compile
+// them in the next build. RINGPAD_STATS=1 reports AOT coverage.
+// RINGPAD_INPUT_SCRIPT=<file> replays pad input at guest times, one event per
 // line: "<start seconds> <duration seconds> <what>", where <what> is one of
 // A|B|X|Y|START|UP|DOWN|LEFT|RIGHT|LT|RT, STICK:x,y or ANGLE:deg[,pct] (0 = up,
 // 90 = right). Duration-0 actions: SHOT:<name> writes a PNG of the last frame to
-// SONICPAD_SHOT_DIR (default generated/shots); STATE:<file> writes a development
-// save state. SONICPAD_STATE_LOAD=<file> resumes from such a state at boot.
+// RINGPAD_SHOT_DIR (default generated/shots); STATE:<file> writes a development
+// save state. RINGPAD_STATE_LOAD=<file> resumes from such a state at boot.
 // DUMP:<file> writes the 16 MB of main RAM, for finding game variables.
-// SONICPAD_CHEATS=<id,id> turns on cheats from port/game/SonicCheats at boot.
-// SONICPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
-// SONICPAD_EXIT_AT=<guest seconds> prints a SONICPAD_PERF line and exits.
+// RINGPAD_CHEATS=<id,id> turns on cheats from port/game/GameCheats at boot.
+// RINGPAD_UNCAPPED=1 runs as fast as the host allows (no audio pacing) and
+// RINGPAD_EXIT_AT=<guest seconds> prints a RINGPAD_PERF line and exits.
 #include "sp_block_api.h"
-#include "SonicCheats.h"
+#include "GameCheats.h"
 #include "emulator.h"
 #include "serialize.h"
 #include "hw/pvr/Renderer_if.h"
@@ -114,23 +114,23 @@ int countBlockCycles(const u16 *ops, int nops)
 	return total;
 }
 
-class SonicPadExecutor final : public Sh4Interpreter
+class RingPadExecutor final : public Sh4Interpreter
 {
 public:
 	void Init() override
 	{
 		Sh4Interpreter::Init();
-		if (const char *trace = std::getenv("SONICPAD_TRACE"))
+		if (const char *trace = std::getenv("RINGPAD_TRACE"))
 			tracePath = trace;
-		statsEnabled = std::getenv("SONICPAD_STATS") != nullptr;
-		aotEnabled = std::getenv("SONICPAD_NO_AOT") == nullptr;
-		idleSkipEnabled = std::getenv("SONICPAD_NO_IDLE_SKIP") == nullptr;
-		if (const char *script = std::getenv("SONICPAD_INPUT_SCRIPT"))
+		statsEnabled = std::getenv("RINGPAD_STATS") != nullptr;
+		aotEnabled = std::getenv("RINGPAD_NO_AOT") == nullptr;
+		idleSkipEnabled = std::getenv("RINGPAD_NO_IDLE_SKIP") == nullptr;
+		if (const char *script = std::getenv("RINGPAD_INPUT_SCRIPT"))
 			loadScript(script);
-		if (const char *state = std::getenv("SONICPAD_STATE_LOAD"))
+		if (const char *state = std::getenv("RINGPAD_STATE_LOAD"))
 			stateLoadPath = state;
-		uncapped = std::getenv("SONICPAD_UNCAPPED") != nullptr;
-		if (const char *exitAt = std::getenv("SONICPAD_EXIT_AT"))
+		uncapped = std::getenv("RINGPAD_UNCAPPED") != nullptr;
+		if (const char *exitAt = std::getenv("RINGPAD_EXIT_AT"))
 			exitAtSlices = u64(std::atof(exitAt) * kSlicesPerSecond);
 		loadTables();
 		lastReport = std::chrono::steady_clock::now();
@@ -159,15 +159,15 @@ public:
 		if (!selfTestDone)
 		{
 			selfTestDone = true;
-			sonicpad::install_cheats();
-			if (const char *cheats = std::getenv("SONICPAD_CHEATS"))
-				sonicpad::enable_cheats_from_list(cheats);
-			if (aotEnabled && std::getenv("SONICPAD_SKIP_SELFTEST") == nullptr && !runSelfTest())
+			ringpad::install_cheats();
+			if (const char *cheats = std::getenv("RINGPAD_CHEATS"))
+				ringpad::enable_cheats_from_list(cheats);
+			if (aotEnabled && std::getenv("RINGPAD_SKIP_SELFTEST") == nullptr && !runSelfTest())
 			{
 				aotEnabled = false;
-				std::fprintf(stderr, "SONICPAD_AOT disabled: self-test failed\n");
+				std::fprintf(stderr, "RINGPAD_AOT disabled: self-test failed\n");
 			}
-			if (std::getenv("SONICPAD_SELFTEST_ONLY") != nullptr)
+			if (std::getenv("RINGPAD_SELFTEST_ONLY") != nullptr)
 			{
 				std::fflush(stderr);
 				std::_Exit(aotEnabled ? 0 : 1);
@@ -269,7 +269,7 @@ private:
 						|| std::memcmp(afterHandler.data(), window, kWindowSize) != 0)
 				{
 					if (failures++ < 10)
-						std::fprintf(stderr, "SONICPAD_SELFTEST mismatch op=%04X pc=%08X/%08X r0=%08X/%08X T=%u/%u\n",
+						std::fprintf(stderr, "RINGPAD_SELFTEST mismatch op=%04X pc=%08X/%08X r0=%08X/%08X T=%u/%u\n",
 								test.op, viaHandler.pc, viaInline.pc, viaHandler.r[0], viaInline.r[0],
 								(unsigned)viaHandler.sr.T, (unsigned)viaInline.sr.T);
 					break;
@@ -277,7 +277,7 @@ private:
 			}
 		}
 		std::memcpy(window, saved.data(), kWindowSize);
-		std::fprintf(stderr, "SONICPAD_SELFTEST forms=%zu trials=%zu skipped=%zu failures=%zu\n",
+		std::fprintf(stderr, "RINGPAD_SELFTEST forms=%zu trials=%zu skipped=%zu failures=%zu\n",
 				sp_selftest_count, trials, skipped, failures);
 		return failures == 0;
 	}
@@ -302,7 +302,7 @@ private:
 		const double guest = (slices - slicesAtWallStart) / kSlicesPerSecond;
 		const double cpu = cpuBase + threadCpuSeconds();
 		const double total = double(aotOps + interpretedOps);
-		std::fprintf(stderr, "SONICPAD_PERF guest_s=%.2f wall_s=%.2f speed=%.2fx sh4_cpu_s=%.2f sh4_cpu_per_guest_s=%.3f "
+		std::fprintf(stderr, "RINGPAD_PERF guest_s=%.2f wall_s=%.2f speed=%.2fx sh4_cpu_s=%.2f sh4_cpu_per_guest_s=%.3f "
 				"blocks=%llu chained=%llu idle_skip_pct=%.2f aot_pct=%.3f uncapped=%d\n",
 				guest, wall, guest / wall, cpu, cpu / guest, (unsigned long long)blocksRun,
 				(unsigned long long)chainedRun, 100.0 * idleSkipped / (guest * 200000000.0), total > 0 ? 100.0 * aotOps / total : 0.0, uncapped ? 1 : 0);
@@ -395,7 +395,7 @@ private:
 				scriptMask |= event.buttons;
 			}
 		}
-		std::fprintf(stderr, "SONICPAD_SCRIPT %s events=%zu\n", path, script.size());
+		std::fprintf(stderr, "RINGPAD_SCRIPT %s events=%zu\n", path, script.size());
 	}
 
 	void applyScript()
@@ -432,7 +432,7 @@ private:
 			if (!event.announced)
 			{
 				event.announced = true;
-				std::fprintf(stderr, "SONICPAD_SCRIPT t=%.2f buttons=%04X stick=%d,%d lt=%u rt=%u\n",
+				std::fprintf(stderr, "RINGPAD_SCRIPT t=%.2f buttons=%04X stick=%d,%d lt=%u rt=%u\n",
 						slices / kSlicesPerSecond, event.buttons, event.x, event.y, event.lt, event.rt);
 			}
 		}
@@ -454,12 +454,12 @@ private:
 		const bool ok = f != nullptr && std::fwrite(ram.data(), 4, ram.size(), f) == ram.size();
 		if (f != nullptr)
 			std::fclose(f);
-		std::fprintf(stderr, "SONICPAD_DUMP t=%.2f %s ok=%d\n", slices / kSlicesPerSecond, file.c_str(), ok ? 1 : 0);
+		std::fprintf(stderr, "RINGPAD_DUMP t=%.2f %s ok=%d\n", slices / kSlicesPerSecond, file.c_str(), ok ? 1 : 0);
 	}
 
 	void takeShot(const std::string& name)
 	{
-		const char *dir = std::getenv("SONICPAD_SHOT_DIR");
+		const char *dir = std::getenv("RINGPAD_SHOT_DIR");
 		const std::string folder = dir != nullptr ? dir : "generated/shots";
 		mkdir(folder.c_str(), 0755);
 		const std::string path = folder + "/" + name + ".png";
@@ -474,7 +474,7 @@ private:
 				stbi_flip_vertically_on_write(0);
 				ok = stbi_write_png(path.c_str(), w, h, 3, rgb.data(), w * 3) != 0;
 			}
-			std::fprintf(stderr, "SONICPAD_SHOT t=%.2f %s %dx%d ok=%d\n", t, path.c_str(), w, h, ok ? 1 : 0);
+			std::fprintf(stderr, "RINGPAD_SHOT t=%.2f %s %dx%d ok=%d\n", t, path.c_str(), w, h, ok ? 1 : 0);
 		});
 	}
 
@@ -499,7 +499,7 @@ private:
 					&& std::fwrite(data.data(), data.size(), 1, f) == 1;
 			ok = std::fclose(f) == 0 && ok;
 		}
-		std::fprintf(stderr, "SONICPAD_STATE save t=%.2f %s bytes=%zu ok=%d\n", slices / kSlicesPerSecond,
+		std::fprintf(stderr, "RINGPAD_STATE save t=%.2f %s bytes=%zu ok=%d\n", slices / kSlicesPerSecond,
 				file.c_str(), data.size(), ok ? 1 : 0);
 	}
 
@@ -513,7 +513,7 @@ private:
 		if (bytes.size() <= sizeof(kStateMagic) + sizeof(savedSlices)
 				|| std::memcmp(bytes.data(), kStateMagic, sizeof(kStateMagic)) != 0)
 		{
-			std::fprintf(stderr, "SONICPAD_STATE load failed: %s is not a SonicPad state\n", file.c_str());
+			std::fprintf(stderr, "RINGPAD_STATE load failed: %s is not a RingPad state\n", file.c_str());
 			return;
 		}
 		std::memcpy(&savedSlices, bytes.data() + sizeof(kStateMagic), sizeof(savedSlices));
@@ -522,7 +522,7 @@ private:
 			Deserializer deser(bytes.data() + offset, bytes.size() - offset);
 			emu.loadstate(deser);
 		} catch (const std::exception& e) {
-			std::fprintf(stderr, "SONICPAD_STATE load failed: %s\n", e.what());
+			std::fprintf(stderr, "RINGPAD_STATE load failed: %s\n", e.what());
 			return;
 		}
 		Instance = this;
@@ -533,7 +533,7 @@ private:
 		for (ScriptEvent& event : script)
 			if (event.start < slices)
 				event.announced = true;
-		std::fprintf(stderr, "SONICPAD_STATE load t=%.2f %s\n", slices / kSlicesPerSecond, file.c_str());
+		std::fprintf(stderr, "RINGPAD_STATE load t=%.2f %s\n", slices / kSlicesPerSecond, file.c_str());
 	}
 
 	void loadTables()
@@ -545,7 +545,7 @@ private:
 			const SpOpCheck& check = sp_aot_opchecks[i];
 			if (OpPtr[check.op] != check.handler)
 			{
-				std::fprintf(stderr, "SONICPAD_AOT error: opcode %04X handler mismatch; AOT disabled\n", check.op);
+				std::fprintf(stderr, "RINGPAD_AOT error: opcode %04X handler mismatch; AOT disabled\n", check.op);
 				aotEnabled = false;
 				return;
 			}
@@ -556,9 +556,9 @@ private:
 		runtime.resize(blocks);
 		pages.resize((RAM_MASK + 1) >> kPageBits);
 		size_t n = 0;
-		// SONICPAD_NO_STATIC=1 leaves statically discovered blocks (stored with
+		// RINGPAD_NO_STATIC=1 leaves statically discovered blocks (stored with
 		// 0 cycles) to the interpreter, to compare against traced code alone.
-		const bool useStatic = std::getenv("SONICPAD_NO_STATIC") == nullptr;
+		const bool useStatic = std::getenv("RINGPAD_NO_STATIC") == nullptr;
 		size_t staticBlocks = 0;
 		// Statically discovered tables come last; inserting in reverse puts
 		// traced (proven hot) blocks first in each variant chain.
@@ -585,7 +585,7 @@ private:
 				rt.variant = slot;
 				slot = &rt;
 			}
-		std::fprintf(stderr, "SONICPAD_AOT manifest=%s blocks=%zu static=%zu opchecks=%zu enabled=%d trace=%s\n",
+		std::fprintf(stderr, "RINGPAD_AOT manifest=%s blocks=%zu static=%zu opchecks=%zu enabled=%d trace=%s\n",
 				sp_aot_manifest_id, n, staticBlocks, sp_aot_opcheck_count, aotEnabled ? 1 : 0,
 				tracePath.empty() ? "off" : tracePath.c_str());
 	}
@@ -757,7 +757,7 @@ private:
 		FILE *f = std::fopen(tmp.c_str(), "w");
 		if (f == nullptr)
 			return;
-		std::fprintf(f, "# sonicpad-trace v1: pc nops cycles ops...\n");
+		std::fprintf(f, "# ringpad-trace v1: pc nops cycles ops...\n");
 		for (const Traced& t : traced)
 		{
 			std::fprintf(f, "%08X %u %d", t.pc, (unsigned)t.ops.size(), t.cycles);
@@ -800,7 +800,7 @@ private:
 		const double guest = (slices - liveSlices) / kSlicesPerSecond;
 		const double cpu = threadCpuSeconds() - liveCpu;
 		const double aot = double(aotOps - liveAot), interp = double(interpretedOps - liveInterp);
-		std::fprintf(stderr, "SONICPAD_LIVE guest_s=%.1f wall_s=%.1f speed=%.2fx sh4_cpu_per_guest_s=%.3f aot_pct=%.2f aot=%d\n",
+		std::fprintf(stderr, "RINGPAD_LIVE guest_s=%.1f wall_s=%.1f speed=%.2fx sh4_cpu_per_guest_s=%.3f aot_pct=%.2f aot=%d\n",
 				guest, wall, guest / wall, guest > 0 ? cpu / guest : 0.0, aot + interp > 0 ? 100.0 * aot / (aot + interp) : 0.0,
 				aotEnabled ? 1 : 0);
 		resetLiveWindow();
@@ -815,7 +815,7 @@ private:
 			return;
 		lastReport = now;
 		const double total = double(aotOps + interpretedOps);
-		std::fprintf(stderr, "SONICPAD_STATS aot_ops=%llu interp_ops=%llu aot_pct=%.2f traced_new=%zu%s\n",
+		std::fprintf(stderr, "RINGPAD_STATS aot_ops=%llu interp_ops=%llu aot_pct=%.2f traced_new=%zu%s\n",
 				(unsigned long long)aotOps, (unsigned long long)interpretedOps,
 				total > 0 ? 100.0 * aotOps / total : 0.0, traced.size(), final ? " final" : "");
 		if (final)
@@ -828,7 +828,7 @@ private:
 			{
 				u16 ops[kMaxBlockOps];
 				const int nops = isRamAddress(top[i].second) ? decodeBlock(top[i].second, ops) : 0;
-				std::fprintf(stderr, "SONICPAD_MISS pc=%08X count=%llu nops=%d first=%04X\n", top[i].second,
+				std::fprintf(stderr, "RINGPAD_MISS pc=%08X count=%llu nops=%d first=%04X\n", top[i].second,
 						(unsigned long long)top[i].first, nops, nops > 0 ? ops[0] : 0);
 			}
 		}
@@ -877,13 +877,13 @@ private:
 
 } // namespace
 
-Sh4Executor *SonicPad_CreateSh4Executor()
+Sh4Executor *RingPad_CreateSh4Executor()
 {
-	return new SonicPadExecutor();
+	return new RingPadExecutor();
 }
 
 // Guest seconds run so far.
-double SonicPad_GuestSeconds()
+double RingPad_GuestSeconds()
 {
 	return gGuestSlices.load(std::memory_order_relaxed) / kSlicesPerSecond;
 }

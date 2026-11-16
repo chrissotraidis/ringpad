@@ -124,7 +124,7 @@ public:
     std::size_t active_count() const { return touches_.size(); }
     Control control_for(int id) const;
 
-    SonicPadDreamcastState state() const;
+    RingPadDreamcastState state() const;
     Visual visual(const Layout& layout) const;
 
     /* Number of new presses (button down, new D-pad direction, trigger full)

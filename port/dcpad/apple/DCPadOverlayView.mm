@@ -975,7 +975,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 
 - (void)publish
 {
-	sonicpad::DreamcastInputMixer::shared().setState(_engine.state(), true);
+	ringpad::DreamcastInputMixer::shared().setState(_engine.state(), true);
 	if (_settings.haptics && _engine.take_press_events() > 0)
 		[_haptic impactOccurred];
 	else
@@ -1077,7 +1077,7 @@ const uint8_t kDirs[4] = {dcpad::DPadUp, dcpad::DPadDown, dcpad::DPadLeft, dcpad
 {
 	_engine.clear();
 	_touchIds.clear();
-	sonicpad::DreamcastInputMixer::shared().clear(true);
+	ringpad::DreamcastInputMixer::shared().clear(true);
 	_dimmed = NO;
 	[self scheduleIdleDim];
 	[self render];

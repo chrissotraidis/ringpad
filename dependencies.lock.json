@@ -1,5 +1,5 @@
 {
-  "schema": "sonicpad-dependency-lock-v2",
+  "schema": "ringpad-dependency-lock-v2",
   "references": {
     "Flycast": {
       "origin": "https://github.com/flyinghead/flycast",

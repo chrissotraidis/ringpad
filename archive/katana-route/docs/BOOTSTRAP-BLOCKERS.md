@@ -1,4 +1,4 @@
-# SonicPad bootstrap blockers
+# RingPad bootstrap blockers
 
 9 October video-copy preparation: three bodies compile and the observer passes
 syntax checks; native execution awaits the disk guard. Refreshed audit
@@ -655,7 +655,7 @@ establish the expected identity, not current public availability.
 
 ## Source-only acquisition request (Chris sends manually)
 
-> I'm building SonicPad privately against SARecomp
+> I'm building RingPad privately against SARecomp
 > d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2. Could you provide authenticated
 > access to matching Katana runtime/compiler source, generated SDK contracts,
 > retained guest C++/metadata and auxiliary Mini Cart source or a reproducible

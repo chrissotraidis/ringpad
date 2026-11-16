@@ -1221,18 +1221,18 @@ static void observed_sdk_request(SH4Context& ctx,DCRuntime& rt){
     original_sdk_request(ctx,rt);
     if(sdk_request_observer)sdk_request_observer(true);
 }
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-acquire/movie-instance-buffer-acquire/movie-instance-buffer-acquire-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-validate/movie-instance-buffer-validate/movie-instance-buffer-validate-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-clear/movie-instance-buffer-clear/movie-instance-buffer-clear-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config/movie-instance-buffer-config/movie-instance-buffer-config-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config-return/movie-instance-buffer-config-return/movie-instance-buffer-config-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-links/movie-instance-buffer-links/movie-instance-buffer-links-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-return/movie-instance-buffer-return/movie-instance-buffer-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-binding-repair1/movie-instance-buffer-binding/movie-instance-buffer-binding-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-flags/movie-instance-buffer-flags/movie-instance-buffer-flags-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-handler/movie-instance-fourth-handler/movie-instance-fourth-handler-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-setup/movie-instance-fourth-setup/movie-instance-fourth-setup-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-create/movie-instance-fourth-create/movie-instance-fourth-create-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-acquire/movie-instance-buffer-acquire/movie-instance-buffer-acquire-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-validate/movie-instance-buffer-validate/movie-instance-buffer-validate-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-clear/movie-instance-buffer-clear/movie-instance-buffer-clear-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config/movie-instance-buffer-config/movie-instance-buffer-config-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config-return/movie-instance-buffer-config-return/movie-instance-buffer-config-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-links/movie-instance-buffer-links/movie-instance-buffer-links-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-return/movie-instance-buffer-return/movie-instance-buffer-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-binding-repair1/movie-instance-buffer-binding/movie-instance-buffer-binding-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-flags/movie-instance-buffer-flags/movie-instance-buffer-flags-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-handler/movie-instance-fourth-handler/movie-instance-fourth-handler-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-setup/movie-instance-fourth-setup/movie-instance-fourth-setup-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-create/movie-instance-fourth-create/movie-instance-fourth-create-manifest.hpp"
 namespace dcrecomp_generated {void resident_pool_register(DCRuntime&);void resident_descriptor_register(DCRuntime&);void resident_descriptor_return_register(DCRuntime&);void resident_channel_register(DCRuntime&);void resident_channel_getters_register(DCRuntime&);void resident_work_pool_register(DCRuntime&);void resident_rate_pool_register(DCRuntime&);}
 static std::function<void()> integration_entry_observer;
 static bool integration_entry_seen=false;
@@ -1384,7 +1384,7 @@ live_constructor_body=rt.targets.at(0x8c65f214);rt.targets.at(0x8c65f214)=&obser
 
 
 #ifdef RECOVERY_MOVIE_ENTRY
-    const char*movie_path=std::getenv("SONICPAD_RECOVERY_MOVIE_REFERENCE");require(movie_path,"Missing declared movie reference");
+    const char*movie_path=std::getenv("RINGPAD_RECOVERY_MOVIE_REFERENCE");require(movie_path,"Missing declared movie reference");
     std::ifstream movie_input(movie_path,std::ios::binary);require(bool(movie_input),"Cannot open declared movie reference");
     const std::vector<std::uint8_t> movie_reference{std::istreambuf_iterator<char>(movie_input),{}};require(movie_reference.size()==184592,"Movie reference size differs");
     dc_begin_code_module(rt,0x8CEB0000,movie_reference.size());bool movie_active=false;
@@ -1492,7 +1492,7 @@ require(rt.targets.contains(0x8c10e67c),"Retained signed division helper missing
 #ifdef RECOVERY_RECORD_READY
     dcrecomp_generated::record_ready_register(rt);dcrecomp_generated::ready_query_register(rt);dcrecomp_generated::ready_setter_register(rt);
 #endif
-    if(const char* path=std::getenv("SONICPAD_RECOVERY_SYSTEM_FLASH")){
+    if(const char* path=std::getenv("RINGPAD_RECOVERY_SYSTEM_FLASH")){
         std::ifstream input(path,std::ios::binary);
         require(bool(input),"Cannot open declared system flash image");
         const std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>(input),{}};
@@ -1519,7 +1519,7 @@ require(rt.targets.contains(0x8c10e67c),"Retained signed division helper missing
 #endif
         // Narrow source-state probe: observe the unchanged final boundary only.
         const std::string prefix=recovery_frame_directory+"/original-startup-"+phase;
-        const char* reference_directory=std::getenv("SONICPAD_RECOVERY_CAPTURE_REFERENCE");
+        const char* reference_directory=std::getenv("RINGPAD_RECOVERY_CAPTURE_REFERENCE");
         auto write_capture=[&](const char* suffix,const auto& bytes){
             const std::string filename=std::string("original-startup-")+phase+suffix;
             const std::filesystem::path reference=reference_directory?std::filesystem::path(reference_directory)/filename:std::filesystem::path{};

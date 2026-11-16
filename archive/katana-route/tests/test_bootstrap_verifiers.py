@@ -140,7 +140,7 @@ class SourceInputTests(unittest.TestCase):
         source = cache / 'FFmpeg-fixture'
         source.mkdir()
         (source / 'decoder.c').write_bytes(b'evil')
-        (source / '.sonicpad-source-archive-sha256').write_text(game.digest(archive))
+        (source / '.ringpad-source-archive-sha256').write_text(game.digest(archive))
         with mock.patch.object(sources, 'ROOT', self.root):
             report = sources.media_source(dict(revision='fixture', archive_sha256=game.digest(archive)))
         self.assertEqual(report['incompatible'], 1)

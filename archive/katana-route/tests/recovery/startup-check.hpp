@@ -921,7 +921,7 @@ static void check_startup(DCRuntime&rt,const SH4Context&boot_context,bool schedu
             std::array<float,3> position_before;
             for(unsigned i=0;i<3;++i)position_before[i]=std::bit_cast<float>(dc_read32(rt,main+32+4*i));
             observe_update("before");
-            if(std::getenv("SONICPAD_RECOVERY_OUTER_LOOP")){
+            if(std::getenv("RINGPAD_RECOVERY_OUTER_LOOP")){
                 // Finish the earlier supplied initialization/update prefix.
                 // Starting more updates before034480 leaves duplicate collision
                 // registrations;002431 incorrectly paired Sonic with himself.
@@ -941,7 +941,7 @@ static void check_startup(DCRuntime&rt,const SH4Context&boot_context,bool schedu
                 std::cout<<"PASS original coroutine root:36 bytes; self-linked empty root; no fabricated pointer\n";
                 std::cerr<<"BEGIN first original outer update050474\n";
             }
-            try{call(std::getenv("SONICPAD_RECOVERY_OUTER_LOOP")?0x8C050474:0x8C09A544);}
+            try{call(std::getenv("RINGPAD_RECOVERY_OUTER_LOOP")?0x8C050474:0x8C09A544);}
             catch(...){observe_update("failure");capture_collision("update-ram.bin");throw;}
             observe_update("returned");capture_collision("update-ram.bin");
             //233831: independent captured-state audit and four negative controls.
@@ -992,7 +992,7 @@ static void check_startup(DCRuntime&rt,const SH4Context&boot_context,bool schedu
             require(rt.pvr_isp_start_writes==joined_starts+1 && rt.pvr_render_completes==joined_completes+1
                 && rt.pvr_ta_stream.empty(),"Joined display frame did not drain before cleanup");
             std::cout<<"PASS original full display/frame: original traversal returned; one render completion; queued packets drained before release; visual/gameplay acceptance open\n";
-            if(std::getenv("SONICPAD_RECOVERY_OUTER_LOOP")){
+            if(std::getenv("RINGPAD_RECOVERY_OUTER_LOOP")){
                 // Keep the live coroutine and collision state between updates.
                 // The surrounding startup order remains supplied, not normal boot.
                 capture_collision("loop-before-ram.bin");

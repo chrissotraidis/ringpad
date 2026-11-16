@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace sonicpad {
+namespace ringpad {
 namespace {
 
 constexpr size_t kBlock = 512;
@@ -143,4 +143,4 @@ std::string vmu_write_file(std::vector<uint8_t>& image, const VMUFile& file, con
     return {};
 }
 
-} // namespace sonicpad
+} // namespace ringpad

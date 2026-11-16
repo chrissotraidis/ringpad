@@ -1,12 +1,12 @@
-// SonicPad's persistent runtime log, kept on the device so a problem seen in
+// RingPad's persistent runtime log, kept on the device so a problem seen in
 // play can be read afterwards and shared from the ••• menu.
 #import <UIKit/UIKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-/* Opens Library/Application Support/SonicPad/Logs/sonicpad.log, keeps the
- * previous session as sonicpad.previous.log and copies everything written to
- * stderr (Flycast's log and the SONICPAD_* lines) into it with timestamps.
+/* Opens Library/Application Support/RingPad/Logs/ringpad.log, keeps the
+ * previous session as ringpad.previous.log and copies everything written to
+ * stderr (Flycast's log and the RINGPAD_* lines) into it with timestamps.
  * Also records memory warnings, thermal and Low Power Mode changes. */
 FOUNDATION_EXPORT void SPDiagnosticsStart(void);
 

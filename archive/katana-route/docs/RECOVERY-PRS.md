@@ -40,7 +40,7 @@ source files and its license were fetched; no packaged binaries or game data:
 The untouched files are staged as `common.rs`, `decompress.rs` and `LICENSE` in
 `work/dreamcast-recovery/prs-reference/`. Its `provenance.json` records exact raw
 source URLs and rustc 1.96.1. This utility is a separate offline reference, not a
-linked SonicPad component. The wrapper calls its unsafe decoder only after the
+linked RingPad component. The wrapper calls its unsafe decoder only after the
 bounded Python reader has validated the same input and established output size.
 
 ## Placement and entry evidence
@@ -1190,7 +1190,7 @@ provider, Mini Cart and failed-load controls. Six core patches and owner inputs
 are unchanged; only the bounded harness/generator mode changed. Reports bind
 sources, generated units, binary identity and inputs.155509/initialization-contract.json
 records exact scope. R3/R4/G1, scheduler/normal boot, real game output and supported
-PAL acquisition remain open. No Simulator or SonicPad game app was launched.
+PAL acquisition remain open. No Simulator or RingPad game app was launched.
 
 ## Original startup producers joined to stage updates —160408
 
@@ -1920,7 +1920,7 @@ binds218 current input/source/generated/patch/evidence identities and binary
 SHA25619afb4e163b0f8ae29ccd768ea57d74855791f3c1a69a7183a460474842f58f4.
 Captures, per-frame raw streams and lighting-render-inspection.json are private
 under211105. Repository safety, Python syntax and diff checks pass. No Simulator,
-SonicPad app or publication; original G1/PAL, full geometry, independently verified
+RingPad app or publication; original G1/PAL, full geometry, independently verified
 lighting/camera, normal boot/full scheduler and R3/R4/adoption remain unresolved.
 
 Next C8: join the original SBOARD registration/state0→2→3 and live character/camera
@@ -2451,7 +2451,7 @@ player misses and50 texture byte checks. Explicit bank1, normal startup/order,
 combined scene, complete update, ground contact and gameplay remain open.
 215723 remains latest full bounded regression. Original G1 and R3/R4 remain
 unresolved; no production-foundation decision. Eight core patches unchanged.
-All three sessions terminal exit1; no Simulator or SonicPad app launched.
+All three sessions terminal exit1; no Simulator or RingPad app launched.
 
 Private `auxiliary-update-contract.json` manifests:
 
@@ -2532,7 +2532,7 @@ negative controls, secondary-motion evidence and relevant disassembly:260 verifi
 identities; SHA256133b6cfa197a730c09aa096cd6432503dfc9e184eca383c621b0b1350e8c98ea.
 Exact compiled-source and oracle snapshots are retained. The provider still fails
 intentionally;215723 remains latest full bounded regression. No Simulator or
-SonicPad app launched; all sessions are terminal.
+RingPad app launched; all sessions are terminal.
 
 Next replace the inspection guard with the verified bounded state assertions and
 exercise original cleanup/repetition. Resolve any changed resource/model invariant,
@@ -2622,7 +2622,7 @@ identities, SHA25611bf63b117ae00f424b5221c2fc3bdcec3fa9158937559fde1c2977bccd219
 static compilation scope, not execution coverage. Cap512/unknown rejection and
 eight core patches unchanged.235343 is the latest expanded passing runtime
 harness;215723 remains historical narrower evidence. All five sessions terminal;
-no Simulator/SonicPad app launched. G1 Katana/PAL, R3/R4 and production adoption
+no Simulator/RingPad app launched. G1 Katana/PAL, R3/R4 and production adoption
 remain unresolved. Source-only acquisition request remains BOOTSTRAP-BLOCKERS.md.
 
 
@@ -2706,7 +2706,7 @@ Independent expected controls for0,1,FFFFFFFF and live seed are recorded but not
 executed. Validate this arithmetic in isolation before another full continuation.
 
 The exact expanded binary302f793ab172f4e9b1741956f1bd1351fa43371d1860c06e8b25c88c61d74748
-also ran without SONICPAD_RECOVERY_OUTER_LOOP into an isolated baseline-regression
+also ran without RINGPAD_RECOVERY_OUTER_LOOP into an isolated baseline-regression
 capture directory; exit0. Both cases pass existing runtime assertions, all five
 external audits, angle-restoration corruption controls and exact repeat images.
 All six render captures match000204. This is a cached native regression, not a

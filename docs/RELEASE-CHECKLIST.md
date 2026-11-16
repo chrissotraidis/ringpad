@@ -56,15 +56,15 @@ build. It uses Apple's `/usr/bin/python3`, a fresh source clone and an empty
 PadMint folder. With the player's supported PAL v1.003 GDI available locally:
 
 ```sh
-# Run from a clean checkout of PadMint main, before tagging SonicPad.
-scripts/player-check.sh sonicpad ios "/path/to/Sonic Adventure.gdi" "/path/to/sonicpad"
+# Run from a clean checkout of PadMint main, before tagging RingPad.
+scripts/player-check.sh ringpad ios "/path/to/Sonic Adventure.gdi" "/path/to/ringpad"
 ```
 
 Keep its workspace private: it contains a personal IPA and generated game code.
 Record both repository revisions, the exit status, package checks and measured
 build-space use. A build failure blocks publication.
 
-SonicPad is not currently in PadMint's catalog. Its `padmint.json` can be used
+RingPad is not currently in PadMint's catalog. Its `padmint.json` can be used
 with a local checkout; adding a catalog entry requires separate approval.
 After an approved catalog/release publication, repeat the player check without
 the checkout argument to test the actual download route. Do not announce that
@@ -72,9 +72,9 @@ route before it passes.
 
 ## Release contents
 
-The prepared attachments are `sonicpad-v0.1.0-padmint.json` and `SHA256SUMS`.
+The prepared attachments are `ringpad-v0.1.0-padmint.json` and `SHA256SUMS`.
 Source comes from the reviewed release tree. A private source export can be
-prepared with `git archive --format=tar.gz --prefix=sonicpad-v0.1.0/ HEAD`;
+prepared with `git archive --format=tar.gz --prefix=ringpad-v0.1.0/ HEAD`;
 inspect its file list and verify that it contains no `archive/`, private inputs,
 generated code or binary app packages before distributing it.
 

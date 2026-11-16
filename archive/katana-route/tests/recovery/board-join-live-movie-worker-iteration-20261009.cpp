@@ -1,63 +1,63 @@
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-aggregate/movie-metadata-aggregate-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-copy/movie-metadata-copy-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-state/movie-metadata-state-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-transfer/movie-metadata-transfer-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-command/movie-buffer-command-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-describe/movie-buffer-describe-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-provider/movie-buffer-provider-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-query/movie-buffer-query-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-snapshot/movie-buffer-snapshot-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-validate/movie-buffer-validate-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-lock/movie-resource-lock-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-request/movie-resource-request-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-unlock/movie-resource-unlock-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-commit/movie-empty-commit-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-copy/movie-empty-copy-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-dispatch/movie-empty-dispatch-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-release/movie-empty-release-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-provider/movie-commit-provider-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-ring/movie-commit-ring-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-status/movie-commit-status-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-repeat-repair1/movie-repeat-common/movie-repeat-common-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-repeat-repair1/movie-repeat-status/movie-repeat-status-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-entry/wrapper/movie-worker-entry-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-step/wrapper/movie-worker-step-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-dispatch/movie-service-dispatch-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-instance/movie-service-instance-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-transition/movie-service-transition-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-summary/movie-service-summary/movie-service-summary-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-time/movie-worker-time/movie-worker-time-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-process/movie-process-dispatch/movie-process-dispatch-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-process/movie-process-child/movie-process-child-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-compat/movie-stream-compat-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-limit/movie-stream-limit-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-start/movie-stream-start-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-arm/movie-method-arm-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-arm_flag/movie-method-arm_flag-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-prepare/movie-method-prepare-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-prepare_flag/movie-method-prepare_flag-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-method/wrapper/movie-resource-method-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-drain/movie-resource-drain-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-lock/movie-resource-lock-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-reset/movie-resource-reset-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-unlock/movie-resource-unlock-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-open-dispatch/wrapper/movie-resource-open-dispatch-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-open-connected-repair1/wrapper/movie-resource-open-connected-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-outer-return/wrapper/movie-outer-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-option/wrapper/movie-entry-option-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-dispatch/movie-entry-setup/movie-entry-setup-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-dispatch/movie-entry-flag/movie-entry-flag-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-next-resource-wrapper/wrapper/movie-next-resource-wrapper-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-tail-return/wrapper/movie-output-tail-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-mode-eight/wrapper/movie-output-mode-eight-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-setup-prefix-repair1/wrapper/movie-output-setup-prefix-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-validity-return/wrapper/movie-validity-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-slot-seven/wrapper/movie-slot-seven-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-slot-six/wrapper/movie-slot-six-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-validation/wrapper/movie-mode-validation-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-slot/wrapper/movie-mode-slot-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-install/wrapper/movie-mode-install-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261009-startup-movie-status-toggle/wrapper/movie-status-toggle-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-aggregate/movie-metadata-aggregate-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-copy/movie-metadata-copy-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-state/movie-metadata-state-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-metadata/movie-metadata-transfer/movie-metadata-transfer-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-command/movie-buffer-command-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-describe/movie-buffer-describe-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-provider/movie-buffer-provider-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-query/movie-buffer-query-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-snapshot/movie-buffer-snapshot-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-buffer-repair1/movie-buffer-validate/movie-buffer-validate-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-lock/movie-resource-lock-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-request/movie-resource-request-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-resource/movie-resource-unlock/movie-resource-unlock-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-commit/movie-empty-commit-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-copy/movie-empty-copy-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-dispatch/movie-empty-dispatch-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-empty/movie-empty-release/movie-empty-release-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-provider/movie-commit-provider-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-ring/movie-commit-ring-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-commit/movie-commit-status/movie-commit-status-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-repeat-repair1/movie-repeat-common/movie-repeat-common-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-repeat-repair1/movie-repeat-status/movie-repeat-status-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-entry/wrapper/movie-worker-entry-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-step/wrapper/movie-worker-step-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-dispatch/movie-service-dispatch-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-instance/movie-service-instance-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-state/movie-service-transition/movie-service-transition-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-service-summary/movie-service-summary/movie-service-summary-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-time/movie-worker-time/movie-worker-time-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-process/movie-process-dispatch/movie-process-dispatch-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-worker-process/movie-process-child/movie-process-child-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-compat/movie-stream-compat-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-limit/movie-stream-limit-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-stream-start/movie-stream-start/movie-stream-start-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-arm/movie-method-arm-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-arm_flag/movie-method-arm_flag-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-prepare/movie-method-prepare-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-ready-return/movie-method-prepare_flag/movie-method-prepare_flag-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-method/wrapper/movie-resource-method-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-drain/movie-resource-drain-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-lock/movie-resource-lock-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-reset/movie-resource-reset-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-reset/movie-resource-unlock/movie-resource-unlock-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-open-dispatch/wrapper/movie-resource-open-dispatch-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-resource-open-connected-repair1/wrapper/movie-resource-open-connected-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-outer-return/wrapper/movie-outer-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-option/wrapper/movie-entry-option-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-dispatch/movie-entry-setup/movie-entry-setup-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-entry-dispatch/movie-entry-flag/movie-entry-flag-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-next-resource-wrapper/wrapper/movie-next-resource-wrapper-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-tail-return/wrapper/movie-output-tail-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-mode-eight/wrapper/movie-output-mode-eight-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-output-setup-prefix-repair1/wrapper/movie-output-setup-prefix-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-validity-return/wrapper/movie-validity-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-slot-seven/wrapper/movie-slot-seven-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-slot-six/wrapper/movie-slot-six-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-validation/wrapper/movie-mode-validation-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-slot/wrapper/movie-mode-slot-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-mode-install/wrapper/movie-mode-install-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261009-startup-movie-status-toggle/wrapper/movie-status-toggle-manifest.hpp"
 // Actual original file loader -> verified AOT module -> original registration.
 // Supplied-scene fixtures remain explicit; original startup records its own continuations.
 #include "board-manifest.hpp"
@@ -1281,18 +1281,18 @@ static void observed_sdk_request(SH4Context& ctx,DCRuntime& rt){
     original_sdk_request(ctx,rt);
     if(sdk_request_observer)sdk_request_observer(true);
 }
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-acquire/movie-instance-buffer-acquire/movie-instance-buffer-acquire-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-validate/movie-instance-buffer-validate/movie-instance-buffer-validate-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-clear/movie-instance-buffer-clear/movie-instance-buffer-clear-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config/movie-instance-buffer-config/movie-instance-buffer-config-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config-return/movie-instance-buffer-config-return/movie-instance-buffer-config-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-links/movie-instance-buffer-links/movie-instance-buffer-links-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-return/movie-instance-buffer-return/movie-instance-buffer-return-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-binding-repair1/movie-instance-buffer-binding/movie-instance-buffer-binding-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-flags/movie-instance-buffer-flags/movie-instance-buffer-flags-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-handler/movie-instance-fourth-handler/movie-instance-fourth-handler-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-setup/movie-instance-fourth-setup/movie-instance-fourth-setup-manifest.hpp"
-#include "/Users/chrissotraidis/GitHub/sonicpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-create/movie-instance-fourth-create/movie-instance-fourth-create-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-acquire/movie-instance-buffer-acquire/movie-instance-buffer-acquire-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-validate/movie-instance-buffer-validate/movie-instance-buffer-validate-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-clear/movie-instance-buffer-clear/movie-instance-buffer-clear-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config/movie-instance-buffer-config/movie-instance-buffer-config-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-config-return/movie-instance-buffer-config-return/movie-instance-buffer-config-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-links/movie-instance-buffer-links/movie-instance-buffer-links-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-return/movie-instance-buffer-return/movie-instance-buffer-return-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-binding-repair1/movie-instance-buffer-binding/movie-instance-buffer-binding-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-buffer-flags/movie-instance-buffer-flags/movie-instance-buffer-flags-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-handler/movie-instance-fourth-handler/movie-instance-fourth-handler-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-setup/movie-instance-fourth-setup/movie-instance-fourth-setup-manifest.hpp"
+#include "/Users/chrissotraidis/GitHub/ringpad/docs/artifacts/recovery-aot/20261008-startup-movie-instance-fourth-create/movie-instance-fourth-create/movie-instance-fourth-create-manifest.hpp"
 namespace dcrecomp_generated {void resident_pool_register(DCRuntime&);void resident_descriptor_register(DCRuntime&);void resident_descriptor_return_register(DCRuntime&);void resident_channel_register(DCRuntime&);void resident_channel_getters_register(DCRuntime&);void resident_work_pool_register(DCRuntime&);void resident_rate_pool_register(DCRuntime&);}
 static std::function<void()> integration_entry_observer;
 static bool integration_entry_seen=false;
@@ -1644,7 +1644,7 @@ live_constructor_body=rt.targets.at(0x8c65f214);rt.targets.at(0x8c65f214)=&obser
 
 
 #ifdef RECOVERY_MOVIE_ENTRY
-    const char*movie_path=std::getenv("SONICPAD_RECOVERY_MOVIE_REFERENCE");require(movie_path,"Missing declared movie reference");
+    const char*movie_path=std::getenv("RINGPAD_RECOVERY_MOVIE_REFERENCE");require(movie_path,"Missing declared movie reference");
     std::ifstream movie_input(movie_path,std::ios::binary);require(bool(movie_input),"Cannot open declared movie reference");
     const std::vector<std::uint8_t> movie_reference{std::istreambuf_iterator<char>(movie_input),{}};require(movie_reference.size()==184592,"Movie reference size differs");
     dc_begin_code_module(rt,0x8CEB0000,movie_reference.size());bool movie_active=false;
@@ -1754,7 +1754,7 @@ require(rt.targets.contains(0x8c65f238)&&rt.targets.contains(0x8c660fa6)&&rt.tar
 #ifdef RECOVERY_RECORD_READY
     dcrecomp_generated::record_ready_register(rt);dcrecomp_generated::ready_query_register(rt);dcrecomp_generated::ready_setter_register(rt);
 #endif
-    if(const char* path=std::getenv("SONICPAD_RECOVERY_SYSTEM_FLASH")){
+    if(const char* path=std::getenv("RINGPAD_RECOVERY_SYSTEM_FLASH")){
         std::ifstream input(path,std::ios::binary);
         require(bool(input),"Cannot open declared system flash image");
         const std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>(input),{}};
@@ -1787,7 +1787,7 @@ require(rt.targets.contains(0x8c65f238)&&rt.targets.contains(0x8c660fa6)&&rt.tar
 #endif
         // Narrow source-state probe: observe the unchanged final boundary only.
         const std::string prefix=recovery_frame_directory+"/original-startup-"+phase;
-        const char* reference_directory=std::getenv("SONICPAD_RECOVERY_CAPTURE_REFERENCE");
+        const char* reference_directory=std::getenv("RINGPAD_RECOVERY_CAPTURE_REFERENCE");
         auto write_capture=[&](const char* suffix,const auto& bytes){
             const std::string filename=std::string("original-startup-")+phase+suffix;
             const std::filesystem::path reference=reference_directory?std::filesystem::path(reference_directory)/filename:std::filesystem::path{};

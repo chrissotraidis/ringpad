@@ -20,4 +20,4 @@ jobs:
       - name: Test source-boundary failures
         run: python3 tests/host/test_repo_safety.py
       - name: Run host tests without game data
-        run: SONICPAD_APPLE_DEVELOPER_DIR="$(xcode-select -p)" scripts/run-host-tests.sh
+        run: RINGPAD_APPLE_DEVELOPER_DIR="$(xcode-select -p)" scripts/run-host-tests.sh

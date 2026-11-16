@@ -2,7 +2,7 @@
 
 /* Dreamcast VMU memory card images (128 KB, 256 blocks of 512 bytes).
  *
- * SonicPad's port A card is one such image. Saves found online usually come
+ * RingPad's port A card is one such image. Saves found online usually come
  * as one file: a .VMS with the file's bytes plus a 108-byte .VMI that names it
  * (Sonic Adventure's is SONICADV_INT, 10 blocks). This writes such a file into
  * an existing card, replacing a file with the same name and leaving every
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace sonicpad {
+namespace ringpad {
 
 constexpr size_t kVMUImageBytes = 128 * 1024;
 
@@ -37,4 +37,4 @@ std::vector<std::string> vmu_list_files(const std::vector<uint8_t>& image);
  * timestamp is 8 BCD bytes: century, year, month, day, hour, minute, second, weekday. */
 std::string vmu_write_file(std::vector<uint8_t>& image, const VMUFile& file, const uint8_t timestamp[8]);
 
-} // namespace sonicpad
+} // namespace ringpad

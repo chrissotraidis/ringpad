@@ -1,5 +1,5 @@
 // Visual capture of the DCPad controls for layout review (not an assertion suite).
-// Run with: scripts/ios/run-ui-tests.sh <udid> -only-testing:SonicPadUITests/DCPadCaptureTests
+// Run with: scripts/ios/run-ui-tests.sh <udid> -only-testing:RingPadUITests/DCPadCaptureTests
 #import <XCTest/XCTest.h>
 
 @interface DCPadCaptureTests : XCTestCase
@@ -21,10 +21,10 @@
 	XCUIApplication *app = [[XCUIApplication alloc] init];
 	// Default touch settings, whatever earlier tests saved.
 	app.launchArguments = @[@"-DCPad.SonicAdventure.tablet", @"{}", @"-DCPad.SonicAdventure.phone", @"{}"];
-	NSMutableDictionary *env = [@{ @"SONICPAD_INPUT_DEBUG": @"1" } mutableCopy];
-	NSString *gdi = NSProcessInfo.processInfo.environment[@"SONICPAD_GDI"];
+	NSMutableDictionary *env = [@{ @"RINGPAD_INPUT_DEBUG": @"1" } mutableCopy];
+	NSString *gdi = NSProcessInfo.processInfo.environment[@"RINGPAD_GDI"];
 	if (gdi != nil)
-		env[@"SONICPAD_GAME"] = gdi;
+		env[@"RINGPAD_GAME"] = gdi;
 	NSString *preview = NSProcessInfo.processInfo.environment[@"DCPAD_PREVIEW"];
 	if (preview.length > 0)
 		env[@"DCPAD_PREVIEW"] = preview;

@@ -1,4 +1,4 @@
-# SonicPad status
+# RingPad status
 
 **10 October 2026 — review handoff supersedes the experiment queue.**
 Chris requested wrap-up, private push/merge and an independent direction review.
@@ -357,7 +357,7 @@ and `work/dreamcast-recovery/live-movie-worker-pack-inventory.json`.
 
 Fresh hardware capture headers extend the existing live-byte comparison and
 APFS sharing mechanism to VRAM/TA vectors. Preserve the immediate-parent
-`SONICPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
+`RINGPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
 shares 1,755,450,412 logical bytes and writes 79,954,132 bytes through the helpers;
 all shared outputs verify against their parent. No prior evidence was changed
 or deleted, and capture files never supply guest state. Free space at this
@@ -417,7 +417,7 @@ scan or replay guest state.
 
 Storage fix: the existing `capture-storage.hpp` already compares live memory
 before APFS cloning and verifies the output afterward. The runner had inherited
-a stale reference from8October. Set `SONICPAD_RECOVERY_CAPTURE_REFERENCE` to the
+a stale reference from8October. Set `RINGPAD_RECOVERY_CAPTURE_REFERENCE` to the
 verified immediate parent; keep this override in future runner copies. This run
 clones188 byte-identical captures /1,180,565,504 logical bytes and writes seven
 new captures /54,788,096 bytes through that helper. Saved verifier checks all
@@ -13204,7 +13204,7 @@ patches unchanged; cap512/unknown-instruction rejection retained.
 
 Private evidence: `20261005-235343/update-display-contract.json`, SHA256
 11bf63b117ae00f424b5221c2fc3bdcec3fa9158937559fde1c2977bccd2194b;
-311 verified identities. All five new runs terminal; no Simulator/SonicPad app
+311 verified identities. All five new runs terminal; no Simulator/RingPad app
 launched. [Render](artifacts/recovery-aot/20261005-235343/scene-3-render.png).
 See [evidence](RECOVERY-PRS.md).
 
@@ -13237,7 +13237,7 @@ R3/R4 and production adoption remain unresolved.
 Evidence: `20261005-215723/report.json` and `group3-startup-contract.json`, SHA256
 7608af0cf8438e5f349b9db324bc0c812ab2c0e7a186ac5593f72a7a00048443.
 244 input/source/generated/patch/evidence/binary identities verified; exact source
-snapshots saved privately. Eight core patches unchanged. No Simulator or SonicPad
+snapshots saved privately. Eight core patches unchanged. No Simulator or RingPad
 app launched. See [recovery loop](RECOVERY-LOOP.md) and [evidence](RECOVERY-PRS.md).
 
 **Previous recovery result —175004:** original outer graphics setup056242 now
@@ -13662,7 +13662,7 @@ SunPad `c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b`,
 PaperPad `a6f6999a570156f6794ff3fa79f810cfad71c4fc`; all push-disabled.
 
 Highest original-baseline behavior: native macOS Foundation probe and input logic tests.
-No Katana core, SonicPad game app, graphics/media playback or gameplay build exists.
+No Katana core, RingPad game app, graphics/media playback or gameplay build exists.
 No Simulator/game instance was launched. Stored device plists all say shutdown;
 live simctl inspection remains license-blocked. Physical acceptance not performed.
 
@@ -13670,7 +13670,7 @@ Known-good commands:
 
 ```sh
 scripts/run-host-tests.sh
-SONICPAD_HOST_TOOLCHAIN=llvm scripts/run-host-tests.sh
+RINGPAD_HOST_TOOLCHAIN=llvm scripts/run-host-tests.sh
 python3 scripts/fetch-media-source.py
 ```
 

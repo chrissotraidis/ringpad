@@ -1,4 +1,4 @@
-/* SonicPad Dreamcast touch layout + per-touch arbitration implementation.
+/* RingPad Dreamcast touch layout + per-touch arbitration implementation.
  *
  * Game-neutral port of the pinned SunPad overlay mechanics. The FLUDD
  * detent/hysteresis and the C-stick are deliberately removed: the Dreamcast
@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-namespace sonicpad {
+namespace ringpad {
 
 namespace {
 float clampf(float v, float lo, float hi) noexcept { return v < lo ? lo : (v > hi ? hi : v); }
@@ -16,15 +16,15 @@ float absf(float v) noexcept { return v < 0.0f ? -v : v; }
 
 unsigned control_button_bit(TouchControl c) noexcept {
     switch (c) {
-        case TouchControl::Start:     return SonicPadDC_Start;
-        case TouchControl::A:         return SonicPadDC_A;
-        case TouchControl::B:         return SonicPadDC_B;
-        case TouchControl::X:         return SonicPadDC_X;
-        case TouchControl::Y:         return SonicPadDC_Y;
-        case TouchControl::DpadUp:    return SonicPadDC_Up;
-        case TouchControl::DpadDown:  return SonicPadDC_Down;
-        case TouchControl::DpadLeft:  return SonicPadDC_Left;
-        case TouchControl::DpadRight: return SonicPadDC_Right;
+        case TouchControl::Start:     return RingPadDC_Start;
+        case TouchControl::A:         return RingPadDC_A;
+        case TouchControl::B:         return RingPadDC_B;
+        case TouchControl::X:         return RingPadDC_X;
+        case TouchControl::Y:         return RingPadDC_Y;
+        case TouchControl::DpadUp:    return RingPadDC_Up;
+        case TouchControl::DpadDown:  return RingPadDC_Down;
+        case TouchControl::DpadLeft:  return RingPadDC_Left;
+        case TouchControl::DpadRight: return RingPadDC_Right;
         default:                      return 0u;
     }
 }
@@ -149,8 +149,8 @@ void DreamcastTouchArbiter::move(int touch_id, float px, float py,
 
 void DreamcastTouchArbiter::end(int touch_id) noexcept { active_.erase(touch_id); }
 
-SonicPadDreamcastState DreamcastTouchArbiter::state() const noexcept {
-    SonicPadDreamcastState out{};
+RingPadDreamcastState DreamcastTouchArbiter::state() const noexcept {
+    RingPadDreamcastState out{};
     float move_x = 0.0f, move_y = 0.0f;
     for (const auto& entry : active_) {
         const TouchBinding& b = entry.second;
@@ -169,4 +169,4 @@ SonicPadDreamcastState DreamcastTouchArbiter::state() const noexcept {
     return out;
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

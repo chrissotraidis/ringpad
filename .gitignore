@@ -1,4 +1,4 @@
-# SonicPad local build workspace.
+# RingPad local build workspace.
 # Never commit original game data, private development material or evidence.
 
 # Original game data and odd disc containers are never part of this project.
@@ -43,7 +43,7 @@ dreamcast_vmu_*.bin
 *.ips
 
 # Machine-local settings.
-sonicpad-display.ini
+ringpad-display.ini
 
 __pycache__/
 *.pyc

@@ -1,4 +1,4 @@
-// Plays the opening of Sonic Adventure with SonicPad's touch controls only, attaching
+// Plays the opening of Sonic Adventure with RingPad's touch controls only, attaching
 // screenshots for review. Not an assertion suite beyond basic progress checks.
 #import <XCTest/XCTest.h>
 
@@ -26,7 +26,7 @@
 {
 	XCUIDevice.sharedDevice.orientation = UIDeviceOrientationLandscapeLeft;
 	XCUIApplication *app = [[XCUIApplication alloc] init];
-	app.launchEnvironment = @{ @"SONICPAD_GAME": NSProcessInfo.processInfo.environment[@"SONICPAD_GDI"] ?: @"" };
+	app.launchEnvironment = @{ @"RINGPAD_GAME": NSProcessInfo.processInfo.environment[@"RINGPAD_GDI"] ?: @"" };
 	app.launchArguments = @[@"-DCPad.SonicAdventure.tablet", @"{}", @"-DCPad.SonicAdventure.phone", @"{}"];
 	NSDate *start = [NSDate date];
 	[app launch];

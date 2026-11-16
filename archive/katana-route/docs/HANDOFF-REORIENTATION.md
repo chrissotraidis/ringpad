@@ -1,4 +1,4 @@
-# SonicPad review and reorientation handoff
+# RingPad review and reorientation handoff
 
 Written 10 October 2026 at Chris's request. **Review the project direction before
 resuming development.** This document is the starting point; the long status and
@@ -192,7 +192,7 @@ Simulator or physical-device test was run. The host suite wrote to a fresh
 
 ## Git and preservation boundary
 
-The destination is the existing **private** `chrissotraidis/sonicpad` repository.
+The destination is the existing **private** `chrissotraidis/ringpad` repository.
 Chris authorized pushing/merging the project work and this handoff on 10 October.
 That does not authorize a public release or uploading the ignored game/source
 inputs and captures. `ref/`, `.local/`, `private-inputs/`, `work/`, generated output

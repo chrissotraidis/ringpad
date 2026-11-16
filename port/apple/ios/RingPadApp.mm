@@ -1,4 +1,4 @@
-// SonicPad iOS shell: a full-screen Metal layer driven by a display link,
+// RingPad iOS shell: a full-screen Metal layer driven by a display link,
 // the reusable DCPad Dreamcast touch controls and ••• menu (port/dcpad),
 // physical controller input, and verified import of the owner's disc. Flycast's Vulkan renderer
 // draws into the layer through MoltenVK; the recompiled game runs on Flycast's
@@ -14,7 +14,7 @@
 #import "DCPadControllerInput.h"
 #import "DCPadOverlayView.h"
 
-#include "SonicCheats.h"
+#include "GameCheats.h"
 #include "types.h"
 #include "emulator.h"
 #include "stdclass.h"
@@ -40,11 +40,11 @@
 #include <signal.h>
 #include <sys/ucontext.h>
 
-static_assert(sonicpad::kFlycastA == DC_BTN_A && sonicpad::kFlycastB == DC_BTN_B, "Flycast face bits");
-static_assert(sonicpad::kFlycastX == DC_BTN_X && sonicpad::kFlycastY == DC_BTN_Y, "Flycast face bits");
-static_assert(sonicpad::kFlycastStart == DC_BTN_START, "Flycast Start bit");
-static_assert(sonicpad::kFlycastUp == DC_DPAD_UP && sonicpad::kFlycastDown == DC_DPAD_DOWN, "Flycast D-pad bits");
-static_assert(sonicpad::kFlycastLeft == DC_DPAD_LEFT && sonicpad::kFlycastRight == DC_DPAD_RIGHT, "Flycast D-pad bits");
+static_assert(ringpad::kFlycastA == DC_BTN_A && ringpad::kFlycastB == DC_BTN_B, "Flycast face bits");
+static_assert(ringpad::kFlycastX == DC_BTN_X && ringpad::kFlycastY == DC_BTN_Y, "Flycast face bits");
+static_assert(ringpad::kFlycastStart == DC_BTN_START, "Flycast Start bit");
+static_assert(ringpad::kFlycastUp == DC_DPAD_UP && ringpad::kFlycastDown == DC_DPAD_DOWN, "Flycast D-pad bits");
+static_assert(ringpad::kFlycastLeft == DC_DPAD_LEFT && ringpad::kFlycastRight == DC_DPAD_RIGHT, "Flycast D-pad bits");
 
 // Flycast's fault handler chains here for faults it does not own. Log where
 // the fault happened (symbol and image offset) before the process traps, so
@@ -58,7 +58,7 @@ static void reportFault(int sig, siginfo_t *info, void *context)
 	dladdr(reinterpret_cast<void *>(pc), &where);
 	dladdr(reinterpret_cast<void *>(lr), &caller);
 	char line[512];
-	const int n = snprintf(line, sizeof line, "SONICPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx\n", sig, info->si_addr,
+	const int n = snprintf(line, sizeof line, "RINGPAD_FAULT signal=%d addr=%p pc=%s+0x%lx lr=%s+0x%lx\n", sig, info->si_addr,
 			where.dli_sname ?: "?", (unsigned long)(pc - (uintptr_t)(where.dli_saddr ?: where.dli_fbase)),
 			caller.dli_sname ?: "?", (unsigned long)(lr - (uintptr_t)(caller.dli_saddr ?: caller.dli_fbase)));
 	// Straight to the log file: the stderr copier thread may not run again.
@@ -80,7 +80,7 @@ static void installFaultReporter()
 
 static void hideFlycastGamepad(Event, void *)
 {
-	// SonicPad's own overlay replaces Flycast's virtual gamepad.
+	// RingPad's own overlay replaces Flycast's virtual gamepad.
 	vgamepad::hide();
 }
 
@@ -114,12 +114,12 @@ static void hideFlycastGamepad(Event, void *)
 @property (nonatomic) BOOL scriptedInput;
 @end
 
-static NSString *const kShowFPSKey = @"SonicPad.showFPS";
-double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
+static NSString *const kShowFPSKey = @"RingPad.showFPS";
+double RingPad_GuestSeconds();   // sp_aot_executor.cpp
 
 @implementation SPGameViewController
 {
-	sonicpad::FlycastPressHold _hold;
+	ringpad::FlycastPressHold _hold;
 	// Input seen since launch, for the UI tests' debug label.
 	uint32_t _seenPressed;
 	int _minX, _maxX, _minY, _maxY;
@@ -148,14 +148,14 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 
 	self.overlay = [[DCPadOverlayView alloc] initWithFrame:view.bounds storageNamespace:@"SonicAdventure"];
 	self.overlay.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-	self.overlay.menuTitle = @"SonicPad";
+	self.overlay.menuTitle = @"RingPad";
 	self.overlay.delegate = self;
 	[view addSubview:self.overlay];
 	self.pauseReasons = [NSMutableSet set];
 	self.portMenu = [[SPPortMenu alloc] initWithHost:self];
 	[self buildFPSLabel];
 
-	if (std::getenv("SONICPAD_INPUT_DEBUG") != nullptr) {
+	if (std::getenv("RINGPAD_INPUT_DEBUG") != nullptr) {
 		self.inputDebug = [[UILabel alloc] init];
 		self.inputDebug.accessibilityIdentifier = @"sp.inputDebug";
 		self.inputDebug.font = [UIFont monospacedSystemFontOfSize:12 weight:UIFontWeightRegular];
@@ -215,12 +215,12 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	panel.hidden = YES;
 
 	UILabel *title = [[UILabel alloc] init];
-	title.text = @"SonicPad";
+	title.text = @"RingPad";
 	title.font = [UIFont systemFontOfSize:40 weight:UIFontWeightHeavy];
 	title.textColor = UIColor.whiteColor;
 
 	UILabel *body = [[UILabel alloc] init];
-	body.text = @"Choose the folder that holds your Sonic Adventure PAL v1.003 disc: one .gdi file and its three tracks. SonicPad checks every track before installing it.";
+	body.text = @"Choose the folder that holds your Sonic Adventure PAL v1.003 disc: one .gdi file and its three tracks. RingPad checks every track before installing it.";
 	body.numberOfLines = 0;
 	body.textAlignment = NSTextAlignmentCenter;
 	body.textColor = [UIColor colorWithWhite:1 alpha:0.85];
@@ -284,14 +284,14 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	os_InstallFaultHandler();
 	flycast_init(0, nullptr);
 	config::RendererType = RenderType::Vulkan;
-	// SonicPad draws its own FPS counter at the top left.
+	// RingPad draws its own FPS counter at the top left.
 	config::ShowFPS = false;
 	[self applyGraphicsDefaultsOnce];
 	[SPPortMenu applyWidescreenPreference];
 	[self restoreCheats];
 	vgamepad::hide();
 	EventManager::listen(Event::Resume, hideFlycastGamepad);
-	self.scriptedInput = std::getenv("SONICPAD_INPUT_SCRIPT") != nullptr;
+	self.scriptedInput = std::getenv("RINGPAD_INPUT_SCRIPT") != nullptr;
 
 	AVAudioSession *session = AVAudioSession.sharedInstance;
 	[session setCategory:AVAudioSessionCategoryPlayback error:nil];
@@ -305,10 +305,10 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	};
 	[self.controllerInput start];
 
-	if (const char *game = std::getenv("SONICPAD_GAME")) {
-		SPLog(@"game: from SONICPAD_GAME");
+	if (const char *game = std::getenv("RINGPAD_GAME")) {
+		SPLog(@"game: from RINGPAD_GAME");
 		settings.content.path = game;
-	} else if (const char *folder = std::getenv("SONICPAD_IMPORT")) {
+	} else if (const char *folder = std::getenv("RINGPAD_IMPORT")) {
 		// A relative path is inside the app's Documents, where a device copy
 		// (devicectl, Finder file sharing) puts the disc folder.
 		NSString *path = [NSString stringWithUTF8String:folder];
@@ -316,7 +316,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 			path = [@(home.c_str()) stringByAppendingPathComponent:path];
 		[self showImport:NO];
 		[self importFromURL:[NSURL fileURLWithPath:path isDirectory:YES]];
-	} else if (NSString *installed = std::getenv("SONICPAD_IGNORE_INSTALLED") ? nil : [SPGameLibrary installedGamePath]) {
+	} else if (NSString *installed = std::getenv("RINGPAD_IGNORE_INSTALLED") ? nil : [SPGameLibrary installedGamePath]) {
 		SPLog(@"game: installed disc");
 		settings.content.path = installed.fileSystemRepresentation;
 	} else {
@@ -348,9 +348,9 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	self.displayLink.preferredFrameRateRange = CAFrameRateRangeMake(60, 60, 60);
 	[self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
 	[self showMenuHintOnce];
-	// Development and device testing: SONICPAD_IMPORT_VMU=<file>[,<file>] imports
+	// Development and device testing: RINGPAD_IMPORT_VMU=<file>[,<file>] imports
 	// a save (paths relative to Documents) once the game has started.
-	if (const char *vmu = std::getenv("SONICPAD_IMPORT_VMU")) {
+	if (const char *vmu = std::getenv("RINGPAD_IMPORT_VMU")) {
 		NSMutableArray<NSURL *> *urls = [NSMutableArray array];
 		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
 		for (NSString *part in [@(vmu) componentsSeparatedByString:@","])
@@ -364,7 +364,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 // One tip on the first play: where save states and settings live.
 - (void)showMenuHintOnce
 {
-	static NSString *const kKey = @"SonicPad.menuHintShown";
+	static NSString *const kKey = @"RingPad.menuHintShown";
 	if (settings.content.path.empty() || [NSUserDefaults.standardUserDefaults boolForKey:kKey])
 		return;
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -447,7 +447,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	// The game should have moved on within 2 s of a resume: new frames from
 	// the renderer and new guest time from the emulator thread.
 	if (_resumedAt > 0 && !_stallLogged && now - _resumedAt > 2) {
-		const double guest = SonicPad_GuestSeconds() - _guestAtResume;
+		const double guest = RingPad_GuestSeconds() - _guestAtResume;
 		const uint64_t frames = _frames - _framesAtResume;
 		if (guest < 0.5 || frames < 10)
 			SPLog(@"stall: %.1f s after resume, guest advanced %.2f s, %llu frames (emu running=%d)",
@@ -469,10 +469,10 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 {
 	if (self.scriptedInput)
 		return;   // the executor's input script owns port A
-	const SonicPadDreamcastState merged = sonicpad::DreamcastInputMixer::shared().consumeMerged();
-	const sonicpad::FlycastPadState pad = sonicpad::to_flycast_pad(sonicpad::adapt(merged));
+	const RingPadDreamcastState merged = ringpad::DreamcastInputMixer::shared().consumeMerged();
+	const ringpad::FlycastPadState pad = ringpad::to_flycast_pad(ringpad::adapt(merged));
 	const uint32_t pressed = _hold.apply(pad.pressed);
-	kcode[0] = sonicpad::flycast_kcode(pressed);
+	kcode[0] = ringpad::flycast_kcode(pressed);
 	joyx[0] = pad.joyx;
 	joyy[0] = pad.joyy;
 	lt[0] = pad.lt;
@@ -487,14 +487,14 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 		_maxRT = MAX(_maxRT, (unsigned)pad.rt);
 		self.inputDebug.text = [NSString stringWithFormat:@"kcode=%08X seen=%08X x=%d..%d y=%d..%d lt=%u rt=%u run=%d frames=%llu guest=%.1f",
 				kcode[0], _seenPressed, _minX, _maxX, _minY, _maxY, _maxLT, _maxRT, emu.running() ? 1 : 0, _frames,
-				SonicPad_GuestSeconds()];
+				RingPad_GuestSeconds()];
 	}
 }
 
 - (void)clearInput
 {
 	[self.overlay clearInput];
-	sonicpad::DreamcastInputMixer::shared().clearAll();
+	ringpad::DreamcastInputMixer::shared().clearAll();
 	_hold.clear();
 }
 
@@ -519,7 +519,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 		emu.start();
 		_resumedAt = CACurrentMediaTime();
 		_framesAtResume = _frames;
-		_guestAtResume = SonicPad_GuestSeconds();
+		_guestAtResume = RingPad_GuestSeconds();
 		_stallLogged = NO;
 	}
 }
@@ -567,7 +567,7 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 	NSMutableArray *quick = [[self.portMenu saveStateElementsForGameLoaded:loaded] mutableCopy];
 	[quick addObject:reset];
 	const BOOL phone = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone;
-	UIMenu *quickRow = [UIMenu menuWithTitle:phone ? @"" : @"SonicPad" image:nil identifier:nil
+	UIMenu *quickRow = [UIMenu menuWithTitle:phone ? @"" : @"RingPad" image:nil identifier:nil
 			options:UIMenuOptionsDisplayInline children:quick];
 	quickRow.preferredElementSize = UIMenuElementSizeMedium;
 	UIMenu *files = [UIMenu menuWithTitle:@"Game Files" image:[UIImage systemImageNamed:@"folder"] identifier:nil options:0
@@ -585,22 +585,22 @@ double SonicPad_GuestSeconds();   // sp_aot_executor.cpp
 
 #pragma mark Cheats
 
-static NSString *const kCheatsKey = @"SonicPad.cheats";
+static NSString *const kCheatsKey = @"RingPad.cheats";
 
 // Cheats ▸: each one is a toggle that stays on across launches.
 - (UIMenu *)cheatsMenu
 {
 	NSMutableArray *items = [NSMutableArray array];
 	int on = 0;
-	for (size_t i = 0; i < sonicpad::cheat_count(); i++) {
-		const sonicpad::CheatInfo& info = sonicpad::cheat_info(i);
-		const BOOL enabled = sonicpad::cheat_enabled(i);
+	for (size_t i = 0; i < ringpad::cheat_count(); i++) {
+		const ringpad::CheatInfo& info = ringpad::cheat_info(i);
+		const BOOL enabled = ringpad::cheat_enabled(i);
 		on += enabled ? 1 : 0;
 		NSString *title = @(info.title);
 		UIAction *a = [UIAction actionWithTitle:title image:nil identifier:nil handler:^(UIAction *) {
-			sonicpad::set_cheat_enabled(i, !enabled);
+			ringpad::set_cheat_enabled(i, !enabled);
 			[self saveCheats];
-			SPLog(@"cheat %s=%d", sonicpad::cheat_info(i).id, !enabled);
+			SPLog(@"cheat %s=%d", ringpad::cheat_info(i).id, !enabled);
 			[self.overlay showMessage:[NSString stringWithFormat:@"%@ %@", title, enabled ? @"off" : @"on"]];
 		}];
 		a.subtitle = @(info.subtitle);
@@ -616,18 +616,18 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 - (void)saveCheats
 {
 	NSMutableArray *ids = [NSMutableArray array];
-	for (size_t i = 0; i < sonicpad::cheat_count(); i++)
-		if (sonicpad::cheat_enabled(i))
-			[ids addObject:@(sonicpad::cheat_info(i).id)];
+	for (size_t i = 0; i < ringpad::cheat_count(); i++)
+		if (ringpad::cheat_enabled(i))
+			[ids addObject:@(ringpad::cheat_info(i).id)];
 	[NSUserDefaults.standardUserDefaults setObject:ids forKey:kCheatsKey];
 }
 
 - (void)restoreCheats
 {
-	sonicpad::install_cheats();
+	ringpad::install_cheats();
 	NSArray *ids = [NSUserDefaults.standardUserDefaults arrayForKey:kCheatsKey];
 	if (ids.count > 0)
-		sonicpad::enable_cheats_from_list([ids componentsJoinedByString:@","].UTF8String);
+		ringpad::enable_cheats_from_list([ids componentsJoinedByString:@","].UTF8String);
 	SPLog(@"cheats on: %@", ids.count > 0 ? [ids componentsJoinedByString:@","] : @"none");
 }
 
@@ -646,7 +646,7 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 // installs retain their choices; players can change them under Graphics.
 - (void)applyGraphicsDefaultsOnce
 {
-	static NSString *const kKey = @"SonicPad.graphicsDefaults.v1";
+	static NSString *const kKey = @"RingPad.graphicsDefaults.v1";
 	if ([NSUserDefaults.standardUserDefaults boolForKey:kKey])
 		return;
 	[NSUserDefaults.standardUserDefaults setBool:YES forKey:kKey];
@@ -700,11 +700,11 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 {
 	extern const char sp_aot_manifest_id[];
 	NSDictionary *info = NSBundle.mainBundle.infoDictionary;
-	NSString *message = [NSString stringWithFormat:@"Version %@ (build %@, %@)\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@",
-			info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?", info[@"SonicPadCommit"] ?: @"?",
+	NSString *message = [NSString stringWithFormat:@"Version %@ (build %@, %@)\nRecompiled code manifest %s\nRenderer: Vulkan on Metal (MoltenVK)\nGame: %@\n\nUnofficial. Not affiliated with or endorsed by SEGA.",
+			info[@"CFBundleShortVersionString"] ?: @"?", info[@"CFBundleVersion"] ?: @"?", info[@"RingPadCommit"] ?: @"?",
 			sp_aot_manifest_id,
 			settings.content.path.empty() ? @"not loaded" : @"Sonic Adventure PAL v1.003"];
-	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"SonicPad" message:message
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"RingPad" message:message
 			preferredStyle:UIAlertControllerStyleAlert];
 	[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
 	[self presentViewController:alert animated:YES completion:nil];
@@ -847,7 +847,7 @@ static NSString *const kCheatsKey = @"SonicPad.cheats";
 
 // Flycast reaches Vulkan through this entry point; MoltenVK is linked statically.
 extern "C" void *vkGetInstanceProcAddr(void *instance, const char *name);
-extern "C" void *SonicPad_VkGetInstanceProcAddr()
+extern "C" void *RingPad_VkGetInstanceProcAddr()
 {
 	return reinterpret_cast<void *>(&vkGetInstanceProcAddr);
 }
@@ -862,7 +862,7 @@ namespace vgamepad
 {
 void setEditMode(bool)
 {
-	// SonicPad's own touch layer replaces Flycast's virtual gamepad editor.
+	// RingPad's own touch layer replaces Flycast's virtual gamepad editor.
 }
 }
 
@@ -875,7 +875,7 @@ int main(int argc, char *argv[])
 		// Development runs on a device: relative script, screenshot and state
 		// paths are inside the app's Documents, where devicectl copies files.
 		NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
-		for (const char *name : {"SONICPAD_INPUT_SCRIPT", "SONICPAD_SHOT_DIR", "SONICPAD_STATE_LOAD"})
+		for (const char *name : {"RINGPAD_INPUT_SCRIPT", "RINGPAD_SHOT_DIR", "RINGPAD_STATE_LOAD"})
 			if (const char *value = std::getenv(name); value != nullptr && value[0] != '/')
 				setenv(name, [documents stringByAppendingPathComponent:@(value)].fileSystemRepresentation, 1);
 		SPDiagnosticsStart();

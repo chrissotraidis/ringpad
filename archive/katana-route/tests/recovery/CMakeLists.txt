@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(SonicPadRecoveryOracle LANGUAGES CXX)
+project(RingPadRecoveryOracle LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT FIXTURE_DIR OR NOT FIXTURE)

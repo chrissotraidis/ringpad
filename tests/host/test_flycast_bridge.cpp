@@ -1,4 +1,4 @@
-/* Host tests for the SonicPad -> Flycast controller bridge.
+/* Host tests for the RingPad -> Flycast controller bridge.
  *
  * Checks the button mapping, stick and trigger scaling, the +Y flip, the
  * active-low kcode word and the minimum press hold. Says nothing about UIKit
@@ -9,7 +9,7 @@
 
 #include <cstdio>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -25,10 +25,10 @@ static int g_checks = 0;
 
 static void test_buttons() {
     const struct { unsigned dc; uint32_t fc; const char *name; } cases[] = {
-        {SonicPadDC_Up, kFlycastUp, "up"}, {SonicPadDC_Down, kFlycastDown, "down"},
-        {SonicPadDC_Left, kFlycastLeft, "left"}, {SonicPadDC_Right, kFlycastRight, "right"},
-        {SonicPadDC_Start, kFlycastStart, "start"}, {SonicPadDC_A, kFlycastA, "A"},
-        {SonicPadDC_B, kFlycastB, "B"}, {SonicPadDC_X, kFlycastX, "X"}, {SonicPadDC_Y, kFlycastY, "Y"},
+        {RingPadDC_Up, kFlycastUp, "up"}, {RingPadDC_Down, kFlycastDown, "down"},
+        {RingPadDC_Left, kFlycastLeft, "left"}, {RingPadDC_Right, kFlycastRight, "right"},
+        {RingPadDC_Start, kFlycastStart, "start"}, {RingPadDC_A, kFlycastA, "A"},
+        {RingPadDC_B, kFlycastB, "B"}, {RingPadDC_X, kFlycastX, "X"}, {RingPadDC_Y, kFlycastY, "Y"},
     };
     for (const auto& c : cases) {
         ActionSnapshot s;
@@ -38,7 +38,7 @@ static void test_buttons() {
     ActionSnapshot none;
     CHECK(to_flycast_pad(none).pressed == 0, "no buttons when nothing held");
     ActionSnapshot triggers;
-    triggers.held_mask = SonicPadDC_TriggerL | SonicPadDC_TriggerR;
+    triggers.held_mask = RingPadDC_TriggerL | RingPadDC_TriggerR;
     CHECK(to_flycast_pad(triggers).pressed == 0, "trigger bits are analog only");
 }
 
@@ -59,11 +59,11 @@ static void test_axes() {
     ActionSnapshot over;
     over.move_x = -2.0f;
     CHECK(to_flycast_pad(over).joyx == -32767, "stick clamps");
-    SonicPadDreamcastState tiny{};
+    RingPadDreamcastState tiny{};
     tiny.connected = 1;
     tiny.moveX = 5;
     CHECK(to_flycast_pad(adapt(tiny)).joyx == 0, "radial deadzone applies before the bridge");
-    SonicPadDreamcastState full{};
+    RingPadDreamcastState full{};
     full.connected = 1;
     full.moveY = -127;
     CHECK(to_flycast_pad(adapt(full)).joyy > 32000, "canonical down is positive Flycast Y");
@@ -76,7 +76,7 @@ static void test_triggers() {
     FlycastPadState p = to_flycast_pad(s);
     CHECK(p.lt == 65535, "full left trigger");
     CHECK(p.rt > 32700 && p.rt < 32800, "half right trigger");
-    SonicPadDreamcastState raw{};
+    RingPadDreamcastState raw{};
     raw.connected = 1;
     raw.triggerL = 255;
     raw.triggerR = 0;

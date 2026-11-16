@@ -1,4 +1,4 @@
-# Building SonicPad
+# Building RingPad
 
 For a personal iPhone/iPad app, start with [Install and update](INSTALL.md).
 That route needs an Apple Silicon Mac, full Xcode with the iOS platform,
@@ -13,7 +13,7 @@ maintainer files:
 
 ```sh
 /usr/bin/python3 scripts/build-personal.py \
-  --gdi "/path/to/Sonic Adventure.gdi" --output SonicPad.ipa
+  --gdi "/path/to/Sonic Adventure.gdi" --output RingPad.ipa
 ```
 
 The script verifies the disc, fetches pinned Flycast and MoltenVK into `ref/`
@@ -22,7 +22,7 @@ discovers static blocks, generates C++ in `build/personal/`, and builds and
 packages an unsigned IPA. It leaves `generated/` untouched and refuses to
 replace an existing output. Add `--jobs 2` to limit parallel build work.
 
-[`padmint.json`](../padmint.json) runs the same script. SonicPad is not yet in
+[`padmint.json`](../padmint.json) runs the same script. RingPad is not yet in
 PadMint's public catalog; use the command above. The IPA and generated game
 code are private outputs, excluded from the source release. See the
 [release checklist](RELEASE-CHECKLIST.md) for current publication gates.
@@ -70,9 +70,9 @@ following sections describe extending and checking coverage.
 
 ```sh
 APP=generated/build-mac/flycast/Flycast.app/Contents/MacOS/Flycast
-SONICPAD_TRACE=$PWD/generated/traces/run-01.txt \
-SONICPAD_STATS=1 \
-SONICPAD_INPUT_SCRIPT=$PWD/tests/acceptance/first-play-chaos0.txt \
+RINGPAD_TRACE=$PWD/generated/traces/run-01.txt \
+RINGPAD_STATS=1 \
+RINGPAD_INPUT_SCRIPT=$PWD/tests/acceptance/first-play-chaos0.txt \
   "$APP" "$PWD/ref/<disc folder>/<disc>.gdi"
 python3 scripts/recomp/generate_blocks.py generated/traces/run-01.txt
 ninja -C generated/build-mac
@@ -105,7 +105,7 @@ handlers for PC-relative instructions, addresses relative to the block's entry,
 and one function per distinct instruction sequence (the 165 event modules
 repeat most of their code). The executor counts their cycles at startup and
 runs them under the same byte check as traced blocks, so a block decoded from
-data never runs. `SONICPAD_NO_STATIC=1` leaves them to the interpreter for
+data never runs. `RINGPAD_NO_STATIC=1` leaves them to the interpreter for
 comparisons. `discover_blocks.py modules <gdi>` rebuilds the module list (about a
 minute) if the detection changes.
 
@@ -126,19 +126,19 @@ player's build stops if its static blocks differ from the tested ones.
 
 | Variable | Effect |
 |---|---|
-| `SONICPAD_TRACE=<file>` | Record blocks that ran on the interpreter. |
-| `SONICPAD_STATS=1` | Print AOT coverage every 2 s and the top misses on exit. |
-| `SONICPAD_INPUT_SCRIPT=<file>` | Replay pad input at guest times, one event per line: `<start s> <duration s> <what>`. See the script commands below. |
-| `SONICPAD_SHOT_DIR=<dir>` | Where `SHOT:` screenshots go (default `generated/shots`). |
-| `SONICPAD_STATE_LOAD=<file>` | Resume from a development state written by `STATE:`; the script continues from the saved time. |
-| `SONICPAD_NO_AOT=1` | Ignore generated code, for interpreter comparison. |
-| `SONICPAD_UNCAPPED=1` | Run without audio pacing, to measure throughput. |
-| `SONICPAD_EXIT_AT=<s>` | Print a `SONICPAD_PERF` line at that guest time and exit. |
-| `SONICPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
-| `SONICPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
-| `SONICPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
-| `SONICPAD_NO_STATIC=1` | Leave statically discovered blocks to the interpreter. |
-| `SONICPAD_CHEATS=<id,id>` | Turn on cheats at boot (`rings`, `lives`, `characters`). |
+| `RINGPAD_TRACE=<file>` | Record blocks that ran on the interpreter. |
+| `RINGPAD_STATS=1` | Print AOT coverage every 2 s and the top misses on exit. |
+| `RINGPAD_INPUT_SCRIPT=<file>` | Replay pad input at guest times, one event per line: `<start s> <duration s> <what>`. See the script commands below. |
+| `RINGPAD_SHOT_DIR=<dir>` | Where `SHOT:` screenshots go (default `generated/shots`). |
+| `RINGPAD_STATE_LOAD=<file>` | Resume from a development state written by `STATE:`; the script continues from the saved time. |
+| `RINGPAD_NO_AOT=1` | Ignore generated code, for interpreter comparison. |
+| `RINGPAD_UNCAPPED=1` | Run without audio pacing, to measure throughput. |
+| `RINGPAD_EXIT_AT=<s>` | Print a `RINGPAD_PERF` line at that guest time and exit. |
+| `RINGPAD_NO_IDLE_SKIP=1` | Disable idle skipping. |
+| `RINGPAD_SELFTEST_ONLY=1` | Run the inline-opcode self-test at boot and exit (status 1 on failure). |
+| `RINGPAD_SKIP_SELFTEST=1` | Skip the startup self-test. |
+| `RINGPAD_NO_STATIC=1` | Leave statically discovered blocks to the interpreter. |
+| `RINGPAD_CHEATS=<id,id>` | Turn on cheats at boot (`rings`, `lives`, `characters`). |
 
 Input script commands:
 
@@ -156,7 +156,7 @@ Development states are for building routes only. Acceptance runs replay the
 whole route from boot without loading one.
 
 `scripts/recomp/run-route.sh <script> <exit s> <log> [VAR=value ...]` runs one
-route with vsync off and prints the `SONICPAD_AOT` and `SONICPAD_PERF` lines.
+route with vsync off and prints the `RINGPAD_AOT` and `RINGPAD_PERF` lines.
 `generate_blocks.py --no-inline` emits handler calls only, for comparisons.
 For profiling with symbols, configure a second build directory with
 `-DCMAKE_BUILD_TYPE=RelWithDebInfo`; Flycast strips Release binaries.
@@ -176,7 +176,7 @@ printf '%s  %s\n' \
   ref/moltenvk-all/MoltenVK-all.tar | shasum -a 256 -c -
 tar xf ref/moltenvk-all/MoltenVK-all.tar -C ref/moltenvk-all
 xcrun simctl list devices available
-SONICPAD_GDI="/path/to/Sonic Adventure.gdi" \
+RINGPAD_GDI="/path/to/Sonic Adventure.gdi" \
   scripts/ios/run-sim.sh <udid> tests/acceptance/first-play-chaos0.txt 205 /tmp/sim.log
 ```
 
@@ -186,24 +186,24 @@ Keep full Xcode selected for this lane; the earlier Command Line Tools setting
 was scoped to the macOS configure command only.
 
 The script configures `generated/build-iossim` with the Xcode generator on
-every run, builds, installs `com.chrissotraidis.sonicpad` and launches it with
-the `SONICPAD_*` variables passed through `SIMCTL_CHILD_`. The app reads the
+every run, builds, installs `com.chrissotraidis.ringpad` and launches it with
+the `RINGPAD_*` variables passed through `SIMCTL_CHILD_`. The app reads the
 GDI directly from the selected Mac path; the route runner does not copy it
 into the Simulator.
 
 UI tests (real UIKit touches, the folder picker and the import flow):
 
 ```sh
-SONICPAD_GDI="/path/to/Sonic Adventure.gdi" scripts/ios/run-ui-tests.sh <udid>
+RINGPAD_GDI="/path/to/Sonic Adventure.gdi" scripts/ios/run-ui-tests.sh <udid>
 ```
 
-Set `SONICPAD_REAL_GDI=ref/<disc folder>` when running
+Set `RINGPAD_REAL_GDI=ref/<disc folder>` when running
 `scripts/run-host-tests.sh` to also verify the owner's disc on the host.
-On iOS, `SONICPAD_IMPORT=<folder>` runs the import flow on launch (a relative
+On iOS, `RINGPAD_IMPORT=<folder>` runs the import flow on launch (a relative
 path is inside the app's Documents),
-`SONICPAD_IGNORE_INSTALLED=1` shows the import screen, and
-`SONICPAD_INPUT_DEBUG=1` shows the port-A values the tests read.
-`SONICPAD_IMPORT_VMU=<file>[,<file>]` imports a save without the picker
+`RINGPAD_IGNORE_INSTALLED=1` shows the import screen, and
+`RINGPAD_INPUT_DEBUG=1` shows the port-A values the tests read.
+`RINGPAD_IMPORT_VMU=<file>[,<file>]` imports a save without the picker
 (paths relative to Documents), as Game Files ▸ Import VMU Save does.
 
 ## iPad or iPhone
@@ -216,7 +216,7 @@ imported disc, saves and settings; changing signing identity or uninstalling
 can disconnect or remove them:
 
 ```sh
-SONICPAD_TEAM=<team ID> scripts/ios/run-device.sh <device UDID> [--launch]
+RINGPAD_TEAM=<team ID> scripts/ios/run-device.sh <device UDID> [--launch]
 ```
 
 To put the disc on the device without the Files picker, copy the folder into
@@ -225,11 +225,11 @@ the app's Documents and launch with the import variable:
 ```sh
 for f in "ref/<disc folder>"/*; do
   xcrun devicectl device copy to --device <UDID> --domain-type appDataContainer \
-    --domain-identifier com.chrissotraidis.sonicpad --source "$f" \
+    --domain-identifier com.chrissotraidis.ringpad --source "$f" \
     --destination "Documents/SonicAdventure/$(basename "$f")"
 done
 xcrun devicectl device process launch --device <UDID> --terminate-existing \
-  --environment-variables '{"SONICPAD_IMPORT":"SonicAdventure"}' com.chrissotraidis.sonicpad
+  --environment-variables '{"RINGPAD_IMPORT":"SonicAdventure"}' com.chrissotraidis.ringpad
 ```
 
 The import hashes every track on the device before copying it. Same-volume
@@ -239,10 +239,10 @@ external or cloud-backed folder.
 ## Diagnostic log
 
 The app keeps this session and the previous one in
-`Library/Application Support/SonicPad/Logs`: everything the runtime writes to
+`Library/Application Support/RingPad/Logs`: everything the runtime writes to
 stderr and app events (lifecycle, pauses with their reason, menu, settings,
 save states, import, controllers, memory and thermal). Every 30 s of play it
-adds two lines: `SONICPAD_LIVE` with guest speed (1.00x is full speed), SH-4
+adds two lines: `RINGPAD_LIVE` with guest speed (1.00x is full speed), SH-4
 CPU per guest second and recompiled coverage, and `render` with presented
 frames per second, frames slower than 50 ms, the worst frame and the graphics
 settings. A `stall` line appears if the game has not moved 2 s after a resume.

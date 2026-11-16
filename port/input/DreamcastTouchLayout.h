@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad Dreamcast touch layout and per-touch arbitration.
+/* RingPad Dreamcast touch layout and per-touch arbitration.
  *
  * Reuses the game-neutral touch mechanics from the pinned SunPad overlay
  * (ref/sunpad/apple/ios/SunPadGameOverlay.mm: normalized centers, stick
@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <map>
 
-namespace sonicpad {
+namespace ringpad {
 
 enum class TouchControl : uint8_t {
     None = 0,
@@ -91,10 +91,10 @@ public:
     std::size_t active_count() const noexcept { return active_.size(); }
 
     /* Aggregate the active touches into one canonical state. */
-    SonicPadDreamcastState state() const noexcept;
+    RingPadDreamcastState state() const noexcept;
 
 private:
     std::map<int, TouchBinding> active_;
 };
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

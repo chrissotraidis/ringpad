@@ -1,7 +1,7 @@
-/* Host tests for the SonicPad game import verifier.
+/* Host tests for the RingPad game import verifier.
  *
  * Uses small synthetic tracks with a test identity, so the checks run without
- * game data. Set SONICPAD_REAL_GDI to a real GDI folder to also verify the
+ * game data. Set RINGPAD_REAL_GDI to a real GDI folder to also verify the
  * owner's disc against the supported identity. */
 
 #include "GameImport.h"
@@ -12,7 +12,7 @@
 #include <fstream>
 #include <string>
 
-using namespace sonicpad;
+using namespace ringpad;
 namespace fs = std::filesystem;
 
 static int g_failures = 0;
@@ -93,8 +93,8 @@ static void test_verify(const fs::path& dir) {
 
 int main() {
     test_parse();
-    test_verify(fs::temp_directory_path() / "sonicpad-import-test");
-    if (const char *real = std::getenv("SONICPAD_REAL_GDI")) {
+    test_verify(fs::temp_directory_path() / "ringpad-import-test");
+    if (const char *real = std::getenv("RINGPAD_REAL_GDI")) {
         GameCheck c = verify_game(real, supported_game());
         CHECK(c.ok, "owner's disc matches the supported identity");
         CHECK(c.gdi_sha256 == supported_game().gdi_sha256, "owner's descriptor hash matches");

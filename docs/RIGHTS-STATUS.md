@@ -1,21 +1,21 @@
-# SonicPad rights and distribution boundaries
+# RingPad rights and distribution boundaries
 
 Updated **29 October 2026** for experimental source and recipe release preparation.
 The repository remains private until the maintainer changes its visibility.
 
 ## Current software and dependencies
 
-SonicPad-owned source is distributed under the GNU General Public License,
+RingPad-owned source is distributed under the GNU General Public License,
 version 3 ([LICENSE](../LICENSE)). These software permissions do not grant
 rights to distribute Sonic Adventure or code translated from it.
 
 | Material | License or origin | Distribution boundary |
 |---|---|---|
-| SonicPad app, input, build and recompilation tools | GPL-3.0 | Source and build recipe are the intended release. |
-| Flycast `ed953fc` | GPL-2.0-or-later, per its file headers | Fetched at build time. SonicPad applies hooks to configured source copies; retain notices and meet the applicable source obligations when distributing GPL software. |
+| RingPad app, input, build and recompilation tools | GPL-3.0 | Source and build recipe are the intended release. |
+| Flycast `ed953fc` | GPL-2.0-or-later, per its file headers | Fetched at build time. RingPad applies hooks to configured source copies; retain notices and meet the applicable source obligations when distributing GPL software. |
 | SunPad `c77dd61` input mechanisms | GPL-3.0-or-later | Adapted as described in [INPUT.md](INPUT.md); attribution is retained in [third-party notices](../THIRD_PARTY_NOTICES.md). |
 | MoltenVK v1.4.2 | Apache-2.0 | Fetched at build time and linked into personal iOS builds; retains its own license and notices. |
-| Original SonicPad app icon | Project artwork | Generated icon with a ring, sky and sea; no character, logo or extracted game artwork. |
+| Original RingPad app icon | Project artwork | Generated icon with a ring, sky and sea; no character, logo or extracted game artwork. |
 
 ## Player-supplied game content
 
@@ -28,7 +28,7 @@ rights to distribute Sonic Adventure or code translated from it.
 | Personal app and IPA | Includes translated game code | Built for the player's own devices; not a public release asset. |
 | VMU cards and save states | Player saves and potentially game data | Keep private and back up locally; do not attach to issues. |
 
-Sonic Adventure and Dreamcast belong to SEGA. SonicPad is unofficial and is
+Sonic Adventure and Dreamcast belong to SEGA. RingPad is unofficial and is
 not affiliated with or endorsed by SEGA. Players must supply their own legally
 obtained supported disc; the project does not supply game downloads.
 

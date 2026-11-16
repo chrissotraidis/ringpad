@@ -1,4 +1,4 @@
-# SonicPad goal-based loop
+# RingPad goal-based loop
 
 **10 October 2026 — review handoff supersedes the experiment queue.**
 Chris requested wrap-up, private push/merge and an independent direction review.
@@ -357,7 +357,7 @@ and `work/dreamcast-recovery/live-movie-worker-pack-inventory.json`.
 
 Fresh hardware capture headers extend the existing live-byte comparison and
 APFS sharing mechanism to VRAM/TA vectors. Preserve the immediate-parent
-`SONICPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
+`RINGPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
 shares 1,755,450,412 logical bytes and writes 79,954,132 bytes through the helpers;
 all shared outputs verify against their parent. No prior evidence was changed
 or deleted, and capture files never supply guest state. Free space at this
@@ -417,7 +417,7 @@ scan or replay guest state.
 
 Storage fix: the existing `capture-storage.hpp` already compares live memory
 before APFS cloning and verifies the output afterward. The runner had inherited
-a stale reference from8October. Set `SONICPAD_RECOVERY_CAPTURE_REFERENCE` to the
+a stale reference from8October. Set `RINGPAD_RECOVERY_CAPTURE_REFERENCE` to the
 verified immediate parent; keep this override in future runner copies. This run
 clones188 byte-identical captures /1,180,565,504 logical bytes and writes seven
 new captures /54,788,096 bytes through that helper. Saved verifier checks all
@@ -5825,7 +5825,7 @@ Compilation is not boot. A PID is not a responsive game. A title is not a comple
 ### One Simulator and one game instance
 
 - **Only one booted Simulator at a time.** Before every launch/test, inspect `xcrun simctl list devices booted` or its JSON form. Shut down booted devices before switching, boot only the selected UDID, wait for readiness, then verify that it is the sole booted device.
-- **One SonicPad game/runtime instance across macOS and Simulator.** Terminate the previous known instance before launching another. Identify owned PIDs/bundle IDs; do not kill unrelated applications or other projects.
+- **One RingPad game/runtime instance across macOS and Simulator.** Terminate the previous known instance before launching another. Identify owned PIDs/bundle IDs; do not kill unrelated applications or other projects.
 - **Kill before relaunch.** Never layer a new process on a hung, crashed or half-terminated one. Capture evidence first, terminate the owned process, confirm exit, then clear only identified stale state.
 - **No parallel Simulator testing.** Disable Xcode test parallelization/device clones and bind UI tests to the chosen UDID. Inspect booted devices after launch because test runners can create additional instances. Stop extra instances before continuing.
 - A narrow iPad graphics probe at G3 is allowed before full mobile bring-up. Stop macOS gameplay first, use one Simulator, shut it down afterward, and return to the lowest goal.

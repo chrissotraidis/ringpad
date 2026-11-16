@@ -142,11 +142,11 @@ static void test_dpad() {
 
     TouchEngine e;
     e.begin(1, f.midX(), f.midY() - r, l, s);
-    CHECK(e.state().buttons == SonicPadDC_Up, "touch D-pad up");
+    CHECK(e.state().buttons == RingPadDC_Up, "touch D-pad up");
     e.move(1, f.midX() + r, f.midY(), l, s);
-    CHECK(e.state().buttons == SonicPadDC_Right, "rolling the thumb changes direction without lifting");
+    CHECK(e.state().buttons == RingPadDC_Right, "rolling the thumb changes direction without lifting");
     e.move(1, f.midX() + r * 2.5f, f.midY() - r * 2.5f, l, s);
-    CHECK(e.state().buttons == (SonicPadDC_Up | SonicPadDC_Right), "the D-pad keeps tracking outside its frame");
+    CHECK(e.state().buttons == (RingPadDC_Up | RingPadDC_Right), "the D-pad keeps tracking outside its frame");
     e.end(1);
     CHECK(e.state().buttons == 0, "D-pad releases on lift");
 }
@@ -155,7 +155,7 @@ static void test_face() {
     Settings s;
     Layout l = resolve_layout(kDevices[0].safe, false, s);
     const struct { Face f; unsigned bit; const char *n; } faces[] = {
-        {FaceA, SonicPadDC_A, "A"}, {FaceB, SonicPadDC_B, "B"}, {FaceX, SonicPadDC_X, "X"}, {FaceY, SonicPadDC_Y, "Y"}};
+        {FaceA, RingPadDC_A, "A"}, {FaceB, RingPadDC_B, "B"}, {FaceX, RingPadDC_X, "X"}, {FaceY, RingPadDC_Y, "Y"}};
     for (auto& f : faces) {
         float x, y;
         l.face_center(f.f, &x, &y);
@@ -174,13 +174,13 @@ static void test_face() {
 
     TouchEngine e;
     e.begin(1, ax, ay, l, s);
-    CHECK(e.state().buttons == SonicPadDC_A, "press A");
+    CHECK(e.state().buttons == RingPadDC_A, "press A");
     e.move(1, bx, by, l, s);
-    CHECK(e.state().buttons == SonicPadDC_B, "slide from A to B");
+    CHECK(e.state().buttons == RingPadDC_B, "slide from A to B");
     e.begin(2, yx, yy, l, s);
-    CHECK(e.state().buttons == (SonicPadDC_B | SonicPadDC_Y), "second thumb adds Y");
+    CHECK(e.state().buttons == (RingPadDC_B | RingPadDC_Y), "second thumb adds Y");
     e.end(1);
-    CHECK(e.state().buttons == SonicPadDC_Y, "lifting one thumb keeps the other's button");
+    CHECK(e.state().buttons == RingPadDC_Y, "lifting one thumb keeps the other's button");
     e.end(2);
     unsigned events = e.take_press_events();
     CHECK(events == 3, "A, B and Y each produce one press event");
@@ -206,7 +206,7 @@ static void test_triggers() {
     TouchEngine e;
     e.begin(1, r.x + r.w * 0.2f, r.midY(), l, s);
     e.begin(2, lt.x + lt.w * 0.9f, lt.midY(), l, s);
-    SonicPadDreamcastState st = e.state();
+    RingPadDreamcastState st = e.state();
     CHECK(st.triggerR > 64 && st.triggerL > 64 && st.triggerR < 255, "both triggers analog and independent");
     e.move(1, r.x + r.w + 40, r.midY(), l, s);
     CHECK(e.state().triggerR == 255, "sliding past the edge clamps to full");
@@ -228,7 +228,7 @@ static void test_stick() {
     e.move(1, home.midX() + r * kStickFullTilt, home.midY(), l, s);
     CHECK(e.state().moveX == 127, "full tilt before the rim");
     e.move(1, home.midX(), home.midY() - r * 0.5f, l, s);
-    SonicPadDreamcastState st = e.state();
+    RingPadDreamcastState st = e.state();
     CHECK(st.moveY > 60 && st.moveX == 0, "dragging up is positive Y");
     e.end(1);
 
@@ -302,14 +302,14 @@ static void test_combined() {
     e.move(1, home.midX() + l.stick_radius, home.midY(), l, s);
     e.begin(2, ax, ay, l, s);
     e.begin(3, r.midX(), r.midY(), l, s);
-    SonicPadDreamcastState st = e.state();
-    CHECK(st.moveX == 127 && (st.buttons & SonicPadDC_A) && st.triggerR > 64, "run, jump and hold R together");
+    RingPadDreamcastState st = e.state();
+    CHECK(st.moveX == 127 && (st.buttons & RingPadDC_A) && st.triggerR > 64, "run, jump and hold R together");
     e.end(2);
     st = e.state();
-    CHECK(st.moveX == 127 && !(st.buttons & SonicPadDC_A) && st.triggerR > 64, "lifting A keeps run and R");
+    CHECK(st.moveX == 127 && !(st.buttons & RingPadDC_A) && st.triggerR > 64, "lifting A keeps run and R");
     const Rect& start = l.frame(Control::Start);
     e.begin(4, start.midX(), start.midY(), l, s);
-    CHECK(e.state().buttons & SonicPadDC_Start, "Start");
+    CHECK(e.state().buttons & RingPadDC_Start, "Start");
 }
 
 static void test_overrides() {

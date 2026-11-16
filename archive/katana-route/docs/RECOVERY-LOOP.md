@@ -1,4 +1,4 @@
-# SonicPad source recovery loop
+# RingPad source recovery loop
 
 **10 October 2026 — review handoff supersedes the experiment queue.**
 Chris requested wrap-up, private push/merge and an independent direction review.
@@ -357,7 +357,7 @@ and `work/dreamcast-recovery/live-movie-worker-pack-inventory.json`.
 
 Fresh hardware capture headers extend the existing live-byte comparison and
 APFS sharing mechanism to VRAM/TA vectors. Preserve the immediate-parent
-`SONICPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
+`RINGPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
 shares 1,755,450,412 logical bytes and writes 79,954,132 bytes through the helpers;
 all shared outputs verify against their parent. No prior evidence was changed
 or deleted, and capture files never supply guest state. Free space at this
@@ -417,7 +417,7 @@ scan or replay guest state.
 
 Storage fix: the existing `capture-storage.hpp` already compares live memory
 before APFS cloning and verifies the output afterward. The runner had inherited
-a stale reference from8October. Set `SONICPAD_RECOVERY_CAPTURE_REFERENCE` to the
+a stale reference from8October. Set `RINGPAD_RECOVERY_CAPTURE_REFERENCE` to the
 verified immediate parent; keep this override in future runner copies. This run
 clones188 byte-identical captures /1,180,565,504 logical bytes and writes seven
 new captures /54,788,096 bytes through that helper. Saved verifier checks all
@@ -5866,7 +5866,7 @@ does not establish a replacement as the accepted production core.
 ## Objective and decision
 
 Determine whether public source can supply a reproducible, ahead-of-time
-Dreamcast execution foundation for SonicPad on Apple ARM64. Keep the native
+Dreamcast execution foundation for RingPad on Apple ARM64. Keep the native
 game goal, SunPad shell mechanisms, single-stick Dreamcast controls, private
 inputs and one-game/one-Simulator limits. Original G1 remains unresolved for
 SARecomp/Katana. Recovery milestones are not substitutes for gameplay acceptance.
@@ -6563,7 +6563,7 @@ provider, Mini Cart and failed-load controls. Six core patches and owner inputs
 are unchanged; only the bounded harness/generator mode changed. Reports bind
 sources, generated units, binary identity and inputs.155509/initialization-contract.json
 records exact scope. R3/R4/G1, scheduler/normal boot, real game output and supported
-PAL acquisition remain open. No Simulator or SonicPad game app was launched.
+PAL acquisition remain open. No Simulator or RingPad game app was launched.
 
 ## 2026-10-05 — R3/C8 original graphics startup, sharded build repair
 

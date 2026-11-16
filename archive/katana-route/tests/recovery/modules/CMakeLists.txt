@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(SonicPadModuleOracle LANGUAGES CXX)
+project(RingPadModuleOracle LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 add_executable(recovery_oracle ../module-execution.cpp
     "${FIXTURE_DIR}/a/dc_runtime.cpp" "${FIXTURE_DIR}/a/dc_arm7.cpp"

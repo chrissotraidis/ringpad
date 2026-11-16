@@ -145,7 +145,7 @@ static void capture_startup_hardware(const DCRuntime& rt,const std::string& pref
  blob("-gd-state.bin",rt.gd);blob("-aica-arm-state.bin",rt.aica_arm);blob("-aica-timers.bin",rt.aica_timers);blob("-aica-slots.bin",rt.aica_native_slots);blob("-g2-dma.bin",rt.g2_dma);
  const auto bytes=[&](const char* name,const auto& value){
   const std::filesystem::path output=prefix+name;
-  const char* reference_directory=std::getenv("SONICPAD_RECOVERY_CAPTURE_REFERENCE");
+  const char* reference_directory=std::getenv("RINGPAD_RECOVERY_CAPTURE_REFERENCE");
   const std::filesystem::path reference=reference_directory?std::filesystem::path(reference_directory)/output.filename():std::filesystem::path{};
   const auto size=value.size()*sizeof(value[0]);
   const bool shared=write_observed_capture(output,reference,value.data(),size);

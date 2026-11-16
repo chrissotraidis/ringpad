@@ -285,28 +285,28 @@ unsigned TouchEngine::take_press_events() {
     return n;
 }
 
-SonicPadDreamcastState TouchEngine::state() const {
-    SonicPadDreamcastState out{};
+RingPadDreamcastState TouchEngine::state() const {
+    RingPadDreamcastState out{};
     float sx = 0, sy = 0;
     for (const auto& kv : touches_) {
         const Touch& t = kv.second;
         switch (t.control) {
         case Control::Stick: sx = t.x; sy = t.y; break;
         case Control::DPad:
-            if (t.bits & DPadUp) out.buttons |= SonicPadDC_Up;
-            if (t.bits & DPadDown) out.buttons |= SonicPadDC_Down;
-            if (t.bits & DPadLeft) out.buttons |= SonicPadDC_Left;
-            if (t.bits & DPadRight) out.buttons |= SonicPadDC_Right;
+            if (t.bits & DPadUp) out.buttons |= RingPadDC_Up;
+            if (t.bits & DPadDown) out.buttons |= RingPadDC_Down;
+            if (t.bits & DPadLeft) out.buttons |= RingPadDC_Left;
+            if (t.bits & DPadRight) out.buttons |= RingPadDC_Right;
             break;
         case Control::Face:
-            if (t.bits & FaceA) out.buttons |= SonicPadDC_A;
-            if (t.bits & FaceB) out.buttons |= SonicPadDC_B;
-            if (t.bits & FaceX) out.buttons |= SonicPadDC_X;
-            if (t.bits & FaceY) out.buttons |= SonicPadDC_Y;
+            if (t.bits & FaceA) out.buttons |= RingPadDC_A;
+            if (t.bits & FaceB) out.buttons |= RingPadDC_B;
+            if (t.bits & FaceX) out.buttons |= RingPadDC_X;
+            if (t.bits & FaceY) out.buttons |= RingPadDC_Y;
             break;
         case Control::LTrigger: out.triggerL = std::max(out.triggerL, t.trigger); break;
         case Control::RTrigger: out.triggerR = std::max(out.triggerR, t.trigger); break;
-        case Control::Start: out.buttons |= SonicPadDC_Start; break;
+        case Control::Start: out.buttons |= RingPadDC_Start; break;
         default: break;
         }
     }

@@ -1,4 +1,4 @@
-/* SonicPad Dreamcast physical-controller mapping implementation.
+/* RingPad Dreamcast physical-controller mapping implementation.
  *
  * Ported from ref/sunpad/apple/shared/SunPadControllerMapping.mm with the
  * GameCube Z slot and the FLUDD shoulder-pressure helper removed. The
@@ -9,7 +9,7 @@
 
 #include "DreamcastInputState.h"
 
-namespace sonicpad {
+namespace ringpad {
 
 namespace {
 constexpr uint8_t kAllowedPhysical =
@@ -50,10 +50,10 @@ uint16_t apply_controller_mapping(const DreamcastControllerMapping& mapping,
     const DreamcastControllerMapping m =
         mapping_is_valid(mapping) ? mapping : default_controller_mapping();
     uint16_t bits = 0;
-    if (pressed_physical & m.gameA) bits |= SonicPadDC_A;
-    if (pressed_physical & m.gameB) bits |= SonicPadDC_B;
-    if (pressed_physical & m.gameX) bits |= SonicPadDC_X;
-    if (pressed_physical & m.gameY) bits |= SonicPadDC_Y;
+    if (pressed_physical & m.gameA) bits |= RingPadDC_A;
+    if (pressed_physical & m.gameB) bits |= RingPadDC_B;
+    if (pressed_physical & m.gameX) bits |= RingPadDC_X;
+    if (pressed_physical & m.gameY) bits |= RingPadDC_Y;
     return bits;
 }
 
@@ -88,4 +88,4 @@ const char* physical_button_name(uint8_t button) noexcept {
     }
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

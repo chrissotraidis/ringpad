@@ -1,4 +1,4 @@
-/* Source-derived host tests for the SonicPad Dreamcast shell layer.
+/* Source-derived host tests for the RingPad Dreamcast shell layer.
  *
  * Level 1 of the three input acceptance levels (state/unit tests). These cover
  * the mechanisms reused from the pinned SunPad donor, adapted to the
@@ -14,7 +14,7 @@
 #include <cmath>
 #include <cstdio>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -30,9 +30,9 @@ static int g_checks = 0;
 
 static bool near(float a, float b, float eps = 0.002f) { return std::fabs(a - b) <= eps; }
 
-static SonicPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
+static RingPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
                                    uint8_t l = 0, uint8_t r = 0, int connected = 1) {
-    SonicPadDreamcastState s{};
+    RingPadDreamcastState s{};
     s.moveX = x; s.moveY = y; s.buttons = buttons;
     s.triggerL = l; s.triggerR = r; s.connected = connected;
     return s;
@@ -41,10 +41,10 @@ static SonicPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
 /* 1. A single source merges to itself; connected is reported. */
 static void test_single_source() {
     DreamcastInputMixer mixer;
-    mixer.setState(make(127, 0, SonicPadDC_A, 200, 0), /*from_touch=*/true);
+    mixer.setState(make(127, 0, RingPadDC_A, 200, 0), /*from_touch=*/true);
     const auto merged = mixer.consumeMerged();
     CHECK(merged.moveX == 127, "touch stick passes through");
-    CHECK((merged.buttons & SonicPadDC_A) != 0u, "touch button passes through");
+    CHECK((merged.buttons & RingPadDC_A) != 0u, "touch button passes through");
     CHECK(merged.triggerL == 200, "touch trigger passes through");
     CHECK(merged.connected == 1, "connected reported");
 }
@@ -52,11 +52,11 @@ static void test_single_source() {
 /* 2. Two sources OR their buttons and take the strongest stick / max trigger. */
 static void test_merge_two_sources() {
     DreamcastInputMixer mixer;
-    mixer.setState(make(40, 0, SonicPadDC_A, 10, 0), /*from_touch=*/true);
-    mixer.setState(make(0, 90, SonicPadDC_B, 0, 220), /*from_touch=*/false);
+    mixer.setState(make(40, 0, RingPadDC_A, 10, 0), /*from_touch=*/true);
+    mixer.setState(make(0, 90, RingPadDC_B, 0, 220), /*from_touch=*/false);
     const auto merged = mixer.consumeMerged();
-    CHECK((merged.buttons & SonicPadDC_A) != 0u, "touch button present");
-    CHECK((merged.buttons & SonicPadDC_B) != 0u, "controller button present");
+    CHECK((merged.buttons & RingPadDC_A) != 0u, "touch button present");
+    CHECK((merged.buttons & RingPadDC_B) != 0u, "controller button present");
     CHECK(merged.moveX == 40, "stronger X axis wins (touch)");
     CHECK(merged.moveY == 90, "stronger Y axis wins (controller)");
     CHECK(merged.triggerL == 10, "L is max of the two");
@@ -66,19 +66,19 @@ static void test_merge_two_sources() {
 /* 3. A sub-sample tap on either source is delivered exactly once. */
 static void test_mixer_edge_latch() {
     DreamcastInputMixer mixer;
-    mixer.setState(make(0, 0, SonicPadDC_X), true); /* press */
+    mixer.setState(make(0, 0, RingPadDC_X), true); /* press */
     mixer.setState(make(0, 0, 0), true);            /* released before poll */
     const auto first = mixer.consumeMerged();
-    CHECK((first.buttons & SonicPadDC_X) != 0u, "tap observed once");
+    CHECK((first.buttons & RingPadDC_X) != 0u, "tap observed once");
     const auto second = mixer.consumeMerged();
-    CHECK((second.buttons & SonicPadDC_X) == 0u, "tap not repeated as turbo");
+    CHECK((second.buttons & RingPadDC_X) == 0u, "tap not repeated as turbo");
 }
 
 /* 4. clearAll drops held values and queued edges on every transition. */
 static void test_mixer_clear() {
     DreamcastInputMixer mixer;
-    mixer.setState(make(127, 127, SonicPadDC_Start, 255, 255), true);
-    mixer.setState(make(0, 0, SonicPadDC_A), false);
+    mixer.setState(make(127, 127, RingPadDC_Start, 255, 255), true);
+    mixer.setState(make(0, 0, RingPadDC_A), false);
     mixer.clearAll();
     const auto merged = mixer.consumeMerged();
     CHECK(merged.buttons == 0u, "clearAll drops held buttons");
@@ -92,9 +92,9 @@ static void test_mapping_default() {
     const auto m = default_controller_mapping();
     CHECK(mapping_is_valid(m), "default mapping valid");
     const uint16_t bits = apply_controller_mapping(m, DCPhysical_A | DCPhysical_Y);
-    CHECK((bits & SonicPadDC_A) != 0u, "physical A -> guest A");
-    CHECK((bits & SonicPadDC_Y) != 0u, "physical Y -> guest Y");
-    CHECK((bits & SonicPadDC_B) == 0u, "unpressed B clear");
+    CHECK((bits & RingPadDC_A) != 0u, "physical A -> guest A");
+    CHECK((bits & RingPadDC_Y) != 0u, "physical Y -> guest Y");
+    CHECK((bits & RingPadDC_B) == 0u, "unpressed B clear");
 }
 
 /* 6. An invalid mapping falls back to the default rather than losing input. */
@@ -106,7 +106,7 @@ static void test_mapping_invalid_fallback() {
     bad.gameY = DCPhysical_Y;
     CHECK(!mapping_is_valid(bad), "duplicate mapping rejected");
     const uint16_t bits = apply_controller_mapping(bad, DCPhysical_A);
-    CHECK((bits & SonicPadDC_A) != 0u, "invalid mapping uses default A");
+    CHECK((bits & RingPadDC_A) != 0u, "invalid mapping uses default A");
 }
 
 /* 7. Assigning swaps with the previous owner; shoulders are allowed targets. */
@@ -142,7 +142,7 @@ static void test_controller_slots() {
 /* 9. Chords: movement + action + trigger, and two independent triggers. */
 static void test_chords() {
     /* Movement + jump/action + one trigger, all in one canonical state. */
-    const auto chord = adapt(make(100, 40, SonicPadDC_A, 180, 0));
+    const auto chord = adapt(make(100, 40, RingPadDC_A, 180, 0));
     CHECK(held(chord, DreamcastAction::A), "chord keeps A");
     CHECK(chord.move_x > 0.0f && chord.move_y > 0.0f, "chord keeps movement");
     CHECK(held(chord, DreamcastAction::LeftTrigger), "chord keeps L trigger");
@@ -155,7 +155,7 @@ static void test_chords() {
           "both trigger values preserved");
 
     /* Simultaneous face buttons are all delivered. */
-    const auto faces = adapt(make(0, 0, SonicPadDC_A | SonicPadDC_B | SonicPadDC_X | SonicPadDC_Y));
+    const auto faces = adapt(make(0, 0, RingPadDC_A | RingPadDC_B | RingPadDC_X | RingPadDC_Y));
     CHECK(held(faces, DreamcastAction::A) && held(faces, DreamcastAction::B) &&
               held(faces, DreamcastAction::X) && held(faces, DreamcastAction::Y),
           "all four faces held at once");
@@ -164,14 +164,14 @@ static void test_chords() {
 /* 10. Rapid distinct taps each land exactly once and are not merged. */
 static void test_rapid_taps() {
     EdgeLatch latch;
-    latch.press(SonicPadDC_A);
-    CHECK((latch.consume(0) & SonicPadDC_A) != 0u, "tap 1 A delivered");
-    latch.press(SonicPadDC_B);
-    CHECK((latch.consume(0) & SonicPadDC_B) != 0u, "tap 2 B delivered");
-    latch.press(SonicPadDC_X);
-    latch.press(SonicPadDC_Y);
+    latch.press(RingPadDC_A);
+    CHECK((latch.consume(0) & RingPadDC_A) != 0u, "tap 1 A delivered");
+    latch.press(RingPadDC_B);
+    CHECK((latch.consume(0) & RingPadDC_B) != 0u, "tap 2 B delivered");
+    latch.press(RingPadDC_X);
+    latch.press(RingPadDC_Y);
     const unsigned both = latch.consume(0);
-    CHECK((both & SonicPadDC_X) != 0u && (both & SonicPadDC_Y) != 0u, "coalesced taps both delivered");
+    CHECK((both & RingPadDC_X) != 0u && (both & RingPadDC_Y) != 0u, "coalesced taps both delivered");
     CHECK((latch.consume(0)) == 0u, "no taps replayed");
 }
 
@@ -180,14 +180,14 @@ static void test_rapid_taps() {
 static void test_slide_out_and_modal_clear() {
     DreamcastInputMixer mixer;
     /* Finger slid off the stick while A is held. */
-    mixer.setState(make(127, 0, SonicPadDC_A), true);
+    mixer.setState(make(127, 0, RingPadDC_A), true);
     CHECK(mixer.consumeMerged().moveX == 127, "stick deflected before slide-out");
 
     /* Control release drops the stick back to center (no stuck axis). */
-    mixer.setState(make(0, 0, SonicPadDC_A), true);
+    mixer.setState(make(0, 0, RingPadDC_A), true);
     const auto recentered = mixer.consumeMerged();
     CHECK(recentered.moveX == 0 && recentered.moveY == 0, "slide-out recenters the stick");
-    CHECK((recentered.buttons & SonicPadDC_A) != 0u, "A still held while pressed");
+    CHECK((recentered.buttons & RingPadDC_A) != 0u, "A still held while pressed");
 
     /* Opening a shell sheet clears everything and queues nothing to replay. */
     mixer.clearAll();
@@ -198,8 +198,8 @@ static void test_slide_out_and_modal_clear() {
     CHECK(still_clear.buttons == 0u, "no queued input replays after the modal");
 
     /* Returning to play requires a fresh press. */
-    mixer.setState(make(0, 0, SonicPadDC_Start), false);
-    CHECK((mixer.consumeMerged().buttons & SonicPadDC_Start) != 0u, "fresh press after modal works");
+    mixer.setState(make(0, 0, RingPadDC_Start), false);
+    CHECK((mixer.consumeMerged().buttons & RingPadDC_Start) != 0u, "fresh press after modal works");
 }
 
 int main() {

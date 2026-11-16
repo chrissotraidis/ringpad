@@ -1,4 +1,4 @@
-/* Source-derived host tests for the SonicPad Dreamcast input contract.
+/* Source-derived host tests for the RingPad Dreamcast input contract.
  *
  * Level 1 of the three input acceptance levels (state/adapter unit tests).
  * These assert the adapter reproduces SARecomp's retained guest boundary
@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static int g_failures = 0;
 static int g_checks = 0;
@@ -27,9 +27,9 @@ static int g_checks = 0;
 
 static bool near(float a, float b, float eps = 0.002f) { return std::fabs(a - b) <= eps; }
 
-static SonicPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
+static RingPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
                                    uint8_t l = 0, uint8_t r = 0, int connected = 1) {
-    SonicPadDreamcastState s{};
+    RingPadDreamcastState s{};
     s.moveX = x; s.moveY = y; s.buttons = buttons;
     s.triggerL = l; s.triggerR = r; s.connected = connected;
     return s;
@@ -37,17 +37,17 @@ static SonicPadDreamcastState make(int8_t x, int8_t y, uint16_t buttons,
 
 /* 1. Guest mask constants match the retained boundary. */
 static void test_mask_identity() {
-    CHECK(SonicPadDC_Up == (1u << 0), "up bit");
-    CHECK(SonicPadDC_Down == (1u << 1), "down bit");
-    CHECK(SonicPadDC_Left == (1u << 2), "left bit");
-    CHECK(SonicPadDC_Right == (1u << 3), "right bit");
-    CHECK(SonicPadDC_Start == (1u << 4), "start bit");
-    CHECK(SonicPadDC_A == (1u << 10), "A bit");
-    CHECK(SonicPadDC_B == (1u << 11), "B bit");
-    CHECK(SonicPadDC_X == (1u << 12), "X bit");
-    CHECK(SonicPadDC_Y == (1u << 13), "Y bit");
-    CHECK(SonicPadDC_TriggerL == (1u << 14), "L trigger bit");
-    CHECK(SonicPadDC_TriggerR == (1u << 15), "R trigger bit");
+    CHECK(RingPadDC_Up == (1u << 0), "up bit");
+    CHECK(RingPadDC_Down == (1u << 1), "down bit");
+    CHECK(RingPadDC_Left == (1u << 2), "left bit");
+    CHECK(RingPadDC_Right == (1u << 3), "right bit");
+    CHECK(RingPadDC_Start == (1u << 4), "start bit");
+    CHECK(RingPadDC_A == (1u << 10), "A bit");
+    CHECK(RingPadDC_B == (1u << 11), "B bit");
+    CHECK(RingPadDC_X == (1u << 12), "X bit");
+    CHECK(RingPadDC_Y == (1u << 13), "Y bit");
+    CHECK(RingPadDC_TriggerL == (1u << 14), "L trigger bit");
+    CHECK(RingPadDC_TriggerR == (1u << 15), "R trigger bit");
 }
 
 /* 2. Neutral and disconnected states produce no motion or held bits. */
@@ -93,8 +93,8 @@ static void test_deadzone_and_diagonals() {
 
 /* 5. Face / start / d-pad bits pass through unchanged. */
 static void test_buttons() {
-    const uint16_t all = SonicPadDC_Up | SonicPadDC_A | SonicPadDC_B | SonicPadDC_X |
-                         SonicPadDC_Y | SonicPadDC_Start;
+    const uint16_t all = RingPadDC_Up | RingPadDC_A | RingPadDC_B | RingPadDC_X |
+                         RingPadDC_Y | RingPadDC_Start;
     const auto snap = adapt(make(0, 0, all));
     CHECK(held(snap, DreamcastAction::A), "A held");
     CHECK(held(snap, DreamcastAction::B), "B held");
@@ -108,18 +108,18 @@ static void test_buttons() {
 /* 6. Triggers are independent, continuous, and threshold-crossing to bits. */
 static void test_triggers() {
     const auto below = adapt(make(0, 0, 0, 64, 64));
-    CHECK((below.held_mask & SonicPadDC_TriggerL) == 0u, "L at threshold: no bit");
+    CHECK((below.held_mask & RingPadDC_TriggerL) == 0u, "L at threshold: no bit");
     CHECK(!held(below, DreamcastAction::LeftTrigger), "L at 64 reads released");
 
     const auto l_only = adapt(make(0, 0, 0, 200, 0));
-    CHECK((l_only.held_mask & SonicPadDC_TriggerL) != 0u, "L above threshold: bit set");
-    CHECK((l_only.held_mask & SonicPadDC_TriggerR) == 0u, "R stays clear");
+    CHECK((l_only.held_mask & RingPadDC_TriggerL) != 0u, "L above threshold: bit set");
+    CHECK((l_only.held_mask & RingPadDC_TriggerR) == 0u, "R stays clear");
     CHECK(near(l_only.left_trigger, 200.0f / 255.0f), "L analog value preserved");
     CHECK(near(l_only.right_trigger, 0.0f), "R analog value zero");
 
     const auto r_only = adapt(make(0, 0, 0, 0, 255));
-    CHECK((r_only.held_mask & SonicPadDC_TriggerR) != 0u, "R full: bit set");
-    CHECK((r_only.held_mask & SonicPadDC_TriggerL) == 0u, "L stays clear");
+    CHECK((r_only.held_mask & RingPadDC_TriggerR) != 0u, "R full: bit set");
+    CHECK((r_only.held_mask & RingPadDC_TriggerL) == 0u, "L stays clear");
 
     /* No digital-click detent: a value just over the threshold is a held bit. */
     const auto edge = adapt(make(0, 0, 0, 65, 0));
@@ -130,29 +130,29 @@ static void test_triggers() {
 static void test_edge_latch() {
     EdgeLatch latch;
     /* Press and release happen between two game samples. */
-    latch.press(SonicPadDC_A);
+    latch.press(RingPadDC_A);
     const auto tap = adapt(make(0, 0, 0)); /* finger already lifted */
     const unsigned delivered = latch.consume(tap.held_mask);
-    CHECK((delivered & SonicPadDC_A) != 0u, "short tap observed once");
+    CHECK((delivered & RingPadDC_A) != 0u, "short tap observed once");
 
     const unsigned next = latch.consume(tap.held_mask);
-    CHECK((next & SonicPadDC_A) == 0u, "tap not repeated as turbo");
+    CHECK((next & RingPadDC_A) == 0u, "tap not repeated as turbo");
 
     /* A modal transition clears a queued edge. */
-    latch.press(SonicPadDC_Start);
+    latch.press(RingPadDC_Start);
     latch.clear();
     const unsigned after_clear = latch.consume(0);
-    CHECK((after_clear & SonicPadDC_Start) == 0u, "cleared edge does not survive");
+    CHECK((after_clear & RingPadDC_Start) == 0u, "cleared edge does not survive");
 }
 
 /* 8. Holding a button is visible every sample; edge latch must not merge. */
 static void test_hold_then_release() {
     EdgeLatch latch;
-    const auto hold = adapt(make(0, 0, SonicPadDC_B));
-    CHECK((latch.consume(hold.held_mask) & SonicPadDC_B) != 0u, "hold visible sample 1");
-    CHECK((latch.consume(hold.held_mask) & SonicPadDC_B) != 0u, "hold visible sample 2");
+    const auto hold = adapt(make(0, 0, RingPadDC_B));
+    CHECK((latch.consume(hold.held_mask) & RingPadDC_B) != 0u, "hold visible sample 1");
+    CHECK((latch.consume(hold.held_mask) & RingPadDC_B) != 0u, "hold visible sample 2");
     const auto release = adapt(make(0, 0, 0));
-    CHECK((latch.consume(release.held_mask) & SonicPadDC_B) == 0u, "release visible");
+    CHECK((latch.consume(release.held_mask) & RingPadDC_B) == 0u, "release visible");
 }
 
 int main() {

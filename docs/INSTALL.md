@@ -1,6 +1,6 @@
-# Install and update SonicPad
+# Install and update RingPad
 
-SonicPad's player route builds a personal app from your own **Sonic Adventure
+RingPad's player route builds a personal app from your own **Sonic Adventure
 PAL v1.003 (MK-5100050)** disc on an Apple Silicon Mac. The intended public
 release provides source and a recipe, excluding prebuilt IPAs and game data.
 
@@ -41,11 +41,11 @@ the same APFS volume may share storage, but cloud or external imports may not.
 ## Build your app
 
 ```sh
-git clone https://github.com/chrissotraidis/sonicpad.git
-cd sonicpad
+git clone https://github.com/chrissotraidis/ringpad.git
+cd ringpad
 /usr/bin/python3 scripts/build-personal.py \
   --gdi "/path/to/Sonic Adventure.gdi" \
-  --output "$HOME/Desktop/SonicPad.ipa"
+  --output "$HOME/Desktop/RingPad.ipa"
 ```
 
 The first build downloads pinned Flycast and MoltenVK dependencies. It then
@@ -57,19 +57,19 @@ All disc-derived files remain in ignored local build directories. The IPA
 contains translated game code and is for your own devices. Keep it private.
 
 The repository also includes a [PadMint-compatible recipe](../padmint.json).
-SonicPad is not yet listed in PadMint's public catalog. The command above is
+RingPad is not yet listed in PadMint's public catalog. The command above is
 the available player build route.
 
 ## Sign, install and import
 
-1. Use your own IPA signing and installation tool to sign `SonicPad.ipa` for
+1. Use your own IPA signing and installation tool to sign `RingPad.ipa` for
    your iPhone or iPad. Follow that tool's account, trust and renewal steps.
-   SonicPad itself does not request your Apple ID or signing credentials.
+   RingPad itself does not request your Apple ID or signing credentials.
 2. Copy the complete disc folder to Files on the device. Make sure all four
    files are downloaded locally before you continue.
-3. Open SonicPad and tap **Import Game**, or **••• → Game Files → Import
+3. Open RingPad and tap **Import Game**, or **••• → Game Files → Import
    Game…**. Choose the **folder containing the GDI and tracks**.
-4. Wait for verification and import to finish. SonicPad retains its own game
+4. Wait for verification and import to finish. RingPad retains its own game
    copy and uses it on later launches.
 
 The app targets iOS and iPadOS 16 or newer. Historical hardware checks used
@@ -91,13 +91,13 @@ The patch can stretch the HUD and has unverified edge-culling behavior.
 Under **Controls**, adjust touch-control opacity, size and stick travel, move
 control groups, or remap a connected controller's face buttons. The floating
 stick's base stays where your thumb first lands; move past the rim to hold
-full tilt. **Start** is the game's button; **•••** opens SonicPad's menu.
+full tilt. **Start** is the game's button; **•••** opens RingPad's menu.
 On a landscape iPhone, scroll inside the menu to reach **Help** at the bottom.
 
 ## Updates and saves
 
 Use the game's normal save function, then choose **••• → Game Files → Export
-VMU Save** and save a backup outside SonicPad before updating. Save states
+VMU Save** and save a backup outside RingPad before updating. Save states
 are convenient checkpoints; use the VMU backup to preserve your game progress.
 Compatibility of save states between builds is not guaranteed.
 
@@ -123,7 +123,7 @@ See [Cheats, saves and widescreen](CHEATS.md) for details.
 | An update appears to lose saves | Check that the signing tool retained the same app identity, then restore your exported VMU backup if needed. |
 
 For a reproducible problem, open a
-[SonicPad issue](https://github.com/chrissotraidis/sonicpad/issues). Include
+[RingPad issue](https://github.com/chrissotraidis/ringpad/issues). Include
 **Help → About This Build**, your device/OS, settings and steps. Export
 **Help → Share Diagnostic Log**, review it for personal information, then
 attach only the relevant log. Do not attach disc files, generated code, IPAs,

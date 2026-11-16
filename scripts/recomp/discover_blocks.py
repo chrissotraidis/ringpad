@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find SonicPad code blocks statically in the game's disc files.
+"""Find RingPad code blocks statically in the game's disc files.
 
 Traces only cover code that ran on a recorded route. The rest of the game's
 code lives in the same disc files: 1ST_READ.BIN, the movie player, and the
@@ -25,7 +25,7 @@ from disc_blocks import Disc, read_manifest              # noqa: E402
 from generate_blocks import opcode_table, sext            # noqa: E402
 
 MAX_OPS = 64
-HEADER = '# sonicpad-trace v1: pc nops cycles ops...'
+HEADER = '# ringpad-trace v1: pc nops cycles ops...'
 
 
 class Module:

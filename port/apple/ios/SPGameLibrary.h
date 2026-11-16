@@ -1,4 +1,4 @@
-// SonicPad game library: verified import and lookup of the owner's disc.
+// RingPad game library: verified import and lookup of the owner's disc.
 #import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN

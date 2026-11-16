@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad -> Flycast controller bridge.
+/* RingPad -> Flycast controller bridge.
  *
  * Converts the adapter's canonical ActionSnapshot into the values Flycast's
  * Dreamcast controller reads for port A: button bits (stored active-low in
@@ -13,7 +13,7 @@
 #include <array>
 #include <cstdint>
 
-namespace sonicpad {
+namespace ringpad {
 
 /* Flycast DreamcastKey bits (core/input/gamepad.h). */
 enum : uint32_t {
@@ -28,7 +28,7 @@ enum : uint32_t {
     kFlycastX     = 1u << 10,
 };
 
-/* Every button the SonicPad profile drives; other kcode bits stay released. */
+/* Every button the RingPad profile drives; other kcode bits stay released. */
 inline constexpr uint32_t kFlycastProfileButtons = kFlycastB | kFlycastA | kFlycastStart |
     kFlycastUp | kFlycastDown | kFlycastLeft | kFlycastRight | kFlycastY | kFlycastX;
 
@@ -62,4 +62,4 @@ private:
     unsigned min_ticks_;
 };
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

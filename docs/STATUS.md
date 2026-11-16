@@ -1,4 +1,4 @@
-# SonicPad status
+# RingPad status
 
 Updated **31 October 2026**. The dated sections below retain historical
 measurements; they are not fresh acceptance of the release candidate.
@@ -8,7 +8,7 @@ measurements; they are not fresh acceptance of the release candidate.
 The intended release is experimental source and a build recipe. The player
 route reconstructs both traced and statically discovered code from the
 owner's disc, then builds a private unsigned IPA on an Apple Silicon Mac.
-SonicPad is not yet in PadMint's public catalog.
+RingPad is not yet in PadMint's public catalog.
 
 Documentation now reflects the current Flycast input bridge, Python 3.9
 player build, Dreamcast Original defaults, save backups and hardware limits.
@@ -21,11 +21,28 @@ Current player instructions: [Install and update](INSTALL.md).
 Outstanding acceptance: [Known issues](KNOWN-ISSUES.md).
 Open maintainer work: [Follow-ups](FOLLOW-UPS.md).
 
+## Rename to RingPad (16 November 2026)
+
+The project was renamed from its earlier working title to RingPad before its
+first public release: repository, app name, bundle identifier
+(`com.chrissotraidis.ringpad`), targets, environment variables
+(`RINGPAD_*`) and file names. Sonic Adventure is still named where it
+describes the disc a player must supply.
+
+The trace format header is now `# ringpad-trace v1`, and manifest IDs hash
+that header, so the same blocks now have new IDs: traced `44c8a6d568863459`
+became `d731f95362e4d44c` and static `13d3333b81a8c42c` became
+`e3c89a61f5a109b2`. Both were rebuilt from the disc before and after the
+rename and differ only in that header line. Older IDs in the dated sections
+below refer to the same code under the old header. The new bundle identifier
+installs as a separate app, so test installs need the disc imported again and
+saves exported from the old app.
+
 ## Face rendering investigation (31 October 2026)
 
 The maintainer reported Sonic's face texture sometimes showing over his eyes.
 On the macOS build, the opening Station Square cutscene ran from boot with
-recompilation on (99.999% recompiled) and with `SONICPAD_NO_AOT=1`. The
+recompilation on (99.999% recompiled) and with `RINGPAD_NO_AOT=1`. The
 close-ups of Sonic's face matched, differing only by a small timing offset, so
 the recompiler is not the cause. The 12.9-inch iPad Pro (M2) replayed the same
 cutscene from a development state at 1920p with 4× xBRZ. With Flycast's
@@ -39,7 +56,7 @@ unchanged afterward. Details and next steps: [Follow-ups](FOLLOW-UPS.md#sonics-f
 
 - Disc: the PAL v1.003 GDI in `ref/` passes all three track hashes and the
   descriptor hash (`scripts/verify-game.py`).
-- Build: the root `CMakeLists.txt` builds Flycast `ed953fc` plus the SonicPad
+- Build: the root `CMakeLists.txt` builds Flycast `ed953fc` plus the RingPad
   executor for macOS arm64 with the Command Line Tools; all JITs compiled out.
 - Gameplay on recompiled code: `tests/acceptance/first-play-chaos0.txt` goes
   from boot through the title screen, file select, character select and
@@ -56,7 +73,7 @@ unchanged afterward. Details and next steps: [Follow-ups](FOLLOW-UPS.md#sonics-f
 ## S1 performance (10 October 2026)
 
 Scripted Chaos 0 route, 200 guest seconds, run uncapped on an M1 with
-`scripts/recomp/run-route.sh ... SONICPAD_UNCAPPED=1`. Speed is guest time per
+`scripts/recomp/run-route.sh ... RINGPAD_UNCAPPED=1`. Speed is guest time per
 wall time; CPU is SH-4 thread CPU time per guest second. That thread also runs
 Flycast's hardware scheduling, so it is the bottleneck in every run.
 
@@ -81,15 +98,15 @@ game's frame-wait loop, which calls a function each pass and so is not skipped.
 
 ## S3 iPad Simulator (11 October 2026)
 
-SonicPad.app (com.chrissotraidis.sonicpad) builds for the iOS Simulator with
-Xcode 27 and runs on a dedicated "SonicPad iPad Air 11 (M3)" Simulator on the
+RingPad.app (com.chrissotraidis.ringpad) builds for the iOS Simulator with
+Xcode 27 and runs on a dedicated "RingPad iPad Air 11 (M3)" Simulator on the
 iOS 26.5 runtime. The scripted Chaos 0 route ran from boot through the memory
 card prompt, file and character select and Sonic's opening into the playable
 fight, with the HUD and Homing Attack hint on screen.
 
 - Rendering: Flycast's iOS shell is GLKit-only, and OpenGL ES is unavailable in
-  the Apple Silicon Simulator. SonicPad has its own minimal iOS shell
-  (`port/apple/ios/SonicPadApp.mm`): UIScene lifecycle, a `CAMetalLayer`
+  the Apple Silicon Simulator. RingPad has its own minimal iOS shell
+  (`port/apple/ios/RingPadApp.mm`): UIScene lifecycle, a `CAMetalLayer`
   view and a display link driving Flycast's Vulkan renderer on MoltenVK 1.4.2,
   linked statically.
 - Recompiled code ran over 99.99% of executed instructions (32,408 interpreted)
@@ -115,7 +132,7 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
   - analog L/R sliders with a haptic full-press detent
   - separate Start
   - Core Animation drawing with pressed states
-- **••• menu:** a SunPad-style persistent menu. SonicPad adds Game (Import, Reset) and Display (Show FPS, About). DCPad adds Controls (Touch Control Settings, Move Controls, Controller Mapping). Opening any of these pauses the game and releases input, and closing them resumes it.
+- **••• menu:** a SunPad-style persistent menu. RingPad adds Game (Import, Reset) and Display (Show FPS, About). DCPad adds Controls (Touch Control Settings, Move Controls, Controller Mapping). Opening any of these pauses the game and releases input, and closing them resumes it.
 - **Settings:** opacity, size, floating stick, haptics and hide-with-controller. Move Controls drags each control group and resizes it. Layouts persist per game and per phone or tablet; Reset restores the defaults.
 - **Physical controllers:** Apple game controllers feed the same mixer, with player-1 ownership and an A/B/X/Y remap (adapted from SunPad).
 - **Tests:**
@@ -154,7 +171,7 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
   - Game Files: Import Game and Export VMU Save, which backs up the in-game save through the share sheet.
   - About This Build, then DCPad's Controls.
   - DCPad shows a short confirmation such as "Saved to Slot 1".
-  - Widescreen was dropped at this point because Flycast's widescreen option shrank the picture inside SonicPad's view. It came back on iPhone on 22 October using Flycast's patch for this disc (see below).
+  - Widescreen was dropped at this point because Flycast's widescreen option shrank the picture inside RingPad's view. It came back on iPhone on 22 October using Flycast's patch for this disc (see below).
 - **Tests:** 377 DCPad host checks pass. The UI suite adds save/load state and live resolution change tests.
 
 ### Fourth pass (12 October 2026)
@@ -167,7 +184,7 @@ Dreamcast port can drop it in. See [port/dcpad/README.md](../port/dcpad/README.m
 
 ## S3 physical iPad (22 October 2026)
 
-SonicPad is signed with Chris's development team, installed and running on
+RingPad is signed with Chris's development team, installed and running on
 his **iPad Pro 12.9-inch (6th generation, M2), iPadOS 27.0.1**.
 
 - **Speed:** full speed from the first boot. Over eight minutes of title,
@@ -179,19 +196,19 @@ his **iPad Pro 12.9-inch (6th generation, M2), iPadOS 27.0.1**.
   (201,376 trials). Coverage is 99.99% on the traced route; the attract demo
   reaches untraced stages and drops to 96–98% while still running at full speed.
 - **Import:** the disc was copied into the app's Documents and imported with
-  the normal flow (`SONICPAD_IMPORT`, every track hashed on the device). The
+  the normal flow (`RINGPAD_IMPORT`, every track hashed on the device). The
   copy is an APFS clone, so free space did not change. Reinstalls keep it.
 - **Icon:** a gold ring with speed streaks over sky and sea (generated; no
   characters, logos or game artwork) in `port/apple/ios/Assets.xcassets`.
 - **Diagnostic log:** `SPDiagnostics` keeps this session and the previous one
-  in `Library/Application Support/SonicPad/Logs`, copying everything the
+  in `Library/Application Support/RingPad/Logs`, copying everything the
   runtime writes to stderr with timestamps. It adds lifecycle, pause, import,
-  save-state, controller, memory and thermal events, a `SONICPAD_LIVE` speed
+  save-state, controller, memory and thermal events, a `RINGPAD_LIVE` speed
   line every 30 s, and a crash line written directly from the fault handler.
   ••• ▸ Help ▸ Share Diagnostic Log sends both sessions as one text file;
   `scripts/ios/pull-device-log.sh` copies them to the Mac.
 - **Build fixes found on the way:**
-  - Flycast's own `Images.xcassets` replaced SonicPad's icon; it is now excluded.
+  - Flycast's own `Images.xcassets` replaced RingPad's icon; it is now excluded.
   - The catalog needed its `MACOSX_PACKAGE_LOCATION` set in Flycast's directory.
   - CoreGraphics and OpenGLES are linked explicitly; they had only been pulled in
     implicitly by Flycast's catalog.
@@ -207,7 +224,7 @@ his **iPad Pro 12.9-inch (6th generation, M2), iPadOS 27.0.1**.
 
 From Chris's first session on the iPad:
 
-- **••• menu:** a SonicPad header over the quick row (Save State, Load State,
+- **••• menu:** a RingPad header over the quick row (Save State, Load State,
   Reset), then Controls, Graphics and Sound, then Game Files and Help. Sound,
   Resolution and Texture Upscaling show the current choice under their name.
   DCPad hands its Controls submenu to the host through a new optional delegate
@@ -217,7 +234,7 @@ From Chris's first session on the iPad:
   shows at once. New installs start at 4× on iPad and 2× on iPhone. On the M2
   iPad, 3× and then 4× with 2× xBRZ each held the game's 30 FPS at full speed,
   with no frame over 50 ms after boot.
-- **Show FPS:** SonicPad's own counter in a glass pill at the top left;
+- **Show FPS:** RingPad's own counter in a glass pill at the top left;
   Flycast's on-screen counter at the bottom is off.
 - **Pause after closing the menu:** on the iPad the game stayed paused after
   the ••• menu closed until the next tap. DCPad reported the close from the
@@ -276,10 +293,10 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
 - **One-command player build:** `scripts/build-personal.py` checks the disc,
   fetches pinned dependencies, rebuilds the manifest, generates the code and
   packages an unsigned IPA. With Apple's Python 3.9 it built Flycast and
-  SonicPad from scratch in 2 min 57 s on this Mac: a 14 MB IPA, arm64, iOS 16+,
+  RingPad from scratch in 2 min 57 s on this Mac: a 14 MB IPA, arm64, iOS 16+,
   SDK 27.1, version 0.1.0 with build number and commit. PadMint's
   `check-manifest` accepts `padmint.json` and `padmint audit` passes the IPA.
-- **PadMint player check:** `scripts/player-check.sh sonicpad ios <gdi> <checkout>`
+- **PadMint player check:** `scripts/player-check.sh ringpad ios <gdi> <checkout>`
   from PadMint main `a723ae0` (Apple Python 3.9, empty PadMint folder, fresh
   clone with no `ref/`, two compile jobs) passed for `81ff44c` (6 min 28 s)
   and for `1387621` (5 min 47 s): build completed, checkout check passed,
@@ -334,12 +351,12 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   run-to-run noise (0.215-0.232 s per guest second, uncapped).
 - **Executor:** each block remembers the exact successor variant that ran, so
   modules sharing a load address do not walk the variant chain;
-  `SONICPAD_NO_STATIC=1` turns static blocks off for comparisons. On iOS,
-  relative `SONICPAD_INPUT_SCRIPT`, `SONICPAD_SHOT_DIR` and
-  `SONICPAD_STATE_LOAD` paths are inside Documents, so routes run on a device.
+  `RINGPAD_NO_STATIC=1` turns static blocks off for comparisons. On iOS,
+  relative `RINGPAD_INPUT_SCRIPT`, `RINGPAD_SHOT_DIR` and
+  `RINGPAD_STATE_LOAD` paths are inside Documents, so routes run on a device.
 - **Player builds:** `build-personal.py` runs discovery on the player's disc and
-  stops unless it gives the tested set (`# static 13d3333b81a8c42c` in
-  `config/recomp-blocks.txt`).
+  stops unless it gives the tested set (`# static e3c89a61f5a109b2` in
+  `config/recomp-blocks.txt`; `13d3333b81a8c42c` before the rename).
 - **PadMint player check on `95ae4dd`:** passed (PadMint main `a723ae0`, Apple
   Python 3.9, empty PadMint folder, fresh clone, two compile jobs, a heavily
   loaded Mac): discovery on the clean clone gave `13d3333b81a8c42c`, scene startup
@@ -377,10 +394,10 @@ game patches on top of Flycast. See [PLAN.md](PLAN.md).
   interpreter; tracing and regeneration can extend coverage. A compiled
   module is not evidence that its gameplay has been accepted.
 - macOS development runs use `~/Library/Application Support/Flycast/` for
-  settings and VMU data. iOS stores its data inside the SonicPad app container.
+  settings and VMU data. iOS stores its data inside the RingPad app container.
 - Widescreen is Flycast's two-value patch for this disc plus a 4:3 to 16:9
   stretch. Players of the same patch report objects popping in at the right
-  edge and a stretched HUD; not yet checked in SonicPad. No PAL v1.003 culling
+  edge and a stretched HUD; not yet checked in RingPad. No PAL v1.003 culling
   or HUD fix has been found; Dreamcast Image Builder's culling fix targets USA
   v1.005.
 

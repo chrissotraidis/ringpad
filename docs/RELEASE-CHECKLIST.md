@@ -35,6 +35,20 @@ See [rights and distribution boundaries](RIGHTS-STATUS.md).
 | Whole-repository publication review | Blocked by archived research in history |
 | Physical iPad or iPhone validation | Not requested for this preparation pass; the 31 October face-rendering check on the M2 iPad is recorded in [STATUS.md](STATUS.md#face-rendering-investigation-31-october-2026) |
 
+### RingPad rename candidate (16 November 2026)
+
+| Check | Result |
+|---|---|
+| Host tests and repository safety | Passed on `247e364` |
+| Simulator UI | iPad Air 11-inch (M4) Simulator: 15 passed, no failures |
+| Physical iPad | iPad Pro 12.9-inch (M2): signed `com.chrissotraidis.ringpad` build, disc import, Chaos 0 route to the fight at 0.99x, 99.999% recompiled |
+| Fresh PadMint player build from clean checkout | Passed for `247e364`, PadMint main `f13bfe9` (0.6.6), Apple Python 3.9.6; 8 min 33 s, 1.8 GiB, publication gate PASS, personal-only |
+| GitHub source/host CI | Not run: GitHub did not start the job because of an account billing or spending-limit problem. CI now targets `macos-15` |
+
+PadMint's `player-check.sh` now audits the catalog first and exits when a game
+has no catalog entry, so the steps after that audit were run by hand with the
+same commands, Apple Python and an empty PadMint folder.
+
 The fresh player build produced a personal unsigned IPA with iOS 16 minimum,
 iOS 27.1 SDK, declared scene startup and a passing package gate. PadMint marks
 it **personal-only, not publishable**. Its runtime launch was not tested by

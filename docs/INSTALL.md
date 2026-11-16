@@ -56,9 +56,8 @@ The output path must not already exist; choose a new filename for an update.
 All disc-derived files remain in ignored local build directories. The IPA
 contains translated game code and is for your own devices. Keep it private.
 
-The repository also includes a [PadMint-compatible recipe](../padmint.json).
-RingPad is not yet listed in PadMint's public catalog. The command above is
-the available player build route.
+[PadMint](https://github.com/chrissotraidis/padmint) 0.6.7 and newer runs the
+same build from its menu: choose RingPad and your `.gdi`, then **Make my copy**.
 
 ## Sign, install and import
 

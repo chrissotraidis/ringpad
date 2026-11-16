@@ -26,6 +26,12 @@ Mac. Open work is in [Follow-ups](FOLLOW-UPS.md); player-facing limits are in
 - PadMint player build from a fresh clone of `247e364` (PadMint main
   `f13bfe9`, Apple Python 3.9.6, empty PadMint folder): 8 min 33 s, 1.8 GiB,
   publication gate PASS, personal-only.
+- After publishing: PadMint 0.6.7 lists RingPad. `scripts/player-check.sh`
+  from PadMint `main` (`1246165`) passed the catalog check and built
+  `RingPad-v0.1.0-ios-personal.ipa` from the published v0.1.0 release with
+  Apple's Python and an empty PadMint folder.
+- iPad Pro 12.9-inch (M2): build 52 of `main` installed in place, keeping the
+  imported disc and saves.
 
 Manifest IDs hash the trace header, which became `# ringpad-trace v1` in the
 rename. The same blocks now read traced `d731f95362e4d44c` (was

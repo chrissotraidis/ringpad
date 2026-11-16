@@ -96,7 +96,7 @@ disc, saves and settings stay. Deleting RingPad deletes them.
 
 ## Current status
 
-**0.1.0 is an experimental preview.** On a 12.9-inch iPad Pro (M2), recorded
+**0.1.1 is an experimental preview.** On a 12.9-inch iPad Pro (M2), recorded
 runs reach the Chaos 0 fight, Emerald Coast and Windy Valley at full speed,
 with 99.9% or more of the game's instructions running as recompiled code. A
 full playthrough, audio quality, save and reload, iPhone hardware, other iPads

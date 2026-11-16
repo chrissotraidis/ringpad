@@ -18,24 +18,28 @@ constexpr float kPi = 3.14159265f;
  *
  * The arrangement follows the Dreamcast controller and a landscape grip: the
  * stick sits where the left thumb rests, the D-pad below and inward of it (as
- * on the real pad), L and R at the top of each thumb's arc, the face diamond
- * under the right thumb and Start just inward of it. tests/host/test_dcpad.cpp
- * checks every control against thumb_pivot() in millimetres. */
+ * on the real pad) and the face diamond under the right thumb. On a phone L
+ * and R sit at the top of each thumb's arc and Start just inward of the face
+ * buttons. On a tablet, tuned by hand on a 12.9-inch iPad Pro, L and R sit
+ * side by side above the face diamond with Start above R, all within the
+ * right thumb's reach. tests/host/test_dcpad.cpp checks every control against
+ * thumb_pivot() in millimetres. */
 struct Spot { float x, y; };
 struct Defaults {
     Spot stick, dpad, face, l, r, start;
     float stick_d, dpad_d, face_d, face_s, trig_w, trig_h, start_w, start_h;
+    bool l_right;   /* L measured from the right edge, beside R */
 };
 
 constexpr Defaults kTablet = {
-    {150.f, 310.f}, {240.f, 120.f}, {175.f, 310.f}, {118.f, 470.f}, {118.f, 470.f}, {250.f, 104.f},
-    200.f, 150.f, 84.f, 76.f, 156.f, 58.f, 104.f, 42.f,
+    {138.f, 298.f}, {240.f, 90.f}, {209.f, 187.f}, {284.f, 361.f}, {112.f, 361.f}, {70.f, 443.f},
+    200.f, 150.f, 77.f, 70.f, 156.f, 58.f, 104.f, 42.f, true,
 };
 
 /* Phones are laid out on an 800 x 380 reference and scaled down to fit. */
 constexpr Defaults kPhone = {
     {92.f, 210.f}, {226.f, 76.f}, {108.f, 196.f}, {84.f, 340.f}, {132.f, 340.f}, {232.f, 52.f},
-    136.f, 108.f, 60.f, 55.f, 112.f, 46.f, 88.f, 44.f,
+    136.f, 108.f, 60.f, 55.f, 112.f, 46.f, 88.f, 44.f, false,
 };
 
 float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
@@ -106,7 +110,7 @@ Layout resolve_layout(const Rect& safe, bool phone, const Settings& settings) {
     const float fs = place(Control::Face, d.face, true, cluster, cluster);
     out.face_spacing = d.face_s * fs;
     out.face_radius = d.face_d * fs * 0.5f;
-    place(Control::LTrigger, d.l, false, d.trig_w, d.trig_h);
+    place(Control::LTrigger, d.l, d.l_right, d.trig_w, d.trig_h);
     place(Control::RTrigger, d.r, true, d.trig_w, d.trig_h);
     place(Control::Start, d.start, true, d.start_w, d.start_h);
 

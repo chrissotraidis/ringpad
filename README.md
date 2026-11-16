@@ -1,24 +1,25 @@
-# SonicPad
+# RingPad
 
 <p align="center">
-  <img src="port/apple/ios/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="160" alt="SonicPad app icon: a gold ring over sky and sea">
+  <img src="port/apple/ios/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="160" alt="RingPad app icon: a gold ring over sky and sea">
 </p>
 
-SonicPad brings **Sonic Adventure to iPhone and iPad**, built from your own
-Dreamcast disc. It translates the game's SH-4 machine code into C++ ahead of
-time on your Mac and compiles it for ARM64, with
+RingPad is an unofficial native iPhone and iPad port that plays your own
+**Sonic Adventure** Dreamcast disc. It translates the game's SH-4 machine code
+into C++ ahead of time on your Mac and compiles it for ARM64, with
 [Flycast](https://github.com/flyinghead/flycast) as the Dreamcast hardware
 layer. It adds Dreamcast touch controls, controller support, save states and a
-native ••• menu.
+native ••• menu. RingPad is not affiliated with or endorsed by SEGA, and it
+includes no game data.
 
-**AI disclosure:** SonicPad uses substantial AI assistance for code, tests,
+**AI disclosure:** RingPad uses substantial AI assistance for code, tests,
 documentation, debugging and maintenance. There is no audited percentage of
 AI-generated code; build, test and device records state what has actually been
-checked. This describes SonicPad's workflow, not the authorship of its upstream
+checked. This describes RingPad's workflow, not the authorship of its upstream
 projects.
 
 <p align="center">
-  <strong>Sonic Adventure on iPhone and iPad, from your own disc.</strong><br>
+  <strong>RingPad: a Dreamcast classic on iPhone and iPad, from your own disc.</strong><br>
   Ahead-of-time static recompilation. No JIT, no BIOS file, no streaming.<br>
   Touch or controller, save states, and the original Dreamcast look.
 </p>
@@ -34,7 +35,7 @@ projects.
 </p>
 
 <p align="center">
-  <a href="#get-sonicpad">Get SonicPad</a> ·
+  <a href="#get-ringpad">Get RingPad</a> ·
   <a href="#supported-game">Game requirements</a> ·
   <a href="#controls">Controls</a> ·
   <a href="docs/INSTALL.md">Install guide</a> ·
@@ -43,7 +44,7 @@ projects.
 </p>
 
 > [!IMPORTANT]
-> **Build your own copy on an Apple Silicon Mac.** SonicPad releases contain
+> **Build your own copy on an Apple Silicon Mac.** RingPad releases contain
 > source and a build recipe. No prebuilt app, translated game code or game data
 > is distributed. You need your own **Sonic Adventure PAL v1.003
 > (MK-5100050)** disc as a three-track GDI.
@@ -78,7 +79,7 @@ projects.
 | Windows, Linux, Android, Apple TV | Not offered |
 | App Store, TestFlight, prebuilt IPAs | Not offered |
 
-**SonicPad 0.1.0 is an experimental preview.** On a 12.9-inch iPad Pro (M2),
+**RingPad 0.1.0 is an experimental preview.** On a 12.9-inch iPad Pro (M2),
 recorded runs reached the Chaos 0 fight, Emerald Coast's opening and Windy
 Valley, and the intro, attract demo and Windy Valley held full game speed.
 The Windy Valley route ran 99.94% of its instructions as recompiled code. A
@@ -86,7 +87,7 @@ complete playthrough, audio, save-and-reload, iPhone hardware and other devices
 are not yet accepted. See [Known issues](docs/KNOWN-ISSUES.md) and the
 [status record](docs/STATUS.md) for the exact scope.
 
-## Get SonicPad
+## Get RingPad
 
 You need:
 
@@ -102,11 +103,11 @@ You need:
 ### Build and install
 
 ```sh
-git clone https://github.com/chrissotraidis/sonicpad.git
-cd sonicpad
+git clone https://github.com/chrissotraidis/ringpad.git
+cd ringpad
 /usr/bin/python3 scripts/build-personal.py \
   --gdi "/path/to/Sonic Adventure.gdi" \
-  --output "$HOME/Desktop/SonicPad.ipa"
+  --output "$HOME/Desktop/RingPad.ipa"
 ```
 
 The builder verifies your disc, downloads pinned Flycast and MoltenVK,
@@ -114,10 +115,10 @@ translates the game and packages an unsigned IPA. A clean build took about
 eight minutes on the maintainer's Apple Silicon Mac. Generated game code stays
 in ignored folders on your Mac.
 
-1. Sign and install `SonicPad.ipa` with your signing tool.
+1. Sign and install `RingPad.ipa` with your signing tool.
 2. Copy the whole GDI folder to Files on your iPhone or iPad. Download any
    cloud placeholders first.
-3. Open SonicPad, tap **Import Game** and choose that folder. You can also use
+3. Open RingPad, tap **Import Game** and choose that folder. You can also use
    **••• → Game Files → Import Game…**.
 4. Let verification finish, then play. Tap **•••** for controls, graphics,
    saves and help.
@@ -128,7 +129,7 @@ setup, troubleshooting and updates.
 
 **Updating:** back up your VMU with **••• → Game Files → Export VMU Save…**,
 then install the new build over the existing app with the same signing setup.
-Deleting SonicPad removes its saves, settings and imported disc.
+Deleting RingPad removes its saves, settings and imported disc.
 
 ## Supported game
 
@@ -140,7 +141,7 @@ Deleting SonicPad removes its saves, settings and imported disc.
 | Identity | Every track and the descriptor are SHA-256 checked against [`config/game-identity.json`](config/game-identity.json) |
 | Not supported | Other regions and revisions, Sonic Adventure DX, CDI and CHD images |
 
-Renaming a different image does not make it compatible. SonicPad copies the
+Renaming a different image does not make it compatible. RingPad copies the
 disc into its own storage during import and leaves your files unchanged. No
 disc image, BIOS, extracted game files or saves are included in this
 repository or its releases.
@@ -154,7 +155,7 @@ repository or its releases.
 | A / B / X / Y | Colored diamond: A bottom, B right, X left, Y top; slide for chords | Positional face buttons, remappable |
 | L / R | Independent analog sliders | Analog triggers; shoulders act as full presses |
 | Start | Start pill | Menu button |
-| SonicPad menu | **•••** | **•••** on screen |
+| RingPad menu | **•••** | **•••** on screen |
 
 **••• → Controls** sets touch opacity, size and stick travel, moves control
 groups, and opens controller mapping. The **•••** button never sends Start to
@@ -184,7 +185,7 @@ import are described in [Cheats, saves and widescreen](docs/CHEATS.md).
 
 ### Is this an emulator, SARecomp or a decompilation?
 
-SonicPad is a static recompilation of the supported disc's machine code. Flycast
+RingPad is a static recompilation of the supported disc's machine code. Flycast
 emulates the Dreamcast's other hardware, and its interpreter runs any code the
 translator missed. It does not use SARecomp or a source decompilation.
 
@@ -196,7 +197,7 @@ entitlement or debugger connection is needed.
 ### Where is the IPA download?
 
 There is none. The app would contain code translated from the game, so each
-player builds their own from their own disc using [the steps above](#get-sonicpad).
+player builds their own from their own disc using [the steps above](#get-ringpad).
 
 ### Can I use Sonic Adventure DX or another release?
 
@@ -223,7 +224,7 @@ personal paths and filenames before you share it. Include your device, OS
 version, graphics settings and steps to reproduce. Never attach game files,
 generated code, IPAs, saves, signing files or credentials.
 
-[GitHub issues](https://github.com/chrissotraidis/sonicpad/issues) ·
+[GitHub issues](https://github.com/chrissotraidis/ringpad/issues) ·
 [Discord community](https://discord.gg/xwHfUD2bxW) ·
 [Install guide](docs/INSTALL.md) ·
 [Known issues](docs/KNOWN-ISSUES.md) · [Security](SECURITY.md)
@@ -253,7 +254,7 @@ say exactly which build or device you tested.
 
 ## Research and credits
 
-SonicPad builds on [Flycast](https://github.com/flyinghead/flycast) for the
+RingPad builds on [Flycast](https://github.com/flyinghead/flycast) for the
 Dreamcast hardware layer, HLE BIOS and SH-4 interpreter, and on
 [MoltenVK](https://github.com/KhronosGroup/MoltenVK) for Vulkan on Metal. Its
 touch input and menu mechanisms are adapted from
@@ -263,10 +264,10 @@ attributions in [Third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Legal and provenance
 
-SonicPad is an unofficial project and is not affiliated with or endorsed by
+RingPad is an unofficial project and is not affiliated with or endorsed by
 SEGA. Sonic Adventure, Sonic the Hedgehog and Dreamcast belong to SEGA.
 
-SonicPad's source is licensed under the **GNU General Public License, version
+RingPad's source is licensed under the **GNU General Public License, version
 3** ([LICENSE](LICENSE)). Dependencies keep their own licenses. The source
 license grants no rights to Sega's game data or to code translated from it; see
 [Rights and distribution boundaries](docs/RIGHTS-STATUS.md). The app icon is

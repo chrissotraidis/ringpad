@@ -1,5 +1,5 @@
-// See SonicCheats.h.
-#include "SonicCheats.h"
+// See GameCheats.h.
+#include "GameCheats.h"
 
 #include "types.h"
 #include "emulator.h"
@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <sstream>
 
-namespace sonicpad {
+namespace ringpad {
 namespace {
 
 constexpr const char *kGameId = "MK-5100050";
@@ -80,7 +80,7 @@ int enable_cheats_from_list(const std::string& ids)
             if (id == kCheats[i].info.id) {
                 gEnabled[i] = true;
                 matched++;
-                std::fprintf(stderr, "SONICPAD_CHEAT on %s\n", id.c_str());
+                std::fprintf(stderr, "RINGPAD_CHEAT on %s\n", id.c_str());
             }
     return matched;
 }
@@ -91,4 +91,4 @@ void install_cheats()
         EventManager::listen(Event::VBlank, onVBlank);
 }
 
-} // namespace sonicpad
+} // namespace ringpad

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class RepositorySafetyTests(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(prefix='sonicpad-safety-')
+        self.temporary = tempfile.TemporaryDirectory(prefix='ringpad-safety-')
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         (self.root / 'scripts').mkdir()

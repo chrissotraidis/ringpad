@@ -1,4 +1,4 @@
-# SonicPad test matrix
+# RingPad test matrix
 
 Updated: **5 October 2026**. Status of PRD Section 10.2 rows 1–32 for the
 current, unbuilt source state. Every row carries its observation type, because

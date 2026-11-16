@@ -1,4 +1,4 @@
-# SonicPad build inputs
+# RingPad build inputs
 
 Updated **29 October 2026**. Game inputs and generated instruction data stay
 private. The supported-disc identity is recorded as hashes; it is not game

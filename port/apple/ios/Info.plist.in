@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>SonicPad</string>
+	<string>RingPad</string>
 	<key>CFBundleExecutable</key>
 	<string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
@@ -13,14 +13,14 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SonicPad</string>
+	<string>RingPad</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
 	<key>CFBundleVersion</key>
 	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
-	<key>SonicPadCommit</key>
+	<key>RingPadCommit</key>
 	<string>${MACOSX_BUNDLE_LONG_VERSION_STRING}</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

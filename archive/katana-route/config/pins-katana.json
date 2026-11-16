@@ -1,5 +1,5 @@
 {
-  "schema": "sonicpad-pins-v1",
+  "schema": "ringpad-pins-v1",
   "private_only": true,
   "references": [
     {

@@ -1,6 +1,6 @@
 # DCPad: Dreamcast touch controls for Apple ports
 
-DCPad is the touch control kit SonicPad uses, written so the next Dreamcast
+DCPad is the touch control kit RingPad uses, written so the next Dreamcast
 port can reuse it unchanged. It turns multi-touch and Apple game controllers
 into one Dreamcast controller state, and gives every port the same **•••**
 menu, touch settings and layout editor.
@@ -32,7 +32,7 @@ DCPad adds what a Dreamcast pad needs:
 | A / B / X / Y | Dreamcast diamond and colours (A red bottom, B blue right, X yellow left, Y green top). Slide between buttons without lifting. Resting between two neighbours presses both, but opposite buttons never chord. |
 | L / R | Analog sliders. A light touch is already past the game's digital threshold; pressure grows toward the outer screen edge, and past the rim notches (72% of the length) is a full press with a haptic tap, a glow and hysteresis. |
 | Start | Separate pill beside the right thumb, never part of the ••• menu. |
-| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. SonicPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); Help (About, Share Diagnostic Log). `showMessage:` confirms actions such as "Saved to Slot 1". |
+| ••• menu | The host adds its own items and DCPad adds Controls: Touch Control Settings, Move Controls and Controller Mapping. RingPad's items come from `port/apple/ios/SPPortMenu`, which any port on the same Flycast foundation can reuse: a top row with Save State, Load State (three dated slots) and Reset; Display (render resolution, Show FPS); Sound (Full, Half, Off); Game Files (Import Game, Export VMU Save); Help (About, Share Diagnostic Log). `showMessage:` confirms actions such as "Saved to Slot 1". |
 
 Each finger owns one control from touch-down to lift, so lifting one thumb
 never releases another's input, and a second finger can't take over a stick,
@@ -56,7 +56,7 @@ setting) and the next touch restores them.
   - `DCPadControllerInput` feeds Apple game controllers into the same state, with player-1 ownership and face-button remapping.
 
 Both inputs publish to `port/input/DreamcastInputMixer`. A port then adapts the
-merged state to its own runtime, as SonicPad does with
+merged state to its own runtime, as RingPad does with
 `port/input/FlycastPadBridge`.
 
 ## Using it in another port
@@ -84,8 +84,8 @@ controllers.connectionChanged = ^(BOOL connected) { [pad setControllerConnected:
 [controllers start];
 
 // Once per frame:
-SonicPadDreamcastState state = sonicpad::DreamcastInputMixer::shared().consumeMerged();
-sonicpad::ActionSnapshot snapshot = sonicpad::adapt(state);   // deadzone, trigger bits
+RingPadDreamcastState state = ringpad::DreamcastInputMixer::shared().consumeMerged();
+ringpad::ActionSnapshot snapshot = ringpad::adapt(state);   // deadzone, trigger bits
 ```
 
 Pause the game in `dcpadOverlay:modalStateChanged:`. The overlay has already
@@ -101,6 +101,6 @@ indicator:
 ```
 
 For screenshots and design review, `DCPAD_PREVIEW="stick=0.7,-0.5 dpad=up face=AB l=255 r=128 start"`
-draws a fixed pressed state (use `dpad=upright` for a diagonal). SonicPad's
+draws a fixed pressed state (use `dpad=upright` for a diagonal). RingPad's
 `tests/ios/DCPadCaptureTests.m` captures idle, pressed, menu, settings and
 Move Controls screenshots with it on any Simulator.

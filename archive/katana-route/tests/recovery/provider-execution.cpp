@@ -34,7 +34,7 @@ int main(int argc,char** argv){
 #ifdef RECOVERY_SBOARD_CAMERA
         // Fresh HLE post-BIOS state, before supplied register-bank/video/task
         // fixtures. Original main entry still does not prove IP.BIN handoff.
-        if(std::getenv("SONICPAD_RECOVERY_ORIGINAL_STARTUP")){
+        if(std::getenv("RINGPAD_RECOVERY_ORIGINAL_STARTUP")){
             run_original_startup(rt,ctx);
             throw std::runtime_error("Original main entry returned; startup acceptance remains open");
         }

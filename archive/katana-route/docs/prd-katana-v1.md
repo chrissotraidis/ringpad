@@ -1,7 +1,7 @@
-# SonicPad PRD: Sonic Adventure, native on Apple platforms
+# RingPad PRD: Sonic Adventure, native on Apple platforms
 
 Status: **conditional implementation specification; source-access gate unresolved**.
-Written: **5 October 2026**. Working name: **SonicPad** (`sonicpad`), not a reserved product name.
+Written: **5 October 2026**. Working name: **RingPad** (`ringpad`), not a reserved product name.
 Audience: an autonomous coding agent operating on Chris's **Apple Silicon Mac**.
 Companion: [`goal-loop.md`](goal-loop.md). Read both before acting.
 
@@ -18,7 +18,7 @@ clear the original G1.
 
 ## 1. Objective and delivery order
 
-Build SonicPad: a game-specific **native ARM64 iOS/iPadOS port of the Dreamcast Sonic Adventure**, with a macOS application as the bring-up and regression target. Preserve SARecomp's working game-specific logic and native runtime interfaces where available. Reuse Chris's Apple application-shell mechanisms rather than rebuilding their menus, layout editor, controller handoff and diagnostics from scratch.
+Build RingPad: a game-specific **native ARM64 iOS/iPadOS port of the Dreamcast Sonic Adventure**, with a macOS application as the bring-up and regression target. Preserve SARecomp's working game-specific logic and native runtime interfaces where available. Reuse Chris's Apple application-shell mechanisms rather than rebuilding their menus, layout editor, controller handoff and diagnostics from scratch.
 
 Use **SARecomp/Katana-derived ahead-of-time game code**, compiled for each Apple target. Do not substitute Sonic Adventure DX, a Windows executable wrapper, streaming, Rosetta, a general Dreamcast emulator or the GameCube/N64 runtimes used by other Pad projects. A change of foundation is a separate decision, not an automatic fallback.
 
@@ -89,14 +89,14 @@ Searches during the review did not establish a public, complete KatanaRecomp sou
 
 ## 4. Environment, workspace and authority
 
-Use a dedicated local `sonicpad/` integration workspace, not the donor repositories as writable project roots. Verify Apple Silicon/native execution, Xcode and SDK versions, C++20 support, CMake 3.25+, Ninja, Python 3, Git, `jq`, `rg`, `xcrun simctl`, Instruments and Metal tools. Record actual installed versions. Install only missing tooling needed by the chosen route; do not upgrade unrelated projects or the OS.
+Use a dedicated local `ringpad/` integration workspace, not the donor repositories as writable project roots. Verify Apple Silicon/native execution, Xcode and SDK versions, C++20 support, CMake 3.25+, Ninja, Python 3, Git, `jq`, `rg`, `xcrun simctl`, Instruments and Metal tools. Record actual installed versions. Install only missing tooling needed by the chosen route; do not upgrade unrelated projects or the OS.
 
 Choose and record deployment targets from the renderer/library requirements and build evidence. Donor minimum-OS badges are not Sonic compatibility guarantees. Check current UIKit scene startup requirements before reusing an older app delegate; SunPad itself documents a source-versus-published-build startup distinction. [S10]
 
 Recommended layout:
 
 ```text
-sonicpad/
+ringpad/
   docs/
     prd.md, goal-loop.md
     STATUS.md, JOURNAL.md, INPUTS.md, BOOTSTRAP-BLOCKERS.md
@@ -157,7 +157,7 @@ Wrong region/revision, missing tracks or hash mismatch blocks the game-input por
 | MoltenVK, if selected | Resolve and pin a tested distribution/source graph | Apple Vulkan-to-Metal candidate; inspected source reference in S12 is not an accepted build dependency. |
 | SDL3, FFmpeg, shader tools, other libraries | Resolve exact source/version/build configuration | Rebuild appropriate Apple slices; upstream Windows DLLs/Linux `.so` files are not reusable Apple binaries. |
 
-Create a new `dependencies.lock.json` containing full commit/archive SHA-256, source origin, patches, ABI identity, license status, compiler/SDK and target platform. Do not copy the SnapPad N64 dependency graph into SonicPad.
+Create a new `dependencies.lock.json` containing full commit/archive SHA-256, source origin, patches, ABI identity, license status, compiler/SDK and target platform. Do not copy the SnapPad N64 dependency graph into RingPad.
 
 **Reference drift matters:** current PaperPad uses PaperBoat and separately retains PaperPad Original documentation. The uploaded SnapPad PRD refers to the earlier ReCut/RT64 PaperPad. Do not mix their build recipes or claim their runtime architectures are interchangeable. Use SunPad for the main UI extraction and PaperPad for identified game-neutral mechanisms. [S10, S11]
 
@@ -480,13 +480,13 @@ Prefer a separate private integration workspace with immutable references while 
 
 Audit source and packages for original discs/assets, generated game C++, private source packs, personal saves, raw crash memory, credentials, provisioning/signing material, local paths and reference/cache directories. Do not copy the removed development archive into a release. An audit can validate a chosen boundary; it cannot grant redistribution rights.
 
-**A ROM-free app can still contain game-derived AOT machine code.** Public integration-source release, a game-code-free base app, and a playable binary/IPA have different content boundaries and need separate decisions. A future owner-local Mac generation workflow may be evaluated once generation is actually reproducible; this document does not claim existing PadMint support for SonicPad or authorize distributing generated game code.
+**A ROM-free app can still contain game-derived AOT machine code.** Public integration-source release, a game-code-free base app, and a playable binary/IPA have different content boundaries and need separate decisions. A future owner-local Mac generation workflow may be evaluated once generation is actually reproducible; this document does not claim existing PadMint support for RingPad or authorize distributing generated game code.
 
 A public candidate requires D1–D10, matrix rows 1–31, exact source/binary hashes, package/source audits, completed dependency notices and permission decisions, no unresolved critical crash/progression/save/privacy defect, and Chris's explicit final approval of the intended publication. Do not push branches/tags, publish builds, create releases or post game captures by momentum.
 
 Approved descriptive substance, only when justified by the implemented architecture and release decision:
 
-> SonicPad is an unofficial Apple-platform adaptation of Sonic Adventure Recompiled using ahead-of-time compiled Dreamcast game code and a native Apple application shell. Users must supply the supported original game data. Credit belongs to SEGA for the original game, SoNiCFReaK and the SARecomp/KatanaRecomp contributors for the upstream port, and the credited Apple-shell contributors. The project is not affiliated with or endorsed by SEGA.
+> RingPad is an unofficial Apple-platform adaptation of Sonic Adventure Recompiled using ahead-of-time compiled Dreamcast game code and a native Apple application shell. Users must supply the supported original game data. Credit belongs to SEGA for the original game, SoNiCFReaK and the SARecomp/KatanaRecomp contributors for the upstream port, and the credited Apple-shell contributors. The project is not affiliated with or endorsed by SEGA.
 
 Do not say “emulator-free,” “all devices supported,” “60 FPS everywhere” or “legal because no ROM is included.”
 

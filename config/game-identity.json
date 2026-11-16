@@ -1,5 +1,5 @@
 {
-  "schema": "sonicpad-game-identity-v2",
+  "schema": "ringpad-game-identity-v2",
   "private_only": true,
   "supported": {
     "release": "Sonic Adventure PAL v1.003 (1999)",

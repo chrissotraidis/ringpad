@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please use a private
-[GitHub security advisory](https://github.com/chrissotraidis/sonicpad/security/advisories/new)
+[GitHub security advisory](https://github.com/chrissotraidis/ringpad/security/advisories/new)
 for vulnerabilities involving code execution, unsafe file import, path escape,
 credentials or sensitive local data.
 
@@ -15,5 +15,5 @@ can be filed through GitHub Issues.
 
 ## Supported version
 
-SonicPad is an experimental source preview. Security fixes target the latest
+RingPad is an experimental source preview. Security fixes target the latest
 commit on `main`; no older release line is maintained.

@@ -6,8 +6,8 @@ cd "$(dirname "$0")/.."
 
 mkdir -p docs/artifacts
 out=$(mktemp -d "$PWD/docs/artifacts/prerequisites.XXXXXX")
-apple_dir=${SONICPAD_APPLE_DEVELOPER_DIR:-/Library/Developer/CommandLineTools}
-xcode_dir=${SONICPAD_XCODE_DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+apple_dir=${RINGPAD_APPLE_DEVELOPER_DIR:-/Library/Developer/CommandLineTools}
+xcode_dir=${RINGPAD_XCODE_DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 cat > "$out/probe.mm" <<'EOF'
 #import <Foundation/Foundation.h>
 #include <cstdio>

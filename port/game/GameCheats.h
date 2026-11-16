@@ -1,6 +1,6 @@
 #pragma once
 
-/* Cheats for Sonic Adventure PAL v1.003 (MK-5100050), the only disc SonicPad
+/* Cheats for Sonic Adventure PAL v1.003 (MK-5100050), the only disc RingPad
  * imports. Each cheat is a set of RAM writes repeated at every vertical blank
  * while it is on. The addresses were found on this exact disc: the published
  * CodeBreaker codes for the PAL "Version 1.0" release sit 0xC0 bytes higher,
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <string>
 
-namespace sonicpad {
+namespace ringpad {
 
 struct CheatInfo {
     const char *id;        /* stable key for settings, e.g. "rings" */
@@ -25,9 +25,9 @@ const CheatInfo& cheat_info(size_t index);
 bool cheat_enabled(size_t index);
 void set_cheat_enabled(size_t index, bool enabled);
 /* Turns on the cheats named in a comma-separated list of ids; for scripted
- * verification runs (SONICPAD_CHEATS). Returns how many matched. */
+ * verification runs (RINGPAD_CHEATS). Returns how many matched. */
 int enable_cheats_from_list(const std::string& ids);
 /* Starts applying cheats at every vertical blank. Safe to call more than once. */
 void install_cheats();
 
-} // namespace sonicpad
+} // namespace ringpad

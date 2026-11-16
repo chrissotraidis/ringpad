@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad Dreamcast controller-slot bookkeeping.
+/* RingPad Dreamcast controller-slot bookkeeping.
  *
  * Reuses the pinned SunPad mechanism (ref/sunpad/apple/ios/
  * SunPadControllerSlots.h) unchanged in intent: Apple's GameController layer
@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace sonicpad {
+namespace ringpad {
 
 struct ControllerSlotChange {
     uintptr_t instance = 0;
@@ -74,4 +74,4 @@ private:
     std::array<uintptr_t, kMaxPlayers> slots_{};
 };
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

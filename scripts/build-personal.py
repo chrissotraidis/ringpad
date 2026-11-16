@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build a personal SonicPad app from the player's own Sonic Adventure disc.
+"""Build a personal RingPad app from the player's own Sonic Adventure disc.
 
-  scripts/build-personal.py --gdi <disc>.gdi --output SonicPad.ipa [--jobs N]
+  scripts/build-personal.py --gdi <disc>.gdi --output RingPad.ipa [--jobs N]
 
 Needs an Apple Silicon Mac with full Xcode and CMake 3.24+. The disc must be
 the PAL v1.003 GDI (MK-5100050) with its three tracks next to it. Steps:
@@ -62,7 +62,7 @@ def flycast(lock):
     if head != pin:
         raise SystemExit(f'{path} is at {head}, not the pinned Flycast {pin}. Move it aside and run again.')
     if output('git', '-C', path, 'status', '--porcelain', '--untracked-files=no'):
-        raise SystemExit(f'{path} has local changes; SonicPad builds against an unmodified Flycast.')
+        raise SystemExit(f'{path} has local changes; RingPad builds against an unmodified Flycast.')
     # Partial clones keep Flycast's dependency history to about 255 MB instead of 1.4 GB.
     run('git', '-C', path, 'submodule', 'update', '--init', '--recursive', '--filter=blob:none')
     run('git', '-C', path, 'remote', 'set-url', '--push', 'origin', 'DISABLED')
@@ -120,19 +120,19 @@ def main():
 
     build = WORK / 'ios'
     run('cmake', '-S', ROOT, '-B', build, '-G', 'Xcode', '-DCMAKE_SYSTEM_NAME=iOS', '-DCMAKE_OSX_SYSROOT=iphoneos',
-        '-DCMAKE_BUILD_TYPE=Release', f'-DSONICPAD_RECOMP_DIR={recomp}', '-Wno-deprecated')
-    run('xcodebuild', 'build', '-project', build / 'sonicpad.xcodeproj', '-target', 'flycast',
+        '-DCMAKE_BUILD_TYPE=Release', f'-DRINGPAD_RECOMP_DIR={recomp}', '-Wno-deprecated')
+    run('xcodebuild', 'build', '-project', build / 'ringpad.xcodeproj', '-target', 'flycast',
         '-configuration', 'Release', '-sdk', 'iphoneos', '-jobs', args.jobs, '-quiet',
         'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO')
-    app = build / 'flycast/Release-iphoneos/SonicPad.app'
+    app = build / 'flycast/Release-iphoneos/RingPad.app'
     expected = f'{expected}+{expected_static}'
-    if expected.encode() not in (app / 'SonicPad').read_bytes():
+    if expected.encode() not in (app / 'RingPad').read_bytes():
         raise SystemExit(f'{app.name} does not contain the recompiled code for manifest {expected}')
 
     result.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='sonicpad-', dir=result.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix='ringpad-', dir=result.parent) as temporary:
         staging = Path(temporary)
-        shutil.copytree(app, staging / 'Payload/SonicPad.app', symlinks=True)
+        shutil.copytree(app, staging / 'Payload/RingPad.app', symlinks=True)
         archive = staging / 'personal.ipa'
         run('ditto', '-c', '-k', '--norsrc', '--keepParent', staging / 'Payload', archive)
         os.link(archive, result)   # never replaces a file that appeared meanwhile

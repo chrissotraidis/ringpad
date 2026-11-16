@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publishable block list for SonicPad's recompiled code.
+"""Publishable block list for RingPad's recompiled code.
 
 The trace manifest (generated/recomp-manifest.txt) holds the game's own SH-4
 instructions, so it stays private. Every traced block is also a byte range of
@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BLOCKS = ROOT / 'config/recomp-blocks.txt'
 MANIFEST = ROOT / 'generated/recomp-manifest.txt'
-HEADER = '# sonicpad-trace v1: pc nops cycles ops...'
+HEADER = '# ringpad-trace v1: pc nops cycles ops...'
 REIOS = 'reios'   # Flycast's high-level BIOS writes its trap opcode here, not the disc
 BOOT = 'IP.BIN'   # the boot sector: the first 16 sectors of the high-density area
 
@@ -189,7 +189,7 @@ def export(args):
     # Blocks found statically from the disc, seeded by these traced ones.
     from discover_blocks import static_manifest
     _, static_id, found, _ = static_manifest(disc, args.manifest)
-    out = ['# sonicpad-blocks v2: pc nops cycles @source offset; sources are @index name sha256',
+    out = ['# ringpad-blocks v2: pc nops cycles @source offset; sources are @index name sha256',
            '# No game data: each block is a byte range of a file on the player\'s disc,',
            '# rebuilt by scripts/recomp/disc_blocks.py import.',
            '# manifest %s' % digest(manifest_text(blocks).encode()),

@@ -1,4 +1,4 @@
-// SonicPad static recompilation: interface between generated SH-4 blocks and the runtime.
+// RingPad static recompilation: interface between generated SH-4 blocks and the runtime.
 #pragma once
 #include "types.h"
 #include "hw/sh4/sh4_if.h"

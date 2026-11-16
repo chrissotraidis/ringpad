@@ -1,18 +1,18 @@
-// SonicPad UI tests: real UIKit touches against the iOS shell in the Simulator.
+// RingPad UI tests: real UIKit touches against the iOS shell in the Simulator.
 //
 // Run with scripts/ios/run-ui-tests.sh. The owner's disc is passed through
-// TEST_RUNNER_SONICPAD_GDI_DIR (folder) and TEST_RUNNER_SONICPAD_GDI (file).
-// Touch tests read Flycast's port-A values from the SONICPAD_INPUT_DEBUG label.
+// TEST_RUNNER_RINGPAD_GDI_DIR (folder) and TEST_RUNNER_RINGPAD_GDI (file).
+// Touch tests read Flycast's port-A values from the RINGPAD_INPUT_DEBUG label.
 #import <XCTest/XCTest.h>
 
 // Flycast DreamcastKey bits (core/input/gamepad.h).
 static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 4, kDown = 1u << 5,
 		kLeft = 1u << 6, kRight = 1u << 7, kY = 1u << 9, kX = 1u << 10;
 
-@interface SonicPadUITests : XCTestCase
+@interface RingPadUITests : XCTestCase
 @end
 
-@implementation SonicPadUITests
+@implementation RingPadUITests
 
 - (void)setUp
 {
@@ -39,7 +39,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 - (XCUIApplication *)launchGame
 {
 	XCUIApplication *app = [[XCUIApplication alloc] init];
-	app.launchEnvironment = @{ @"SONICPAD_GAME": [self env:@"SONICPAD_GDI"], @"SONICPAD_INPUT_DEBUG": @"1" };
+	app.launchEnvironment = @{ @"RINGPAD_GAME": [self env:@"RINGPAD_GDI"], @"RINGPAD_INPUT_DEBUG": @"1" };
 	app.launchArguments = @[@"-DCPad.SonicAdventure.tablet", @"{}", @"-DCPad.SonicAdventure.phone", @"{}"];
 	[app launch];
 	XCTAssertTrue([app.buttons[@"dcpad.menu"] waitForExistenceWithTimeout:30]);
@@ -126,7 +126,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 - (void)testFreshInstallShowsImportInLandscape
 {
 	XCUIApplication *app = [[XCUIApplication alloc] init];
-	app.launchEnvironment = @{ @"SONICPAD_IGNORE_INSTALLED": @"1" };
+	app.launchEnvironment = @{ @"RINGPAD_IGNORE_INSTALLED": @"1" };
 	[app launch];
 	XCUIElement *choose = app.buttons[@"sp.import.choose"];
 	XCTAssertTrue([choose waitForExistenceWithTimeout:20]);
@@ -146,7 +146,7 @@ static const unsigned kB = 1u << 1, kA = 1u << 2, kStart = 1u << 3, kUp = 1u << 
 - (void)testImportVerifiesDiscAndStartsGame
 {
 	XCUIApplication *app = [[XCUIApplication alloc] init];
-	app.launchEnvironment = @{ @"SONICPAD_IMPORT": [self env:@"SONICPAD_GDI_DIR"] };
+	app.launchEnvironment = @{ @"RINGPAD_IMPORT": [self env:@"RINGPAD_GDI_DIR"] };
 	[app launch];
 	XCUIElement *menu = app.buttons[@"dcpad.menu"];
 	XCTAssertTrue([menu waitForExistenceWithTimeout:120], @"import finished and the game view is shown");

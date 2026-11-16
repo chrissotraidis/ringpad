@@ -20,8 +20,8 @@ static std::atomic<int> gLogFD{-1};
 static int gConsoleFD = -1;   // the original stderr, so Xcode and devicectl still see output
 static NSString *gLogDir;
 
-static NSString *CurrentPath(void) { return [gLogDir stringByAppendingPathComponent:@"sonicpad.log"]; }
-static NSString *PreviousPath(void) { return [gLogDir stringByAppendingPathComponent:@"sonicpad.previous.log"]; }
+static NSString *CurrentPath(void) { return [gLogDir stringByAppendingPathComponent:@"ringpad.log"]; }
+static NSString *PreviousPath(void) { return [gLogDir stringByAppendingPathComponent:@"ringpad.previous.log"]; }
 
 static int OpenLog(void)
 {
@@ -110,7 +110,7 @@ void SPDiagnosticsStart(void)
 	if (gLogDir != nil)
 		return;
 	NSString *support = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
-	gLogDir = [support stringByAppendingPathComponent:@"SonicPad/Logs"];
+	gLogDir = [support stringByAppendingPathComponent:@"RingPad/Logs"];
 	[NSFileManager.defaultManager createDirectoryAtPath:gLogDir withIntermediateDirectories:YES attributes:nil error:nil];
 	Rotate();   // each launch starts a fresh file; the last session stays readable
 	gLogFD = OpenLog();
@@ -130,9 +130,9 @@ void SPDiagnosticsStart(void)
 	NSProcessInfo *info = NSProcessInfo.processInfo;
 	UIDevice *device = UIDevice.currentDevice;
 	NSDictionary *fs = [NSFileManager.defaultManager attributesOfFileSystemForPath:NSHomeDirectory() error:nil];
-	SPLog(@"session start: SonicPad %@ (%@, %@) on %@ %@ %@, %.1f GB RAM, %.1f GB free, thermal %@, low power %d",
+	SPLog(@"session start: RingPad %@ (%@, %@) on %@ %@ %@, %.1f GB RAM, %.1f GB free, thermal %@, low power %d",
 			[bundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"], [bundle objectForInfoDictionaryKey:@"CFBundleVersion"],
-			[bundle objectForInfoDictionaryKey:@"SonicPadCommit"],
+			[bundle objectForInfoDictionaryKey:@"RingPadCommit"],
 			Machine(), device.systemName, device.systemVersion, info.physicalMemory / 1073741824.0,
 			[fs[NSFileSystemFreeSize] doubleValue] / 1e9, ThermalName(info.thermalState), info.lowPowerModeEnabled ? 1 : 0);
 
@@ -151,8 +151,8 @@ void SPLog(NSString *format, ...)
 	va_start(args, format);
 	NSString *line = [[NSString alloc] initWithFormat:format arguments:args];
 	va_end(args);
-	os_log(OS_LOG_DEFAULT, "SonicPad: %{public}@", line);
-	fprintf(stderr, "SONICPAD_APP %s\n", line.UTF8String);
+	os_log(OS_LOG_DEFAULT, "RingPad: %{public}@", line);
+	fprintf(stderr, "RINGPAD_APP %s\n", line.UTF8String);
 }
 
 int SPDiagnosticsFD(void)
@@ -177,7 +177,7 @@ NSURL *SPDiagnosticsReportURL(void)
 	}
 	NSDateFormatter *f = [[NSDateFormatter alloc] init];
 	f.dateFormat = @"yyyyMMdd-HHmmss";
-	NSString *name = [NSString stringWithFormat:@"SonicPad-Diagnostics-%@.txt", [f stringFromDate:NSDate.date]];
+	NSString *name = [NSString stringWithFormat:@"RingPad-Diagnostics-%@.txt", [f stringFromDate:NSDate.date]];
 	NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:name]];
 	return [report writeToURL:url atomically:YES] ? url : nil;
 }

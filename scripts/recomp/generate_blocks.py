@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate SonicPad ahead-of-time C++ for traced SH-4 blocks.
+"""Generate RingPad ahead-of-time C++ for traced SH-4 blocks.
 
-Input: one or more trace files written by the SonicPad executor
-(SONICPAD_TRACE=<file>), each line "PC NOPS CYCLES OP...". Output: C++ sources
+Input: one or more trace files written by the RingPad executor
+(RINGPAD_TRACE=<file>), each line "PC NOPS CYCLES OP...". Output: C++ sources
 in generated/recomp/ that the root CMake build compiles into the app.
 
 Each instruction calls the same Flycast handler the interpreter would use;
@@ -353,7 +353,7 @@ def main():
         inputs.append(args.manifest)
     blocks = read_traces(inputs)
     ordered = sorted(blocks.items())
-    manifest = ['# sonicpad-trace v1: pc nops cycles ops...']
+    manifest = ['# ringpad-trace v1: pc nops cycles ops...']
     manifest += [f'{pc:08X} {len(ops)} {cycles} ' + ' '.join(f'{op:04X}' for op in ops)
                  for (pc, ops), cycles in ordered]
     manifest_text = '\n'.join(manifest) + '\n'

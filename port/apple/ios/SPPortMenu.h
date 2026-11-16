@@ -1,4 +1,4 @@
-// Standard ••• menu items for a Dreamcast port on SonicPad's foundation
+// Standard ••• menu items for a Dreamcast port on RingPad's foundation
 // (recompiled code on Flycast's hardware layer): save states, display, sound
 // and VMU save export. Nothing here is specific to Sonic Adventure, so the
 // next port can hand the same items to its DCPad overlay.
@@ -35,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 /* Replaces the port A memory card with a 128 KB VMU image chosen in Files,
  * keeping the current card as a dated backup, then restarts the game. */
 - (UIAction *)importVMUActionForGameLoaded:(BOOL)loaded;
-/* The same import without the picker or the confirmation (SONICPAD_IMPORT_VMU). */
+/* The same import without the picker or the confirmation (RINGPAD_IMPORT_VMU). */
 - (void)importVMUFromURLs:(NSArray<NSURL *> *)urls;
 /* Widescreen is offered on phones, whose screens are wider than 4:3. */
 + (BOOL)widescreenAvailable;

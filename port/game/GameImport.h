@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad game import: verify an owner-supplied Sonic Adventure GDI.
+/* RingPad game import: verify an owner-supplied Sonic Adventure GDI.
  *
  * Only the PAL v1.003 (MK-5100050) GDI with its three tracks is accepted. The
  * track contents decide compatibility: layout, sizes and SHA-256 must match
@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace sonicpad {
+namespace ringpad {
 
 struct TrackIdentity {
     int number;
@@ -61,4 +61,4 @@ std::string sha256_file(const std::string& path, const HashProgress& progress = 
 GameCheck verify_game(const std::string& folder_or_gdi, const GameIdentity& identity,
                       const HashProgress& progress = {});
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

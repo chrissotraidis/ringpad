@@ -35,6 +35,20 @@ See [rights and distribution boundaries](RIGHTS-STATUS.md).
 | Whole-repository publication review | Blocked by archived research in history |
 | Physical iPad or iPhone validation | Not requested for this preparation pass; the 31 October face-rendering check on the M2 iPad is recorded in [STATUS.md](STATUS.md#face-rendering-investigation-31-october-2026) |
 
+### RingPad rename candidate (16 November 2026)
+
+| Check | Result |
+|---|---|
+| Host tests and repository safety | Passed on `247e364` |
+| Simulator UI | iPad Air 11-inch (M4) Simulator: 15 passed, no failures |
+| Physical iPad | iPad Pro 12.9-inch (M2): signed `com.chrissotraidis.ringpad` build, disc import, Chaos 0 route to the fight at 0.99x, 99.999% recompiled |
+| Fresh PadMint player build from clean checkout | Passed for `247e364`, PadMint main `f13bfe9` (0.6.6), Apple Python 3.9.6; 8 min 33 s, 1.8 GiB, publication gate PASS, personal-only |
+| GitHub source/host CI | Not run: GitHub did not start the job because of an account billing or spending-limit problem. CI now targets `macos-15` |
+
+PadMint's `player-check.sh` now audits the catalog first and exits when a game
+has no catalog entry, so the steps after that audit were run by hand with the
+same commands, Apple Python and an empty PadMint folder.
+
 The fresh player build produced a personal unsigned IPA with iOS 16 minimum,
 iOS 27.1 SDK, declared scene startup and a passing package gate. PadMint marks
 it **personal-only, not publishable**. Its runtime launch was not tested by
@@ -56,15 +70,15 @@ build. It uses Apple's `/usr/bin/python3`, a fresh source clone and an empty
 PadMint folder. With the player's supported PAL v1.003 GDI available locally:
 
 ```sh
-# Run from a clean checkout of PadMint main, before tagging SonicPad.
-scripts/player-check.sh sonicpad ios "/path/to/Sonic Adventure.gdi" "/path/to/sonicpad"
+# Run from a clean checkout of PadMint main, before tagging RingPad.
+scripts/player-check.sh ringpad ios "/path/to/Sonic Adventure.gdi" "/path/to/ringpad"
 ```
 
 Keep its workspace private: it contains a personal IPA and generated game code.
 Record both repository revisions, the exit status, package checks and measured
 build-space use. A build failure blocks publication.
 
-SonicPad is not currently in PadMint's catalog. Its `padmint.json` can be used
+RingPad is not currently in PadMint's catalog. Its `padmint.json` can be used
 with a local checkout; adding a catalog entry requires separate approval.
 After an approved catalog/release publication, repeat the player check without
 the checkout argument to test the actual download route. Do not announce that
@@ -72,9 +86,9 @@ route before it passes.
 
 ## Release contents
 
-The prepared attachments are `sonicpad-v0.1.0-padmint.json` and `SHA256SUMS`.
+The prepared attachments are `ringpad-v0.1.0-padmint.json` and `SHA256SUMS`.
 Source comes from the reviewed release tree. A private source export can be
-prepared with `git archive --format=tar.gz --prefix=sonicpad-v0.1.0/ HEAD`;
+prepared with `git archive --format=tar.gz --prefix=ringpad-v0.1.0/ HEAD`;
 inspect its file list and verify that it contains no `archive/`, private inputs,
 generated code or binary app packages before distributing it.
 

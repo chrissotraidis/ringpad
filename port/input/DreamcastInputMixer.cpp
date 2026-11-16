@@ -1,4 +1,4 @@
-/* SonicPad Dreamcast input mixer implementation.
+/* RingPad Dreamcast input mixer implementation.
  *
  * Mirrors the pinned SunPad mixer (ref/sunpad/apple/shared/SunPadInputMixer.mm)
  * with the GameCube C-stick axis removed. The EdgeLatch provides the donor's
@@ -8,7 +8,7 @@
 
 #include <cstdlib>
 
-namespace sonicpad {
+namespace ringpad {
 
 namespace {
 int abs_i8(int8_t v) noexcept { return v < 0 ? -int(v) : int(v); }
@@ -21,11 +21,11 @@ DreamcastInputMixer& DreamcastInputMixer::shared() noexcept {
 }
 
 void DreamcastInputMixer::clear_locked(unsigned index) noexcept {
-    states_[index] = SonicPadDreamcastState{};
+    states_[index] = RingPadDreamcastState{};
     latches_[index].clear();
 }
 
-void DreamcastInputMixer::setState(const SonicPadDreamcastState& state,
+void DreamcastInputMixer::setState(const RingPadDreamcastState& state,
                                    bool from_touch) noexcept {
     std::scoped_lock lock(mutex_);
     const unsigned index = from_touch ? 0u : 1u;
@@ -45,12 +45,12 @@ void DreamcastInputMixer::clearAll() noexcept {
     clear_locked(1u);
 }
 
-SonicPadDreamcastState DreamcastInputMixer::consumeMerged() noexcept {
+RingPadDreamcastState DreamcastInputMixer::consumeMerged() noexcept {
     std::scoped_lock lock(mutex_);
-    const SonicPadDreamcastState& touch = states_[0];
-    const SonicPadDreamcastState& controller = states_[1];
+    const RingPadDreamcastState& touch = states_[0];
+    const RingPadDreamcastState& controller = states_[1];
 
-    SonicPadDreamcastState merged{};
+    RingPadDreamcastState merged{};
     /* Held bits plus this sample's latched edges. */
     merged.buttons = uint16_t(unsigned(touch.buttons) | unsigned(controller.buttons) |
                               latches_[0].consume(0u) | latches_[1].consume(0u));
@@ -64,4 +64,4 @@ SonicPadDreamcastState DreamcastInputMixer::consumeMerged() noexcept {
     return merged;
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

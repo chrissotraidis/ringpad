@@ -1,4 +1,4 @@
-/* SonicPad Dreamcast input adapter implementation.
+/* RingPad Dreamcast input adapter implementation.
  *
  * Pure C++20, no host or guest dependencies. The guest mask values mirror
  * SARecomp src/sonic_input_bindings.hpp so this adapter is a verified copy of
@@ -8,14 +8,14 @@
 
 #include <cmath>
 
-namespace sonicpad {
+namespace ringpad {
 
 namespace {
-unsigned clamped_trigger_bits(const SonicPadDreamcastState& s, int threshold) noexcept {
+unsigned clamped_trigger_bits(const RingPadDreamcastState& s, int threshold) noexcept {
     unsigned bits = 0;
     const int t = threshold < 0 ? 0 : (threshold > 255 ? 255 : threshold);
-    if (int(s.triggerL) > t) bits |= SonicPadDC_TriggerL;
-    if (int(s.triggerR) > t) bits |= SonicPadDC_TriggerR;
+    if (int(s.triggerL) > t) bits |= RingPadDC_TriggerL;
+    if (int(s.triggerR) > t) bits |= RingPadDC_TriggerR;
     return bits;
 }
 } /* namespace */
@@ -37,7 +37,7 @@ float apply_radial_deadzone(float x, float y, unsigned deadzone_percent,
     return capped;
 }
 
-ActionSnapshot adapt(const SonicPadDreamcastState& state,
+ActionSnapshot adapt(const RingPadDreamcastState& state,
                      unsigned deadzone_percent, int trigger_threshold) noexcept {
     ActionSnapshot out;
     if (!state.connected) return out;
@@ -63,24 +63,24 @@ ActionSnapshot adapt(const SonicPadDreamcastState& state,
 
 unsigned action_pad_bit(DreamcastAction action) noexcept {
     switch (action) {
-        case DreamcastAction::Up:    return SonicPadDC_Up;
-        case DreamcastAction::Down:  return SonicPadDC_Down;
-        case DreamcastAction::Left:  return SonicPadDC_Left;
-        case DreamcastAction::Right: return SonicPadDC_Right;
-        case DreamcastAction::A:     return SonicPadDC_A;
-        case DreamcastAction::B:     return SonicPadDC_B;
-        case DreamcastAction::X:     return SonicPadDC_X;
-        case DreamcastAction::Y:     return SonicPadDC_Y;
-        case DreamcastAction::Start: return SonicPadDC_Start;
+        case DreamcastAction::Up:    return RingPadDC_Up;
+        case DreamcastAction::Down:  return RingPadDC_Down;
+        case DreamcastAction::Left:  return RingPadDC_Left;
+        case DreamcastAction::Right: return RingPadDC_Right;
+        case DreamcastAction::A:     return RingPadDC_A;
+        case DreamcastAction::B:     return RingPadDC_B;
+        case DreamcastAction::X:     return RingPadDC_X;
+        case DreamcastAction::Y:     return RingPadDC_Y;
+        case DreamcastAction::Start: return RingPadDC_Start;
         default: return 0;
     }
 }
 
 bool held(const ActionSnapshot& snap, DreamcastAction action) noexcept {
     unsigned bit = action_pad_bit(action);
-    if (action == DreamcastAction::LeftTrigger) bit = SonicPadDC_TriggerL;
-    if (action == DreamcastAction::RightTrigger) bit = SonicPadDC_TriggerR;
+    if (action == DreamcastAction::LeftTrigger) bit = RingPadDC_TriggerL;
+    if (action == DreamcastAction::RightTrigger) bit = RingPadDC_TriggerR;
     return bit != 0 && (snap.held_mask & bit) != 0;
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

@@ -1,9 +1,9 @@
 #!/bin/sh
-# SonicPad host test runner.
+# RingPad host test runner.
 #
 # Builds and runs source-derived host tests for the game-independent input
 # contract. The default is the independently installed Apple Command Line
-# Tools, selected for this process only. SONICPAD_HOST_TOOLCHAIN=llvm retains
+# Tools, selected for this process only. RINGPAD_HOST_TOOLCHAIN=llvm retains
 # the Homebrew lane. These tests do not link Katana or test the guest ABI.
 #
 # Usage: scripts/run-host-tests.sh
@@ -11,10 +11,10 @@ set -u
 
 cd "$(dirname "$0")/.." || exit 2
 
-lane=${SONICPAD_HOST_TOOLCHAIN:-apple}
+lane=${RINGPAD_HOST_TOOLCHAIN:-apple}
 case "$lane" in
     apple)
-        DEVELOPER_DIR=${SONICPAD_APPLE_DEVELOPER_DIR:-/Library/Developer/CommandLineTools}
+        DEVELOPER_DIR=${RINGPAD_APPLE_DEVELOPER_DIR:-/Library/Developer/CommandLineTools}
         export DEVELOPER_DIR
         CXX=${CXX:-/usr/bin/clang++}
         SDK=${SDK:-$(/usr/bin/xcrun --sdk macosx --show-sdk-path)}

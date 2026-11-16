@@ -1,4 +1,4 @@
-# SonicPad journal
+# RingPad journal
 
 ## 9 October 2026 — live callback and original movie context handoff
 
@@ -1865,7 +1865,7 @@ Root revision: 65fefee; clean at start. New implementation identity: scripts/con
 Pins: SARecomp d5288fe64e68711dd9f0e6718c1d0fb2eeca92f2; SunPad c77dd61b824e46d0c9a57ff4f8eb2682fceefb1b; PaperPad a6f6999a570156f6794ff3fa79f810cfad71c4fc, all verified, push-disabled.
 Hypothesis: previous all-Apple-compilation blocker was caused by the default full-Xcode selection; independently installed CLT may be usable. A native Apple compile/link/run would falsify the prior universal claim. Source-only public history/dependencies may close portions of G1 without obtaining the removed asset-containing archive.
 Toolchain experiment: DEVELOPER_DIR=/Library/Developer/CommandLineTools /usr/bin/clang++ --version succeeds: Apple clang 21.0.0. ARM64 Objective-C++ Foundation probe compiles, links and runs using Apple's compiler/linker and macOS SDK 27.0. vtool: MACOS, minimum 13.0, SDK 27.0, LD 27037.1. Global xcode-select and license settings untouched. Full Xcode has license EA2002 but recorded acceptance is EA1990/Xcode 26.6. Full Xcode/simctl remain unavailable.
-Implementation: scripts/check-prerequisites.sh compiles/runs a private macOS probe and separately checks full Xcode; current exit 2 is intentional for incomplete Xcode/mobile readiness. scripts/run-host-tests.sh defaults to Apple CLT, retains explicit SONICPAD_HOST_TOOLCHAIN=llvm, preserves compiler/SDK overrides, isolates outputs by lane, and promotes a successfully compiled .building output before running it.
+Implementation: scripts/check-prerequisites.sh compiles/runs a private macOS probe and separately checks full Xcode; current exit 2 is intentional for incomplete Xcode/mobile readiness. scripts/run-host-tests.sh defaults to Apple CLT, retains explicit RINGPAD_HOST_TOOLCHAIN=llvm, preserves compiler/SDK overrides, isolates outputs by lane, and promotes a successfully compiled .building output before running it.
 Validation: Apple lane 46/46 + 50/50 + 46/46 PASS, exit 0; LLVM lane same 142 checks PASS, exit 0. CXX=/usr/bin/false scripts/run-host-tests.sh returns 4 (BUILD FAILED), never runs a stale binary; Apple lane rerun afterward passes. Shell-only tests do not prove guest ABI, UIKit routing, physical input or gameplay.
 Source scan: scoped Python os.walk scan completed and was explicitly waited to exit 0. Roots GitHub, Documents, Downloads, Desktop, .local, /Volumes; 1,235,012 filenames, no traversal errors, excludes .git/node_modules/__pycache__. Relevant filename criteria: GDI, native_port.hpp, Katana source archive/development parts and named libraries. Zero candidates. Prior unfinished root-wide searches do not prove exhaustive machine-wide absence.
 Source recovery: inspected public source-only Git history for the six r354 title mismatches. Five match exactly at 40cb8ca05dd849390cbcde31f4b00da0a4137511; exact r354 CMakeLists.txt not found. scripts/recover-title-source.py privately materializes 33 matching pinned-current files and the five historical matches, each verified against r354 size/hash. 38/39; exit 2 for CMake missing. Second invocation confirms cache contents and same result. No game assets acquired. Private staged provenance .local/source-only/r354/title-source/source-provenance.json SHA-256 03bdfbc622ec36daeeba9b9b7bb6dbc70bb4d85241ed0cfefcabb1dd2f423c98.
@@ -2831,7 +2831,7 @@ unchanged. Gameplay smoke is not run: no playable core exists yet.
 
 Previous goal turn classified as progress: connected camera/SBOARD execution
 changed the next measured boundary. Followed C5/C6 at roota343a2d; preserved
-all dirty/private evidence. Memory registry had no SonicPad/Katana entry.
+all dirty/private evidence. Memory registry had no RingPad/Katana entry.
 Original Katana/PAL G1 unresolved; no archive/build retry or Simulator/game launch.
 
 Inspected descriptor0C90A5B8 and original905480/9054F6/8C0A1620/8C0A1690.
@@ -2984,11 +2984,11 @@ provider, Mini Cart and failed-load controls. Six core patches and owner inputs
 are unchanged; only the bounded harness/generator mode changed. Reports bind
 sources, generated units, binary identity and inputs.155509/initialization-contract.json
 records exact scope. R3/R4/G1, scheduler/normal boot, real game output and supported
-PAL acquisition remain open. No Simulator or SonicPad game app was launched.
+PAL acquisition remain open. No Simulator or RingPad game app was launched.
 
 Final checks:155509 and155425 pass with28/22 current source/input/generated-file
 hashes plus binary hashes verified,12/8 case counts, incomplete-goal flags,
-Python syntax, git diff --check and repository safety. No Simulator, SonicPad or
+Python syntax, git diff --check and repository safety. No Simulator, RingPad or
 owned recovery probe remains running. Goal stays active; next measurement is C8.
 
 ## Original startup producers joined to stage updates —160408
@@ -3770,7 +3770,7 @@ player misses and50 texture byte checks. Explicit bank1, normal startup/order,
 combined scene, complete update, ground contact and gameplay remain open.
 215723 remains latest full bounded regression. Original G1 and R3/R4 remain
 unresolved; no production-foundation decision. Eight core patches unchanged.
-All three sessions terminal exit1; no Simulator or SonicPad app launched.
+All three sessions terminal exit1; no Simulator or RingPad app launched.
 
 Private `auxiliary-update-contract.json` manifests:
 
@@ -3911,7 +3911,7 @@ Independent expected controls for0,1,FFFFFFFF and live seed are recorded but not
 executed. Validate this arithmetic in isolation before another full continuation.
 
 The exact expanded binary302f793ab172f4e9b1741956f1bd1351fa43371d1860c06e8b25c88c61d74748
-also ran without SONICPAD_RECOVERY_OUTER_LOOP into an isolated baseline-regression
+also ran without RINGPAD_RECOVERY_OUTER_LOOP into an isolated baseline-regression
 capture directory; exit0. Both cases pass existing runtime assertions, all five
 external audits, angle-restoration corruption controls and exact repeat images.
 All six render captures match000204. This is a cached native regression, not a
@@ -14616,7 +14616,7 @@ scan or replay guest state.
 
 Storage fix: the existing `capture-storage.hpp` already compares live memory
 before APFS cloning and verifies the output afterward. The runner had inherited
-a stale reference from8October. Set `SONICPAD_RECOVERY_CAPTURE_REFERENCE` to the
+a stale reference from8October. Set `RINGPAD_RECOVERY_CAPTURE_REFERENCE` to the
 verified immediate parent; keep this override in future runner copies. This run
 clones188 byte-identical captures /1,180,565,504 logical bytes and writes seven
 new captures /54,788,096 bytes through that helper. Saved verifier checks all
@@ -14677,7 +14677,7 @@ and `work/dreamcast-recovery/live-movie-worker-pack-inventory.json`.
 
 Fresh hardware capture headers extend the existing live-byte comparison and
 APFS sharing mechanism to VRAM/TA vectors. Preserve the immediate-parent
-`SONICPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
+`RINGPAD_RECOVERY_CAPTURE_REFERENCE` override in subsequent runners. This run
 shares 1,755,450,412 logical bytes and writes 79,954,132 bytes through the helpers;
 all shared outputs verify against their parent. No prior evidence was changed
 or deleted, and capture files never supply guest state. Free space at this

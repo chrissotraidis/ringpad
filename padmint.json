@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "id": "sonicpad",
-  "name": "SonicPad",
+  "id": "ringpad",
+  "name": "RingPad",
   "game": "Sonic Adventure (Dreamcast, PAL v1.003)",
   "kind": "disc-translation",
   "status": "experimental",

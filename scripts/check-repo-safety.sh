@@ -1,5 +1,5 @@
 #!/bin/sh
-# SonicPad repository-safety check.
+# RingPad repository-safety check.
 #
 # Checks tracked filenames and recipe metadata before a commit or release.
 # Private inputs remain ignored and reference checkouts cannot push.
@@ -14,7 +14,7 @@ ok()   { printf '  [ ok ] %s\n' "$1"; }
 bad()  { printf '  [FAIL] %s\n' "$1"; fail=1; }
 
 cd "$(dirname "$0")/.." || exit 2
-printf 'SonicPad repository-safety check (%s)\n' "$(pwd)"
+printf 'RingPad repository-safety check (%s)\n' "$(pwd)"
 
 printf '\nIgnored private inputs and evidence:\n'
 for entry in ref/ private-inputs/ work/ generated/ out/ docs/artifacts/; do

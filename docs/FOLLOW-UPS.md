@@ -1,4 +1,4 @@
-# SonicPad follow-ups
+# RingPad follow-ups
 
 Updated **31 October 2026**. Open maintainer work, with what is already known
 and the next step for each item. Player-facing limits are in
@@ -37,7 +37,7 @@ Known so far (31 October 2026):
 - **Not the recompiler.** The translator calls Flycast's own handler for every
   floating-point instruction, so vertex math matches the interpreter. On the
   Mac build, the opening Station Square cutscene with recompilation on and with
-  `SONICPAD_NO_AOT=1` gave matching close-ups of Sonic's face: 3.5–4.9% RMSE
+  `RINGPAD_NO_AOT=1` gave matching close-ups of Sonic's face: 3.5–4.9% RMSE
   between corresponding frames, from a small timing offset, against about 26%
   between neighbouring frames of one run.
 - **Not reproduced in the captured shots.** Neither the Mac (OpenGL) runs nor
@@ -59,7 +59,7 @@ Next steps:
    attached iPad, and note the scene and graphics settings.
 2. Write a development state just before that moment (`STATE:` in an input
    script) and replay it on the iPad from `Documents` with
-   `SONICPAD_STATE_LOAD`, `SONICPAD_INPUT_SCRIPT` and `SHOT:` events.
+   `RINGPAD_STATE_LOAD`, `RINGPAD_INPUT_SCRIPT` and `SHOT:` events.
 3. Compare that scene with **Dreamcast Original** and with Flycast's
    **Per Strip** sorting (`rend.PerStripSorting`). Ship whichever setting
    fixes it, if one does.

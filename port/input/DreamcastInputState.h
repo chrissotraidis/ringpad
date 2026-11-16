@@ -1,6 +1,6 @@
 #pragma once
 
-/* SonicPad Dreamcast input contract.
+/* RingPad Dreamcast input contract.
  *
  * The shell (Apple overlay, physical controller, keyboard) produces one
  * canonical, game-independent Dreamcast controller state. A single adapter
@@ -23,34 +23,34 @@ extern "C" {
 /* Normalized Dreamcast state at the shell/adapter boundary.
  * - moveX/moveY: analog movement stick, int8 [-127, 127]; +Y is up.
  * - triggerL/triggerR: independent analog triggers, uint8 [0, 255].
- * - buttons: bitmask of the SonicPadDC_* constants below (bits 0-13 only).
+ * - buttons: bitmask of the RingPadDC_* constants below (bits 0-13 only).
  * - connected: 1 when a sampled source owns P1, else 0. */
-typedef struct SonicPadDreamcastState {
+typedef struct RingPadDreamcastState {
     int8_t   moveX, moveY;
     uint8_t  triggerL, triggerR;
     uint16_t buttons;
     int      connected;
-} SonicPadDreamcastState;
+} RingPadDreamcastState;
 
 /* Guest pad bits, identical to SARecomp src/sonic_input_bindings.hpp. */
 enum {
-    SonicPadDC_Up       = 1u << 0,
-    SonicPadDC_Down     = 1u << 1,
-    SonicPadDC_Left     = 1u << 2,
-    SonicPadDC_Right    = 1u << 3,
-    SonicPadDC_Start    = 1u << 4,
-    SonicPadDC_A        = 1u << 10,
-    SonicPadDC_B        = 1u << 11,
-    SonicPadDC_X        = 1u << 12,
-    SonicPadDC_Y        = 1u << 13,
-    SonicPadDC_TriggerL = 1u << 14, /* adapter-derived from triggerL */
-    SonicPadDC_TriggerR = 1u << 15  /* adapter-derived from triggerR */
+    RingPadDC_Up       = 1u << 0,
+    RingPadDC_Down     = 1u << 1,
+    RingPadDC_Left     = 1u << 2,
+    RingPadDC_Right    = 1u << 3,
+    RingPadDC_Start    = 1u << 4,
+    RingPadDC_A        = 1u << 10,
+    RingPadDC_B        = 1u << 11,
+    RingPadDC_X        = 1u << 12,
+    RingPadDC_Y        = 1u << 13,
+    RingPadDC_TriggerL = 1u << 14, /* adapter-derived from triggerL */
+    RingPadDC_TriggerR = 1u << 15  /* adapter-derived from triggerR */
 };
 
 #ifdef __cplusplus
 } /* extern "C" */
 
-namespace sonicpad {
+namespace ringpad {
 
 /* Guest trigger pad bit set when a trigger's raw value exceeds this. Copied
  * from the retained boundary (SARecomp sets bits 14/15 above raw value 64). */
@@ -76,7 +76,7 @@ struct ActionSnapshot {
 
 /* Convert one canonical state into the guest-facing action snapshot.
  * Purely functional: no hidden state, no host I/O, no timing. */
-ActionSnapshot adapt(const SonicPadDreamcastState& state,
+ActionSnapshot adapt(const RingPadDreamcastState& state,
                      unsigned deadzone_percent = kDefaultMoveDeadzonePercent,
                      int trigger_threshold = kDefaultTriggerThreshold) noexcept;
 
@@ -112,5 +112,5 @@ private:
     unsigned pending_ = 0;
 };
 
-} /* namespace sonicpad */
+} /* namespace ringpad */
 #endif /* __cplusplus */

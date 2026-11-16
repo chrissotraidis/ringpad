@@ -1,4 +1,4 @@
-# SonicPad current build and input checks
+# RingPad current build and input checks
 
 **10 October 2026 — review handoff supersedes the experiment queue.**
 Chris requested wrap-up, private push/merge and an independent direction review.
@@ -3440,7 +3440,7 @@ game app. All three suites currently pass: 46 + 50 + 46 checks.
 The preserved comparison lane is:
 
 ```sh
-SONICPAD_HOST_TOOLCHAIN=llvm scripts/run-host-tests.sh
+RINGPAD_HOST_TOOLCHAIN=llvm scripts/run-host-tests.sh
 ```
 
 `scripts/check-prerequisites.sh` separately probes macOS/Foundation and full
@@ -4125,8 +4125,8 @@ rejects SYSINFO_INIT. Current stereo boundary is missing original610F32 after89
 sectors,39 queued sound commands and default material setup; this is not a passing
 boot, audible playback, texture-data or graphics-output acceptance.
 
-For flag-off regressions clear SONICPAD_RECOVERY_ORIGINAL_STARTUP,
-SONICPAD_RECOVERY_OUTER_LOOP and SONICPAD_RECOVERY_SYSTEM_FLASH. The latest
+For flag-off regressions clear RINGPAD_RECOVERY_ORIGINAL_STARTUP,
+RINGPAD_RECOVERY_OUTER_LOOP and RINGPAD_RECOVERY_SYSTEM_FLASH. The latest
 exact-binary evidence is in `20261006-042919/baseline-regression/`.
 Patch9 and31 isolated contract checks cover SYSINFO and read-only flash services;
 Patch12 adds in-memory flash programming/erase; unsupported SYSINFO commands
@@ -5212,7 +5212,7 @@ Recorded runners refuse to overwrite their evidence directories. The reduction
 repairs correct independent expectations (block ticks, R1, weighted issue cost);
 they do not modify the runtime or game. The probe is an observer-only rebuild
 using31 verified objects. Actual startup133000 uses the canonical provider runner
-with `SONICPAD_RECOVERY_CAPTURE_TIMER_ONLY=1`, recorded in its command environment.
+with `RINGPAD_RECOVERY_CAPTURE_TIMER_ONLY=1`, recorded in its command environment.
 
 ```sh
 DEVELOPER_DIR=/Library/Developer/CommandLineTools python3 work/dreamcast-recovery/run-timer-prefix-reduction.py
@@ -5260,7 +5260,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-startup-work.py 20261006-135001
 ```
 
-The full runner records `SONICPAD_RECOVERY_CAPTURE_WORK_ONLY=1`; original
+The full runner records `RINGPAD_RECOVERY_CAPTURE_WORK_ONLY=1`; original
 observers always call the translated routines.1,920reduction cases and one actual
 frozen call pass. Four prospective phases compare entire16MiB RAM/69CPU/25TMU:
 workentry,recordscanentry/return,failure. Earlier captures deliberately omitted;
@@ -5288,7 +5288,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-task-critical.py 20261006-140051
 ```
 
-The full runner records `SONICPAD_RECOVERY_CAPTURE_CRITICAL_ONLY=1`; observers
+The full runner records `RINGPAD_RECOVERY_CAPTURE_CRITICAL_ONLY=1`; observers
 always call original code.2,048prefixcases,3,584fullcases and actual frozen calls
 pass entire16MiB RAM/69CPU/25TMU expectations. Three prospective startup phases
 include normal IRQmask/stack restoration and23cycles caller continuation before
@@ -5317,7 +5317,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-record16.py 20261006-141129
 ```
 
-The full runner records `SONICPAD_RECOVERY_CAPTURE_RECORD16_ONLY=1`; read-only
+The full runner records `RINGPAD_RECOVERY_CAPTURE_RECORD16_ONLY=1`; read-only
 observers always call original routines.6,144cases/actual frozen call and three
 prospective whole16MiB/69CPU/25TMU phases pass. Originalnesting0→1→0/IRQmask,
 stack restoration and23caller cycles before65FEDE are independently checked.
@@ -5348,7 +5348,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-record32.py 20261006-142605 'Reduce original010B58 signed guard; actual flag1/count0 predicts0. WholeRAM/69CPU/25TMU and frozen caller, then0556D8. One static batch remains.'
 ```
 
-`SONICPAD_RECOVERY_CAPTURE_RECORD32_ONLY=1` captures entry/return/workreturn and
+`RINGPAD_RECOVERY_CAPTURE_RECORD32_ONLY=1` captures entry/return/workreturn and
 failure. Three prospective phases verify whole16MiB RAM/all69CPU/all25TMU;
 later failure/audio/device counters unpredicted.4,608cases,236/121emittercycles,
 no hardware timing accuracy. Original648422 returns0556D4/SPFFFFC8,totalelapsed3;
@@ -5375,7 +5375,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-main-guard.py 20261006-143441 'Reduce original0558C0 mode0 prologue/table dispatch, first04E310 missing. FullRAM/stack/69CPU/25TMU and frozen caller; original rejection, invalid-mode return. One classification batch remains.'
 ```
 
-`SONICPAD_RECOVERY_CAPTURE_MAIN_GUARD_ONLY=1` captures read-only original guard
+`RINGPAD_RECOVERY_CAPTURE_MAIN_GUARD_ONLY=1` captures read-only original guard
 entry/return and failure.4,096cases and three prospective unchangedwhole16MiB
 RAM/69CPU/25TMU phases pass. Originalguard actualflag1/count0 returns0, conditional
 caller rejects0558C0.8/13/15/16guard+5caller emittercycles; no hardware timing.
@@ -5403,7 +5403,7 @@ scripts/check-source-closure.sh --report docs/artifacts/bootstrap-input-audit-20
 python3 work/dreamcast-recovery/checkpoint-mode-prefix.py 20261006-144501 'Execute original04E310 prefix through actualmissing051354, savedPR/R4=0 delay/fullRAM/stack/69CPU/25TMU and frozen caller. Later051354 must includeoriginalregistered09AC9C. Two classification batches consumed: execute next.'
 ```
 
-`SONICPAD_RECOVERY_CAPTURE_MODE_PREFIX_ONLY=1` records read-only original entry
+`RINGPAD_RECOVERY_CAPTURE_MODE_PREFIX_ONLY=1` records read-only original entry
 and missing04E310 boundary.1,280cases/two prospective wholeRAM/stack/69CPU/25TMU
 phases pass;31/32/27emittercycles, no hardware claim. Exactbinary regression passes.
 996identities/allprior415verified; corrected rejected handoff preserved, no

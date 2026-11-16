@@ -1,6 +1,6 @@
 # Known issues and acceptance limits
 
-Updated **31 October 2026**. SonicPad is experimental. The [status record](STATUS.md)
+Updated **31 October 2026**. RingPad is experimental. The [status record](STATUS.md)
 contains supporting measurements; the [release checklist](RELEASE-CHECKLIST.md)
 records source-release preparation and the publication gate. Maintainer work
 still to pick up is listed in [follow-ups](FOLLOW-UPS.md).
@@ -28,7 +28,7 @@ still to pick up is listed in [follow-ups](FOLLOW-UPS.md).
 ## Widescreen
 
 Phone widescreen uses Flycast's camera patch and a 4:3-to-16:9 stretch. HUD
-appearance and edge pop-in/culling have not been accepted in SonicPad. The
+appearance and edge pop-in/culling have not been accepted in RingPad. The
 option is not offered on iPad. Turn it off under **••• → Graphics → Widescreen
 (16:9)** for the original aspect ratio, then restart when ready.
 **Dreamcast Original** changes resolution and textures, not widescreen.
@@ -52,7 +52,7 @@ Flycast tracks the same report as
 clipping during cutscene expressions also happens on a real Dreamcast.
 
 There is no setting that fixes it yet. Flycast's accurate **Per Pixel**
-sorting renders badly broken frames through MoltenVK on iPad, so SonicPad
+sorting renders badly broken frames through MoltenVK on iPad, so RingPad
 keeps Flycast's default Per Triangle sorting. If you see the glitch, note the
 scene and graphics settings and attach a screenshot or short recording to an
 issue; a known location lets it be replayed and tested.
@@ -69,12 +69,12 @@ off.
 - The player route needs an Apple Silicon Mac and full Xcode. macOS is also
   a development/regression target, not a packaged player release. There is no
   Windows, Linux, Android or Apple TV player route.
-- SonicPad is not yet in PadMint's public catalog. Use the
+- RingPad is not yet in PadMint's public catalog. Use the
   [personal build instructions](INSTALL.md#build-your-app).
 - Back up the VMU before updates or imports. Save states are not a substitute
   for normal game saves; compatibility across builds is not guaranteed.
 
 Report reproducible problems through
-[GitHub issues](https://github.com/chrissotraidis/sonicpad/issues), with the build
+[GitHub issues](https://github.com/chrissotraidis/ringpad/issues), with the build
 identity, device, settings and relevant diagnostic log. Never upload game
 data, generated game code, an IPA or a save.

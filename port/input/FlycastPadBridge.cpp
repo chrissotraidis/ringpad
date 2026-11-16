@@ -1,10 +1,10 @@
-/* SonicPad -> Flycast controller bridge. See FlycastPadBridge.h. */
+/* RingPad -> Flycast controller bridge. See FlycastPadBridge.h. */
 
 #include "FlycastPadBridge.h"
 
 #include <cmath>
 
-namespace sonicpad {
+namespace ringpad {
 
 namespace {
 
@@ -24,11 +24,11 @@ uint16_t to_trigger(float v) noexcept {
 
 FlycastPadState to_flycast_pad(const ActionSnapshot& s) noexcept {
     static const struct { unsigned from; uint32_t to; } map[] = {
-        {SonicPadDC_Up, kFlycastUp},     {SonicPadDC_Down, kFlycastDown},
-        {SonicPadDC_Left, kFlycastLeft}, {SonicPadDC_Right, kFlycastRight},
-        {SonicPadDC_Start, kFlycastStart},
-        {SonicPadDC_A, kFlycastA}, {SonicPadDC_B, kFlycastB},
-        {SonicPadDC_X, kFlycastX}, {SonicPadDC_Y, kFlycastY},
+        {RingPadDC_Up, kFlycastUp},     {RingPadDC_Down, kFlycastDown},
+        {RingPadDC_Left, kFlycastLeft}, {RingPadDC_Right, kFlycastRight},
+        {RingPadDC_Start, kFlycastStart},
+        {RingPadDC_A, kFlycastA}, {RingPadDC_B, kFlycastB},
+        {RingPadDC_X, kFlycastX}, {RingPadDC_Y, kFlycastY},
     };
     FlycastPadState out;
     for (const auto& m : map)
@@ -56,4 +56,4 @@ uint32_t FlycastPressHold::apply(uint32_t pressed) noexcept {
     return out;
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

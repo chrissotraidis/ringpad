@@ -34,7 +34,7 @@ def main():
     if digest(archive) != pin['archive_sha256']:
         raise SystemExit('FFmpeg source SHA-256 mismatch; preserving existing input')
     source_dir = cache / f"FFmpeg-{pin['revision']}"
-    stamp = source_dir / '.sonicpad-source-archive-sha256'
+    stamp = source_dir / '.ringpad-source-archive-sha256'
     if source_dir.exists():
         if not stamp.is_file() or stamp.read_text().strip() != pin['archive_sha256']:
             raise SystemExit('Refusing to replace an unrecognized source directory')

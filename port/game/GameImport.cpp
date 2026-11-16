@@ -1,4 +1,4 @@
-/* SonicPad game import verifier. See GameImport.h. */
+/* RingPad game import verifier. See GameImport.h. */
 
 #include "GameImport.h"
 
@@ -12,7 +12,7 @@
 
 namespace fs = std::filesystem;
 
-namespace sonicpad {
+namespace ringpad {
 
 const GameIdentity& supported_game() noexcept {
     static const GameIdentity identity{
@@ -207,4 +207,4 @@ GameCheck verify_game(const std::string& folder_or_gdi, const GameIdentity& iden
     return check;
 }
 
-} /* namespace sonicpad */
+} /* namespace ringpad */

@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static int failures = 0, checks = 0;
 #define CHECK(cond, what) do { checks++; if (!(cond)) { failures++; std::printf("FAIL: %s\n", what); } } while (0)

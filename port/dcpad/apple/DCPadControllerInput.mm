@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <vector>
 
-using namespace sonicpad;
+using namespace ringpad;
 
 static uintptr_t InstanceID(GCController *controller)
 {
@@ -139,14 +139,14 @@ static BOOL UsableController(GCController *c)
 	if (pad.buttonY.isPressed) physical |= DCPhysical_Y;
 	if (pad.leftShoulder.isPressed) physical |= DCPhysical_ShoulderL;
 	if (pad.rightShoulder.isPressed) physical |= DCPhysical_ShoulderR;
-	SonicPadDreamcastState s{};
+	RingPadDreamcastState s{};
 	s.connected = 1;
 	s.buttons = apply_controller_mapping(m, physical);
-	if (pad.dpad.up.isPressed) s.buttons |= SonicPadDC_Up;
-	if (pad.dpad.down.isPressed) s.buttons |= SonicPadDC_Down;
-	if (pad.dpad.left.isPressed) s.buttons |= SonicPadDC_Left;
-	if (pad.dpad.right.isPressed) s.buttons |= SonicPadDC_Right;
-	if (pad.buttonMenu.isPressed) s.buttons |= SonicPadDC_Start;
+	if (pad.dpad.up.isPressed) s.buttons |= RingPadDC_Up;
+	if (pad.dpad.down.isPressed) s.buttons |= RingPadDC_Down;
+	if (pad.dpad.left.isPressed) s.buttons |= RingPadDC_Left;
+	if (pad.dpad.right.isPressed) s.buttons |= RingPadDC_Right;
+	if (pad.buttonMenu.isPressed) s.buttons |= RingPadDC_Start;
 	s.moveX = int8_t(std::lround(pad.leftThumbstick.xAxis.value * 127.0f));
 	s.moveY = int8_t(std::lround(pad.leftThumbstick.yAxis.value * 127.0f));
 	/* Shoulders act as full trigger presses unless mapped to a face button. */

@@ -289,6 +289,14 @@ double RingPad_GuestSeconds();   // sp_aot_executor.cpp
 	[self applyGraphicsDefaultsOnce];
 	[SPPortMenu applyWidescreenPreference];
 	[self restoreCheats];
+	// Flycast's virtual gamepad starts fully opaque and hide() only fades it out
+	// one frame at a time, which left it over RingPad's controls while the game
+	// booted. Fully transparent, it never shows. It is saved because Flycast
+	// reloads emu.cfg when the game loads.
+	if (config::VirtualGamepadTransparency != 100) {
+		config::VirtualGamepadTransparency = 100;
+		SaveSettings();
+	}
 	vgamepad::hide();
 	EventManager::listen(Event::Resume, hideFlycastGamepad);
 	self.scriptedInput = std::getenv("RINGPAD_INPUT_SCRIPT") != nullptr;

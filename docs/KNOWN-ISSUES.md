@@ -1,8 +1,7 @@
 # Known issues and acceptance limits
 
-Updated **31 October 2026**. RingPad is experimental. The [status record](STATUS.md)
-contains supporting measurements; the [release checklist](RELEASE-CHECKLIST.md)
-records source-release preparation and the publication gate. Maintainer work
+Updated **16 November 2026**. RingPad is experimental. The [status record](STATUS.md)
+contains supporting measurements. Maintainer work
 still to pick up is listed in [follow-ups](FOLLOW-UPS.md).
 
 ## Gameplay and device coverage
@@ -69,7 +68,7 @@ off.
 - The player route needs an Apple Silicon Mac and full Xcode. macOS is also
   a development/regression target, not a packaged player release. There is no
   Windows, Linux, Android or Apple TV player route.
-- RingPad is not yet in PadMint's public catalog. Use the
+- RingPad is not in PadMint's catalog. Use the
   [personal build instructions](INSTALL.md#build-your-app).
 - Back up the VMU before updates or imports. Save states are not a substitute
   for normal game saves; compatibility across builds is not guaranteed.

@@ -91,7 +91,7 @@ Dreamcast-specific geometry and controls.
 | Level | Evidence and scope |
 |---|---|
 | Host tests | `scripts/run-host-tests.sh` covers the adapter, mixer, controller mapping, legacy layout, DCPad and Flycast bridge. No game data or device is needed for those suites. |
-| Simulator routing | `tests/ios/RingPadUITests.m` sends UIKit taps, drags and holds and inspects Flycast port-A values. Recorded checks cover buttons, axes, triggers, menu pause/resume, settings, layout persistence and import. See [STATUS.md](STATUS.md) and the [release checklist](RELEASE-CHECKLIST.md) for exact runs. |
+| Simulator routing | `tests/ios/RingPadUITests.m` sends UIKit taps, drags and holds and inspects Flycast port-A values. Recorded checks cover buttons, axes, triggers, menu pause/resume, settings, layout persistence and import. See [STATUS.md](STATUS.md) for the latest run. |
 | Physical acceptance | The exact build still needs recorded hands-on multitouch/controller acceptance. Prior device boot, attract-demo and scripted-route measurements do not establish control feel or input latency. |
 
 Passing a host or Simulator check does not close physical acceptance.

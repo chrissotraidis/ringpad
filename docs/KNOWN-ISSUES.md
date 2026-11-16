@@ -68,8 +68,8 @@ off.
 - The player route needs an Apple Silicon Mac and full Xcode. macOS is also
   a development/regression target, not a packaged player release. There is no
   Windows, Linux, Android or Apple TV player route.
-- RingPad is not in PadMint's catalog. Use the
-  [personal build instructions](INSTALL.md#build-your-app).
+- PadMint builds RingPad from version 0.6.7. Older PadMint versions don't list
+  it; use the [personal build instructions](INSTALL.md#build-your-app).
 - Back up the VMU before updates or imports. Save states are not a substitute
   for normal game saves; compatibility across builds is not guaranteed.
 

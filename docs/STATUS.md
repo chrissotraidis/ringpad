@@ -18,6 +18,13 @@ Mac. Open work is in [Follow-ups](FOLLOW-UPS.md); player-facing limits are in
 
 ## Latest checks (16 November 2026, RingPad rename)
 
+**0.1.1 candidate:** host tests (380 DCPad checks, including the new tablet
+layout on three iPad and three iPhone sizes) and all 15 UI tests on the iPad
+Air 11-inch (M4) Simulator pass. On the iPad Pro (M2), build 59 installed in
+place, imported the disc and passed the startup self-test (313,696 trials, no
+failures); frames captured through a cold launch show only RingPad's controls.
+The external-display scene rule has not been tried with a physical display.
+
 - Host tests, repository safety checks and `test_repo_safety.py` pass.
 - All 15 UI tests pass on the iPad Air 11-inch (M4) Simulator.
 - iPad Pro 12.9-inch (M2): signed `com.chrissotraidis.ringpad` build, disc

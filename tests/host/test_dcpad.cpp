@@ -97,7 +97,8 @@ static void test_reach() {
         };
         reach("stick", l.frame(Control::Stick).midX(), l.frame(Control::Stick).midY(), true);
         reach("D-pad", l.frame(Control::DPad).midX(), l.frame(Control::DPad).midY(), true);
-        reach("L", l.frame(Control::LTrigger).midX(), l.frame(Control::LTrigger).midY(), true);
+        /* Tablets put L beside R, under the right thumb. */
+        reach("L", l.frame(Control::LTrigger).midX(), l.frame(Control::LTrigger).midY(), d.phone);
         reach("R", l.frame(Control::RTrigger).midX(), l.frame(Control::RTrigger).midY(), false);
         reach("Start", l.frame(Control::Start).midX(), l.frame(Control::Start).midY(), false);
         const Face faces[4] = {FaceA, FaceB, FaceX, FaceY};

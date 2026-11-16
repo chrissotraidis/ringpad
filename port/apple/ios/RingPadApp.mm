@@ -821,6 +821,13 @@ static NSString *const kCheatsKey = @"RingPad.cheats";
 
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options
 {
+	// Only the app's own scene gets the game. A scene for an external display
+	// gets no window, so iOS keeps its default there: mirroring, or an
+	// extended display (Apple TN3187), as in the other Pad ports.
+	if (![session.role isEqualToString:UIWindowSceneSessionRoleApplication]) {
+		SPLog(@"scene with role %@ left to the system", session.role);
+		return;
+	}
 	UIWindowScene *windowScene = (UIWindowScene *)scene;
 	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
 	self.window.rootViewController = [[SPGameViewController alloc] init];

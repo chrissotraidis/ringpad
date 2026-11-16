@@ -1,7 +1,6 @@
 # RingPad rights and distribution boundaries
 
-Updated **29 October 2026** for experimental source and recipe release preparation.
-The repository remains private until the maintainer changes its visibility.
+Updated **16 November 2026** for the experimental source and recipe release.
 
 ## Current software and dependencies
 
@@ -31,18 +30,3 @@ rights to distribute Sonic Adventure or code translated from it.
 Sonic Adventure and Dreamcast belong to SEGA. RingPad is unofficial and is
 not affiliated with or endorsed by SEGA. Players must supply their own legally
 obtained supported disc; the project does not supply game downloads.
-
-## Historical research archive
-
-`archive/katana-route` is excluded from the current build. It retains earlier
-research, including MIT-licensed DreamcastRecompiled patches with their
-[license notice](../licenses/DreamcastRecompiled-MIT.txt),
-test harnesses and behavioral models of original guest routines. Some tests
-include captured constants and register values. These models and the reachable
-Git history require a separate provenance review before the entire repository
-is made public; absence of disc binaries alone does not settle that review.
-
-`scripts/check-repo-safety.sh` checks ignored paths, prohibited tracked artifacts
-and the structure of the current recipe metadata. It does not establish
-copyright clearance or audit historical source content. Do not interpret its
-passing result as approval to publish the historical archive.

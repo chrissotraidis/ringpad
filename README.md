@@ -242,7 +242,6 @@ say exactly which build or device you tested.
 | [Known issues](docs/KNOWN-ISSUES.md) | Limitations, workarounds and outstanding acceptance |
 | [Follow-ups](docs/FOLLOW-UPS.md) | Open maintainer work and next steps |
 | [Status](docs/STATUS.md) | Recorded build, route and device evidence |
-| [Release checklist](docs/RELEASE-CHECKLIST.md) | Release checks and publication steps |
 | [Rights](docs/RIGHTS-STATUS.md) | Licenses and game-content boundaries |
 | [`scripts/build-personal.py`](scripts/build-personal.py) | Build a private unsigned IPA from your disc |
 | [`scripts/recomp/`](scripts/recomp/) | Block discovery and C++ generation |

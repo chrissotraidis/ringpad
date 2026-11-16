@@ -1,28 +1,8 @@
 # RingPad follow-ups
 
-Updated **31 October 2026**. Open maintainer work, with what is already known
+Updated **16 November 2026**. Open maintainer work, with what is already known
 and the next step for each item. Player-facing limits are in
 [Known issues](KNOWN-ISSUES.md); recorded measurements are in [Status](STATUS.md).
-
-## Before a public release
-
-### Publish from clean history
-
-The existing repository must stay private. `archive/katana-route` holds
-reconstructed original routines and captured game-state values, and Git history
-keeps them even though `.gitattributes` leaves `archive/` out of source
-exports. Keep this repository as a private history and publish a fresh
-repository from the reviewed source export. That changes the repository
-identity and needs the maintainer's explicit approval. See the
-[release checklist](RELEASE-CHECKLIST.md#publication-status) and
-[rights and distribution boundaries](RIGHTS-STATUS.md#historical-research-archive).
-
-### Repeat the PadMint player check on the final commit
-
-The last clean player build used candidate `21bd0df`. Run
-`scripts/player-check.sh` from current PadMint `main` against the commit that
-will be published, before tagging, and again after publishing. A failure
-blocks the release.
 
 ## Rendering
 
@@ -76,6 +56,8 @@ over a player's save.
 These remain open; build and Simulator checks do not close them:
 
 - A complete playthrough, credits and Chao flows, and a 60-minute soak.
+- Extending the acceptance script through Station Square into Emerald Coast
+  and tracing it, so later stages run recompiled.
 - Audio quality, natural in-game saving and a cold reload.
 - iPhone hardware, other iPads and Bluetooth controllers.
 - Sustained stage performance away from the recorded routes.

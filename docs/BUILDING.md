@@ -22,10 +22,9 @@ discovers static blocks, generates C++ in `build/personal/`, and builds and
 packages an unsigned IPA. It leaves `generated/` untouched and refuses to
 replace an existing output. Add `--jobs 2` to limit parallel build work.
 
-[`padmint.json`](../padmint.json) runs the same script. RingPad is not yet in
-PadMint's public catalog; use the command above. The IPA and generated game
-code are private outputs, excluded from the source release. See the
-[release checklist](RELEASE-CHECKLIST.md) for current publication gates.
+[`padmint.json`](../padmint.json) runs the same script. RingPad is not in
+PadMint's catalog; use the command above. The IPA and generated game code are
+private outputs, excluded from the source release.
 
 ## macOS development build
 
@@ -258,6 +257,21 @@ scripts/check-repo-safety.sh
 
 The host runner covers the input adapter, mixer, legacy layout contract,
 DCPad, Flycast bridge, game importer and VMU operations. The safety checker
-covers repository content, not gameplay acceptance. The publication/history
-check and clean player build are recorded in
-[RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md).
+covers repository content, not gameplay acceptance.
+
+## Releasing
+
+Run these on the release commit and record the results in
+[STATUS.md](STATUS.md). They are the same checks CI runs, plus the device-level
+ones CI cannot:
+
+1. `scripts/check-repo-safety.sh`, `python3 tests/host/test_repo_safety.py`
+   and `scripts/run-host-tests.sh`.
+2. The iOS UI tests on one Simulator (`scripts/ios/run-ui-tests.sh`).
+3. A PadMint player build from a clean checkout, using current PadMint `main`
+   with Apple's `/usr/bin/python3` and an empty PadMint folder. RingPad is not
+   in PadMint's catalog, so `scripts/player-check.sh` stops at its catalog
+   audit; run its `padmint tools` and `padmint build` steps with
+   `--repo <fresh clone>`. A failure blocks the release.
+4. Attach `ringpad-vX.Y.Z-padmint.json` (a copy of `padmint.json`) and
+   `SHA256SUMS`. Never attach an IPA, generated code, disc data or saves.

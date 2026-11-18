@@ -335,7 +335,7 @@ double RingPad_GuestSeconds();   // sp_aot_executor.cpp
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations
 {
-	return UIInterfaceOrientationMaskLandscape;
+	return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskLandscape;
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -833,7 +833,7 @@ static NSString *const kCheatsKey = @"RingPad.cheats";
 	self.window.rootViewController = [[SPGameViewController alloc] init];
 	[self.window makeKeyAndVisible];
 	UIWindowSceneGeometryPreferencesIOS *landscape = [[UIWindowSceneGeometryPreferencesIOS alloc]
-			initWithInterfaceOrientations:UIInterfaceOrientationMaskLandscape];
+			initWithInterfaceOrientations:(UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskLandscape)];
 	[windowScene requestGeometryUpdateWithPreferences:landscape errorHandler:^(NSError *error) {
 		SPLog(@"landscape request failed: %@", error);
 	}];

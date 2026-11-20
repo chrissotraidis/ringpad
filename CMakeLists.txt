@@ -105,7 +105,7 @@ if(IOS)
 		MACOSX_PACKAGE_LOCATION "Resources")
 	# Every build is identifiable: version, commit count as the build number,
 	# and the commit (with -dirty for uncommitted changes) in About and the log.
-	set(RINGPAD_VERSION "0.1.1")
+	set(RINGPAD_VERSION "0.1.2")
 	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-list --count HEAD
 		OUTPUT_VARIABLE _sp_build OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 	execute_process(COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} describe --always --dirty --abbrev=7
